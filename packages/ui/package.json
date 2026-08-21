@@ -5,13 +5,40 @@
   "description": "shadcn components, DROP tokens and FA/RTL primitives (safe placeholder \u2014 ticket 0.1; content arrives with its owning ticket)",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./theme.css": "./src/theme.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "typescript": "6.0.3"
+  },
+  "dependencies": {
+    "@date-fns/tz": "1.5.0",
+    "@hookform/resolvers": "5.9.1",
+    "@radix-ui/react-direction": "1.1.4",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "cmdk": "1.1.1",
+    "date-fns": "4.4.0",
+    "date-fns-jalali": "4.4.0-0",
+    "lucide-react": "1.33.0",
+    "next-themes": "0.4.6",
+    "radix-ui": "1.6.7",
+    "react-day-picker": "10.0.1",
+    "react-hook-form": "7.85.0",
+    "react-resizable-panels": "4.12.3",
+    "sonner": "2.0.8",
+    "tailwind-merge": "3.6.0",
+    "vaul": "1.1.2",
+    "zod": "4.4.3"
   }
 }

@@ -68,7 +68,7 @@ handoff_required: true
 The Persian-first, RTL-first foundation every panel surface is built from — ticket 0.12's
 substance carried into panel scope (ADR-0017 D2) plus the /studio shell that (18 §11.1) moves
 into step 1. Nothing here talks to a gateway, a mock, or a backend: this ticket is pure
-presentation foundation, buildable in parallel with P2.
+presentation foundation. (Sequential execution per ADR-0018 D2: P2 starts after this ticket.)
 
 The tracer-bullet vertical slice: open `/studio` and the component gallery in Persian under
 `<html lang="fa-IR" dir="rtl">`, in both dark and light themes, at all three 09 §14
@@ -102,8 +102,8 @@ Key mechanics (inherited from 0.12, adjusted for panel scope):
 
 ## Blocked by
 
-None — 0.1 is done and committed. Runs in parallel with P2. P4 needs this ticket's published
-component API; freeze exported names before handoff.
+None — 0.1 is done and committed. P2 starts only after this ticket completes (ADR-0018 D2).
+P4 needs this ticket's published component API; freeze exported names before handoff.
 
 ## Acceptance criteria
 

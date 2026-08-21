@@ -21,6 +21,37 @@ const providerPatterns = [
 ];
 const domainRestrictions = [...frameworkPatterns, ...providerPatterns];
 
+
+/**
+ * P1 (09 §1; AC-P1.3): logical CSS properties only — physical direction
+ * utilities are a lint failure in UI code. Escape hatch: an eslint-disable
+ * with a documented reason (enforced by tests/repo/logical-properties.test.ts).
+ */
+const PHYSICAL_CLASS = /(?:^|[\s"'`:])(?:-?(?:ml|mr|pl|pr)-(?:\d|\[|px\b|\()|text-left\b|text-right\b|-?(?:left|right)-(?:\d|\[|full\b|px\b)|rounded-(?:l|r|tl|tr|bl|br)(?:-|\b)|border-[lr](?:-\d)?\b|[mp][lr]-auto\b|float-(?:left|right)\b|clear-(?:left|right)\b)/;
+
+const dropLogicalPlugin = {
+  rules: {
+    "no-physical-direction-classes": {
+      meta: {
+        type: "problem",
+        docs: { description: "09 §1: use logical properties/utilities (ms-, me-, ps-, pe-, start-, end-, text-start, text-end) instead of physical ones" },
+        schema: [],
+      },
+      create(context) {
+        function check(node, value) {
+          if (typeof value === "string" && PHYSICAL_CLASS.test(value)) {
+            context.report({ node, message: "Physical direction utility in \"{{v}}\" — use the logical equivalent (09 §1), or document a physical reason via eslint-disable.", data: { v: value.slice(0, 60) } });
+          }
+        }
+        return {
+          Literal(node) { check(node, node.value); },
+          TemplateElement(node) { check(node, node.value.raw); },
+        };
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -34,11 +65,22 @@ export default tseslint.config(
       // tests/repo/dependency-direction.test.ts and MUST fail there; the
       // repo-wide sweep skips them so `pnpm lint` stays green.
       "tests/repo/boundary-fixtures-bad/**",
+      "tests/repo/lint-fixtures-bad/**",
     ],
   },
   {
     files: ["**/*.{ts,tsx,mjs}"],
     languageOptions: { parser: tseslint.parser },
+  },
+  {
+    files: [
+      "packages/ui/**/*.{ts,tsx}",
+      "packages/workflow-ui/**/*.{ts,tsx}",
+      "apps/web/**/*.{ts,tsx}",
+      "tests/repo/lint-fixtures-bad/*.tsx",
+    ],
+    plugins: { drop: dropLogicalPlugin },
+    rules: { "drop/no-physical-direction-classes": "error" },
   },
   {
     files: [DOMAIN_PACKAGES, "tests/repo/boundary-fixtures-bad/domain-*.ts"],

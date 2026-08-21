@@ -22,3 +22,7 @@ executive agent model.zip
 dist/
 *.tsbuildinfo
 next-env.d.ts.bak
+
+# --- Playwright (ticket P1) ---
+test-results/
+playwright-report/
