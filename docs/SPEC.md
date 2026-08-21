@@ -1,5 +1,28 @@
 # DROP Studio OS — Product Specification (PRD)
 
+## Scope status (ADR-0017)
+
+**Panel-first scope correction adopted 2026-08-21** (doc 18,
+`docs/implementation/18_SCOPE_CORRECTION_PANEL_FIRST_AND_MOCK_MACHINES.md`; adoption recorded
+in ADR-0017). The user stories below remain the product's full definition — none are
+renumbered or deleted. **This delivery implements only the panel-visible stories**, on
+deterministic mocks behind the `MachineGateway` interface (18 §6; ADR-0017 D4). The
+machine-execution story ranges —
+
+- **15–53** — Machines 01–05: concept generation, research retrieval, synthesis, production
+  validation, handoff generation and Weekly Lens derivation;
+- **86–88** — registry publishing and versioned configuration releases;
+- **90–98** — pipeline runtime, run manifests and reproducibility (their run *views* stay
+  panel-visible over mocked runs);
+- **99–107** — AI gateway, providers, SSRF policy and compose/platform infrastructure —
+
+are presented through the fourteen deterministic mock scenarios of (18 §7.2) and are
+**deferred for real execution** to the separate machine build, which connects later through
+`RealMachineGateway` (18 §9). The ADR-0012 state vocabulary and ADR-0014 event taxonomy are
+the presentation vocabulary of those mocks; ADR-0013 approval semantics (N distinct human
+approvers, single approval write path) are what the panel presents. No PostgreSQL, Redis,
+queues or AI providers appear anywhere in panel scope (18 §4.2, §5).
+
 > **Derived document.** This spec is synthesized from the implementation bundle — primarily the Executive Implementation Brief (01), Product Surfaces and Information Architecture (04), the Release Plan (15) — with the spec-v0 source material's user stories as raw material. It exists for build-time convenience and never overrides the bundle. **Authority remains with the `docs/DELIVERY_README.md` hierarchy as repaired by ADR-0011** (DELIVERY_README's order governs; 00_READ_ME_FIRST §3 defers to it; pending human-owner ratification). Where this document reflects a repair to a bundle defect, the governing repair ADR (ADR-0011 through ADR-0016) is cited inline; everything else derives from the cited bundle documents.
 
 ## Problem Statement

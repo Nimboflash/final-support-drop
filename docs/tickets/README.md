@@ -1,107 +1,112 @@
-# Release 0 Ticket Index
+# Ticket Index — Panel-First Plan (P-series)
 
-This directory holds the per-ticket specification files mandated by the ticket template of
-(15 §9) and required reading for every build session after 0.1 (16 §4). Each file derives from
-the implementation bundle and the repair ADRs; no ticket file overrides the bundle silently —
-where a ticket applies a repair, it cites the ADR that records it (ADR-0011 through ADR-0016).
+## Scope note
 
-File format: `docs/tickets/<id>-<slug>.md`, starting with the mandatory YAML block from
+The build is **panel-first** per the authoritative scope correction
+`docs/implementation/18_SCOPE_CORRECTION_PANEL_FIRST_AND_MOCK_MACHINES.md` ("doc 18"), adopted
+by ADR-0017. This delivery builds the operational panel and its minimum supporting backend
+only; Machines 01–05, their runtime and their infrastructure are a separate build that
+connects later through the `MachineGateway` adapter (18 §1–2, §9).
+
+- **The P-series (P1–P8) is the active plan.** It implements the (18 §11) build sequence
+  against the (18 §12) acceptance criteria and the fourteen (18 §7.2) mock scenarios.
+- **The 0-series is partitioned** (ADR-0017 D2): **0.1 is DONE** and committed — nothing here
+  reopens it; its thirteen scaffold packages stay frozen inert placeholders (ADR-0017 D3).
+  The remaining 0-series tickets are **deferred** (machine-side) or **superseded** into the
+  P-series; each file carries a status banner naming ADR-0017. Nothing is deleted — the
+  ticket files remain the recorded contract the machine build inherits.
+- Three panel packages join the workspace per (18 §10): `panel-domain`, `machine-gateway`,
+  `mock-data` (ADR-0017 D3).
+- The ADR-0012 state vocabulary and ADR-0014 event taxonomy are the presentation vocabulary
+  of the mocks; ADR-0013 approval semantics (N distinct human approvers, single approval
+  write path) are what the panel presents (ADR-0017 D4). No PostgreSQL, Redis, queues or AI
+  providers anywhere in panel scope (18 §4.2, §5; ADR-0017 D5).
+
+File format is unchanged: `docs/tickets/<id>-<slug>.md` with the mandatory YAML block from
 (15 §9), followed by **What to build**, **Blocked by** and **Acceptance criteria**.
 
-> **Note on ticket 0.16.** Ticket 0.16 was added by **ADR-0014** to own the workflow
-> definition/validate/publish engine, run command endpoints, SSE stream and approval
-> request/decision endpoints — the API band the Release 0 vertical demo requires but no ticket
-> previously owned. Per the amendment rule of (15 §1), the authoritative 0.1–0.15 plan is
-> **not renumbered**; 0.16 is appended.
-
-## Ticket table
+## Active tickets (P-series)
 
 | ID | Title | Depends on | Status |
 |---|---|---|---|
-| 0.1 | Monorepo foundation (pnpm, strict TS, scaffolds, Vitest) | None — sole start | ready |
-| 0.2 | Compose reference stack (Postgres, Redis, MinIO, web, worker, Nginx) | 0.1 | ready |
-| 0.3 | Zod contracts v1 | 0.1 | ready |
-| 0.4 | Drizzle schemas and migrations | 0.3 | ready |
-| 0.5 | Better Auth invitations and sessions | 0.4 (UI screens also 0.12, per ADR-0014; server-side auth is unblocked) | ready |
-| 0.6 | Actors, roles, capabilities, approval policies and audit | 0.4, 0.5 | ready |
-| 0.7 | Artifact and run registries | 0.4 | ready |
-| 0.8 | Prompt, Rule and Example registries | 0.6, 0.7 | ready |
-| 0.9 | AI gateway and mock adapter | 0.3, 0.4 | ready |
-| 0.10 | Pipeline runtime | 0.7, 0.9 | ready |
-| 0.11 | Run manifests and comparisons | 0.10, 0.8 (0.8 added by ADR-0014) | ready |
-| 0.12 | FA-first RTL UI foundation | 0.1 | ready |
-| 0.13 | Dashboard skeleton | 0.4, 0.6, 0.10, 0.12, 0.16 (0.4/0.10/0.16 added by ADR-0014) | ready |
-| 0.14 | S3-compatible storage | 0.2, 0.3, 0.7 | ready |
-| 0.15 | Release 0 audit sweep | all (0.1–0.14, 0.16) | ready |
-| 0.16 | Workflow definition, run-command, SSE and approval APIs | 0.3, 0.4, 0.6, 0.10 (ADR-0014 D4) | ready |
+| P1 | Panel shell and FA-first RTL baseline (owned shadcn/ui, tokens, fonts, `/studio` shell) | 0.1 (done) — frontier | ready |
+| P2 | Panel domain contracts and the `MachineGateway` seam (`panel-domain`, `machine-gateway`) | 0.1 (done) — frontier | ready |
+| P3 | Deterministic mock scenarios and `MockMachineGateway` (`mock-data`, fourteen 18 §7.2 scenarios) | P2 | ready |
+| P4 | Dashboard surfaces on mock data (overview, Programs, Lenses, approvals, artifacts, requests, audit) | P1, P2, P3 | ready |
+| P5 | Workflow graph surfaces (React Flow definition and run-inspection views on mock data) | P1, P2, P3 | ready |
+| P6 | Mocked commands and degraded states (run controls, approvals, synchronize, audit visibility) | P4, P5 | ready |
+| P7 | Test hardening (component, adapter-contract, scenario, accessibility, visual, FA/RTL e2e) | P6 | ready |
+| P8 | Integration boundary handoff (`RealMachineGateway` connection points, provisional contracts) | P7 | ready |
 
-Dependency corrections relative to the (15 §2) table are recorded in ADR-0014 (0.13 gains
-0.4, 0.10, 0.16; 0.11 gains 0.8; 0.5's UI screens depend on 0.12).
+**P1 and P2 are the frontier**: both depend only on the done 0.1 and may run in parallel
+(their packages do not overlap). P3 and P4 must not start before the P2 contract freeze lands
+(doc 15 §11 discipline applies unchanged to the P-series).
 
 ## Dependency graph
 
-Blocking edges only. The dashed edge is the partial dependency of 0.5's UI screens on 0.12;
-0.5's server-side work does not wait for it. 0.15 formally depends on **all** tickets; since
-0.13 and 0.14 are the only tickets nothing else depends on, the two drawn edges cover the full
-set transitively.
+Blocking edges only, as declared in each ticket's **Blocked by** section. P2→P4 and P2→P5 are
+drawn even though P3 covers them transitively, because P4/P5 consume P2's frozen DTOs
+directly.
 
 ```mermaid
 graph TD
-  T1["0.1 Monorepo foundation"]
-  T2["0.2 Compose stack"]
-  T3["0.3 Zod contracts"]
-  T4["0.4 Drizzle schemas"]
-  T5["0.5 Better Auth"]
-  T6["0.6 RBAC + approvals + audit"]
-  T7["0.7 Artifact/run registries"]
-  T8["0.8 Prompt/Rule/Example registries"]
-  T9["0.9 AI gateway + mock"]
-  T10["0.10 Pipeline runtime"]
-  T11["0.11 Run manifests"]
-  T12["0.12 FA-first RTL UI foundation"]
-  T13["0.13 Dashboard skeleton"]
-  T14["0.14 S3 storage"]
-  T15["0.15 Release audit sweep"]
-  T16["0.16 Workflow/run/SSE/approval APIs"]
+  P1["P1 Panel shell + RTL baseline"]
+  P2["P2 Panel domain + MachineGateway seam"]
+  P3["P3 Mock scenarios + MockMachineGateway"]
+  P4["P4 Dashboard surfaces"]
+  P5["P5 Workflow graph surfaces"]
+  P6["P6 Mocked commands + degraded states"]
+  P7["P7 Test hardening"]
+  P8["P8 Integration boundary handoff"]
 
-  T1 --> T2
-  T1 --> T3
-  T1 --> T12
-  T3 --> T4
-  T3 --> T9
-  T3 --> T14
-  T2 --> T14
-  T4 --> T5
-  T4 --> T6
-  T4 --> T7
-  T4 --> T9
-  T4 --> T13
-  T5 --> T6
-  T12 -.->|UI screens only| T5
-  T6 --> T8
-  T6 --> T13
-  T6 --> T16
-  T7 --> T8
-  T7 --> T10
-  T7 --> T14
-  T8 --> T11
-  T9 --> T10
-  T10 --> T11
-  T10 --> T13
-  T10 --> T16
-  T3 --> T16
-  T4 --> T16
-  T12 --> T13
-  T16 --> T13
-  T13 --> T15
-  T14 --> T15
+  P2 --> P3
+  P1 --> P4
+  P2 --> P4
+  P3 --> P4
+  P1 --> P5
+  P2 --> P5
+  P3 --> P5
+  P4 --> P6
+  P5 --> P6
+  P6 --> P7
+  P7 --> P8
 ```
 
-## Frontier rule
+## Deferred / superseded 0-series tickets
 
-Work any ticket whose blockers are all done. **0.1 is the sole start.** After 0.1 completes,
-0.2, 0.3 and 0.12 open; the frontier then advances edge by edge. Build only one approved ticket
-per session (00 §5.1), freeze contracts before opening parallel lanes (00 §5.2), and never
-parallelize edits to the same migration/schema, `packages/contracts`, approval/audit semantics
-or published workflow version logic (15 §11). Every ticket ends with green checks, independent
-review, a commit and a structured handoff (16 §7) before its dependents may start.
+Statuses below are the banners carried in each file (ADR-0017 D2). Deferred tickets are
+machine-side scope: not implemented in this delivery, inherited by the separate machine build.
+
+| ID | Title | Banner status | Reason (one line) |
+|---|---|---|---|
+| 0.2 | Compose reference stack | DEFERRED (ADR-0017) | Postgres/Redis/MinIO/worker infrastructure exists only for the machine runtime (18 §4.2, §5) |
+| 0.3 | Zod contracts v1 | PARTIALLY SUPERSEDED (ADR-0017) | Panel-facing DTO slice ships as P2; the full machine contract set is machine-side |
+| 0.4 | Drizzle schemas and migrations | DEFERRED (ADR-0017) | Authoritative PostgreSQL persistence is owned by the machine system (18 §5) |
+| 0.5 | Better Auth invitations and sessions | DEFERRED (ADR-0017) | Full auth backend is machine-side; the panel keeps only the session scaffolding (18 §4.2) it demonstrably needs |
+| 0.6 | RBAC, approvals and audit | DEFERRED (ADR-0017) | Server engine half deferred; panel-side RBAC checks survive inside P-series tickets, ADR-0013 semantics presented via mocks |
+| 0.7 | Artifact and run registries | DEFERRED (ADR-0017) | Registry persistence belongs to the machine build; the panel shows mocked artifacts/runs |
+| 0.8 | Prompt, Rule and Example registries | DEFERRED (ADR-0017) | Generation-governing registries are machine scope; no prompts in the panel build (18 §5) |
+| 0.9 | AI gateway and mock adapter | DEFERRED (ADR-0017) | Provider gateways are machine execution; the panel never calls AI providers (18 §5) |
+| 0.10 | Pipeline runtime | DEFERRED (ADR-0017) | The runtime is the machine orchestrator itself — the core of what doc 18 defers (18 §2) |
+| 0.11 | Run manifests and comparisons | DEFERRED (ADR-0017) | Manifests require real runs; comparison views appear over mocked runs in P4 |
+| 0.12 | FA-first RTL UI foundation | SUPERSEDED BY P1 (ADR-0017) | Substance carried into P1 under panel scope; file remains the machine-era reference |
+| 0.13 | Dashboard skeleton | SUPERSEDED BY P4/P5 (ADR-0017) | Dashboard surfaces ship as P4 and graph surfaces as P5, on mock data |
+| 0.14 | S3-compatible storage | DEFERRED (ADR-0017) | Object storage is machine infrastructure; not added for future machine needs (18 §4.2) |
+| 0.15 | Release 0 audit sweep | DEFERRED (ADR-0017) | Audits machine-era exit criteria; UI-visible criteria are carried by the mock scenarios instead |
+| 0.16 | Workflow/run/SSE/approval APIs | DEFERRED (ADR-0017) | The API band becomes the provisional (18 §9) integration surface documented in P8 |
+
+## Frontier rule and the P8 hard stop
+
+Work any ticket whose blockers are all done, **one ticket per session** (00 §5.1). After the
+done 0.1, **P1 and P2 open simultaneously** and are the only frontier; the frontier then
+advances edge by edge (P2 → P3; P1+P2+P3 → P4 and P5; P4+P5 → P6 → P7 → P8). Freeze the P2
+contracts before P3/P4/P5 open, and never parallelize edits to `panel-domain` schemas, the
+`MachineGateway` interface, or approval/audit presentation semantics (15 §11, applied to the
+panel seams). Every ticket ends with green checks, independent review, a commit citing the
+ticket ID and a structured handoff (16 §9) before its dependents may start.
+
+**P8 is a hard stop** (18 §11): "Do not start machine implementation after step 8. Stop and
+hand off the completed panel for review." After P8, the panel is handed to the human owner;
+no machine work, no provider integration, no further tickets begin in this repository under
+this scope. Machine-side work resumes only in the separate machine build, connecting through
+`RealMachineGateway` (18 §9).
