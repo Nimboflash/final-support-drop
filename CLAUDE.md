@@ -7,16 +7,29 @@ auditable creative operating system. Five governed AI machines (01 Concept → 0
 This file exists per `docs/implementation/16_CLAUDE_CODE_BUILD_PROTOCOL.md` §2. It is
 navigation and discipline, not authority. When it disagrees with the documents below, they win.
 
-## Authority order (ADR-0011)
+## Current scope (ADR-0017 — read this first)
+
+**Panel first.** This delivery builds the operational dashboard/control panel, the workflow
+graph, and the minimum backend the panel needs — nothing else. Machines 01–05, their runtime,
+queues, DB infrastructure and AI providers are a **separate build** connected later through
+the `MachineGateway` adapter. Everything machine-dependent runs on deterministic typed mocks
+(`docs/implementation/18_SCOPE_CORRECTION_PANEL_FIRST_AND_MOCK_MACHINES.md`). Active tickets
+are the P-series in `docs/tickets/`; tickets 0.2–0.16 are deferred or superseded per
+ADR-0017 D2. Never add machine logic, provider calls, or machine infrastructure here.
+
+## Authority order (ADR-0011, amended by ADR-0017)
 
 1. `docs/source-material/DROP_BRAND_DNA_v3.0.md` — permanent brand truth.
-2. Recorded decisions in `docs/implementation/03_SOURCE_RECONCILIATION_AND_DECISIONS.md`,
+2. `docs/implementation/18_...` — **build scope** (panel-first; ADR-0017 D1).
+3. Recorded decisions in `docs/implementation/03_SOURCE_RECONCILIATION_AND_DECISIONS.md`,
    then repo ADRs in `docs/adr/` (0011–0016 repair the bundle's verified defects).
-3. `docs/implementation/02_ADR_0010_DASHBOARD_AND_WORKFLOW_UI.md`.
-4. The numbered implementation docs `docs/implementation/00–17` — the build contract.
-5. `docs/source-material/{project-master-document,spec-v0,execution-plan}.md` (2026-08-15).
-6. `docs/source-material/DROP_STUDIO_OS_MASTER_BUILD_SPEC_v1.0.md` — baseline reference.
-7. The two PDFs — supporting visual references only.
+4. `docs/implementation/02_ADR_0010_DASHBOARD_AND_WORKFLOW_UI.md`.
+5. The numbered implementation docs `docs/implementation/00–17` — the build contract
+   (product language, domain concepts, states, RBAC/approval/audit semantics, and future
+   integration contracts; their machine-build instructions are deferred by ADR-0017).
+6. `docs/source-material/{project-master-document,spec-v0,execution-plan}.md` (2026-08-15).
+7. `docs/source-material/DROP_STUDIO_OS_MASTER_BUILD_SPEC_v1.0.md` — baseline reference.
+8. The two PDFs — supporting visual references only.
 
 Never silently resolve a conflict. Follow a recorded decision, or stop and write a new ADR
 (`docs/adr/`, next number). ADR-0011 is Proposed pending one-line human-owner ratification.

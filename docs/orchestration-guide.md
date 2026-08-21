@@ -1,5 +1,13 @@
 # Orchestration Guide — Running the DROP Studio OS Build as a Governed Multi-Agent Process
 
+> **Scope note (ADR-0017).** The active plan is the P-series (panel-first, doc 18): the
+> implementation lane works P-tickets on mock data behind `MachineGateway`; the
+> backend-engineer lane's machine work is deferred with tickets 0.2–0.16. The frontend lane
+> is primary; security review focuses on panel RBAC presentation, mock/demo marking (no UI
+> state may claim real machine work), and the P8 integration boundary. The P8 hard stop is a
+> release gate: hand off the finished panel, do not start machine work (18 §11).
+
+
 **Status:** Operating manual. This document is procedure, not contract. It derives from the
 delivery bundle and the VSO framework (`executive-multi-agent-model/`) and never overrides either.
 Where it reflects a repaired defect, the repair is recorded in ADR-0011 through ADR-0016 — the ADR

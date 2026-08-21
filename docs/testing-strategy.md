@@ -1,5 +1,13 @@
 # DROP Studio OS — Testing Strategy (TDD)
 
+> **Scope note (ADR-0017).** Under the panel-first correction (doc 18), the active seams for
+> the current delivery are Seam A (panel DTO contracts), the **adapter-contract seam** at
+> `MachineGateway` (every adapter — mock now, real later — passes the same conformance suite),
+> the component seam, the scenario seam (the fourteen 18 §7.2 scenarios), Seam E (FA/RTL
+> e2e), and Seam F. Seams B (machine/stage), C (HTTP), and D (DB constraint) sleep until the
+> machine build connects; their definitions below remain the contract that build inherits.
+
+
 **Status:** Active build document — derives from the implementation bundle, primarily
 `14_TESTING_QA_AND_ACCEPTANCE.md`.
 **Authority:** This document never overrides the bundle silently. Where it departs from a
