@@ -8,8 +8,9 @@ const md = readFileSync(join(__dirname, "..", "..", "CLAUDE.md"), "utf8");
 
 describe("root CLAUDE.md (AC-6)", () => {
   it.each([
-    ["authority hierarchy section", /## Authority order \(ADR-0011\)/],
-    ["pending-ratification flag", /pending .*ratification|Proposed pending/i],
+    ["authority hierarchy section", /## Authority order \(ADR-0011/],
+    ["ratified authority ruling (ADR-0018 D5)", /ratified.*(ADR-0018|owner)|ADR-0018 D5/i],
+    ["doc 18 scope tier in the order", /18_.*build scope|doc 18/i],
     ["non-negotiables from 00 §4", /## Non-negotiables/],
     ["package dependency rules", /## Package dependency rules/],
     ["release-gate stop rule", /Stop at every release gate/i],

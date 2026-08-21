@@ -1,0 +1,5 @@
+/*
+ * shadcn CLI target file ONLY — intentionally empty of tokens.
+ * ALL design tokens live in the single theme file ../theme.css (09 §3; AC-P1.4).
+ */
+@import "tailwindcss";

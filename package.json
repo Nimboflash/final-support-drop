@@ -2,22 +2,26 @@
   "name": "drop-os",
   "private": true,
   "version": "0.0.1",
-  "description": "DROP Studio OS — versioned creative operating system (Release 0)",
+  "description": "DROP Studio OS \u2014 versioned creative operating system (Release 0)",
   "engines": {
     "node": ">=24"
   },
   "packageManager": "pnpm@11.14.0",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r run typecheck",
-    "lint": "eslint . && node scripts/check-pinned.mjs",
+    "lint": "eslint . && node scripts/check-pinned.mjs && node scripts/check-token-literals.mjs",
     "test": "vitest run",
     "test:db": "node scripts/inert-gate.mjs test:db 0.4",
-    "test:e2e": "node scripts/inert-gate.mjs test:e2e 0.13",
+    "test:e2e": "pnpm --filter @drop/web build && playwright test",
     "build": "pnpm -r run build"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.62.1",
     "@types/node": "26.2.0",
+    "@vitejs/plugin-react": "6.1.0",
     "eslint": "10.8.1",
+    "jsdom": "30.0.1",
     "prettier": "3.9.6",
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0",
