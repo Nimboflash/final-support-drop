@@ -1,0 +1,20 @@
+{
+  "name": "@drop/worker",
+  "version": "0.0.1",
+  "private": true,
+  "description": "BullMQ worker entry (safe placeholder \u2014 ticket 0.1; queue behavior arrives with ticket 0.10)",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drop/pipeline": "workspace:*",
+    "@drop/config": "workspace:*",
+    "@drop/observability": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "@types/node": "26.2.0"
+  }
+}

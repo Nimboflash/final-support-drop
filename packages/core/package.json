@@ -1,0 +1,21 @@
+{
+  "name": "@drop/core",
+  "version": "0.0.1",
+  "private": true,
+  "description": "workspaces, actors, RBAC, approval, audit, comments (safe placeholder \u2014 ticket 0.1; content arrives with its owning ticket)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  },
+  "dependencies": {
+    "@drop/contracts": "workspace:*",
+    "@drop/db": "workspace:*"
+  }
+}

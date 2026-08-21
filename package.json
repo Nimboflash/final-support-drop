@@ -1,0 +1,27 @@
+{
+  "name": "drop-os",
+  "private": true,
+  "version": "0.0.1",
+  "description": "DROP Studio OS — versioned creative operating system (Release 0)",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.14.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r run typecheck",
+    "lint": "eslint . && node scripts/check-pinned.mjs",
+    "test": "vitest run",
+    "test:db": "node scripts/inert-gate.mjs test:db 0.4",
+    "test:e2e": "node scripts/inert-gate.mjs test:e2e 0.13",
+    "build": "pnpm -r run build"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "eslint": "10.8.1",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "4.1.11",
+    "yaml": "2.9.0"
+  }
+}

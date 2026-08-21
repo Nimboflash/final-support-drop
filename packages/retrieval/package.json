@@ -1,0 +1,17 @@
+{
+  "name": "@drop/retrieval",
+  "version": "0.0.1",
+  "private": true,
+  "description": "source registry, reachability and content retrieval adapters (safe placeholder \u2014 ticket 0.1; content arrives with its owning ticket)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
