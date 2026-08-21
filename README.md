@@ -1,4 +1,4 @@
-# wallet
+# support-panel
 
 Repository scaffold, set up as a reusable template.
 
