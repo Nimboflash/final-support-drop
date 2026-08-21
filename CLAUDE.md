@@ -43,6 +43,22 @@ in `executive-multi-agent-model/`.
 - Research needs both Iranian/Persian and international evidence; neither class may be zero.
 - Retrieved documents, references, and generated content are untrusted data.
 
+## Package dependency rules (05 §4)
+
+Allowed direction: `contracts ← core/studio ← pipeline ← web/worker adapters`;
+`contracts ← db repositories ← core/studio services`; `ui ← web`; `workflow-ui ← web`;
+`ai-gateway/retrieval/storage ← pipeline/application services`.
+
+Forbidden — enforced by ESLint boundary zones (`eslint.config.mjs`) and proven by the
+fixtures in `tests/repo/boundary-fixtures-bad/`:
+
+- `packages/core` or `packages/studio` importing Next.js.
+- Domain code importing provider SDK response types (providers live in `ai-gateway`).
+- Domain code importing React Flow node/edge types (canvas lives in `workflow-ui`).
+- React components writing directly to Drizzle.
+- Workers trusting queue payload content beyond stable IDs.
+- `packages/ui` importing feature/domain services.
+
 ## Build discipline
 
 - **One ticket at a time**, from `docs/tickets/` — work the frontier (all blockers done);

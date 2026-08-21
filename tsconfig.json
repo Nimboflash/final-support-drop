@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["tests/repo/**/*.ts", "vitest.config.ts"],
+  "exclude": ["tests/repo/boundary-fixtures-bad"]
+}

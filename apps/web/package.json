@@ -1,0 +1,24 @@
+{
+  "name": "@drop/web",
+  "version": "0.0.1",
+  "private": true,
+  "description": "DROP OS web app \u2014 Next.js App Router, standalone output (shell placeholder, ticket 0.1)",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "16.3.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "@drop/ui": "workspace:*",
+    "@drop/workflow-ui": "workspace:*",
+    "@drop/pipeline": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "typescript": "6.0.3"
+  }
+}

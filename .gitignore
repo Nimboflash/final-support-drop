@@ -16,3 +16,9 @@ node_modules/
 # --- Source archives already extracted into the repo (kept locally, not committed) ---
 executive agent model.zip
 *.zip
+
+# --- Node / build output (ticket 0.1) ---
+.next/
+dist/
+*.tsbuildinfo
+next-env.d.ts.bak
