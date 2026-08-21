@@ -14,8 +14,10 @@ graph, and the minimum backend the panel needs — nothing else. Machines 01–0
 queues, DB infrastructure and AI providers are a **separate build** connected later through
 the `MachineGateway` adapter. Everything machine-dependent runs on deterministic typed mocks
 (`docs/implementation/18_SCOPE_CORRECTION_PANEL_FIRST_AND_MOCK_MACHINES.md`). Active tickets
-are the P-series in `docs/tickets/`; tickets 0.2–0.16 are deferred or superseded per
-ADR-0017 D2. Never add machine logic, provider calls, or machine infrastructure here.
+are the P-series in `docs/tickets/`, run **strictly sequentially** (ADR-0018 D2); tickets
+0.2–0.16 are deferred or superseded per ADR-0017 D2. `apps/worker` and the eleven
+machine-oriented packages are **implementation-frozen through P8** (ADR-0018 D3). Never add
+machine logic, provider calls, or machine infrastructure here.
 
 ## Authority order (ADR-0011, amended by ADR-0017)
 
@@ -32,7 +34,7 @@ ADR-0017 D2. Never add machine logic, provider calls, or machine infrastructure 
 8. The two PDFs — supporting visual references only.
 
 Never silently resolve a conflict. Follow a recorded decision, or stop and write a new ADR
-(`docs/adr/`, next number). ADR-0011 is Proposed pending one-line human-owner ratification.
+(`docs/adr/`, next number). ADR-0011 is **ratified** (owner, 2026-08-21; ADR-0018 D5).
 
 ## Read before implementing anything
 

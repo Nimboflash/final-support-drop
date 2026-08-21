@@ -30,7 +30,7 @@ File format is unchanged: `docs/tickets/<id>-<slug>.md` with the mandatory YAML 
 | ID | Title | Depends on | Status |
 |---|---|---|---|
 | P1 | Panel shell and FA-first RTL baseline (owned shadcn/ui, tokens, fonts, `/studio` shell) | 0.1 (done) — frontier | ready |
-| P2 | Panel domain contracts and the `MachineGateway` seam (`panel-domain`, `machine-gateway`) | 0.1 (done) — frontier | ready |
+| P2 | Panel domain contracts, `MachineGateway` + `PanelGateway` seams (`panel-domain`, `machine-gateway`) | P1 (ADR-0018 D2) | ready |
 | P3 | Deterministic mock scenarios and `MockMachineGateway` (`mock-data`, fourteen 18 §7.2 scenarios) | P2 | ready |
 | P4 | Dashboard surfaces on mock data (overview, Programs, Lenses, approvals, artifacts, requests, audit) | P1, P2, P3 | ready |
 | P5 | Workflow graph surfaces (React Flow definition and run-inspection views on mock data) | P1, P2, P3 | ready |
@@ -38,7 +38,7 @@ File format is unchanged: `docs/tickets/<id>-<slug>.md` with the mandatory YAML 
 | P7 | Test hardening (component, adapter-contract, scenario, accessibility, visual, FA/RTL e2e) | P6 | ready |
 | P8 | Integration boundary handoff (`RealMachineGateway` connection points, provisional contracts) | P7 | ready |
 
-**P1 and P2 are the frontier**: both depend only on the done 0.1 and may run in parallel
+**P1 is the sole frontier** (ADR-0018 D2 — sequential execution): P2 starts only after P1 completes
 (their packages do not overlap). P3 and P4 must not start before the P2 contract freeze lands
 (doc 15 §11 discipline applies unchanged to the P-series).
 
@@ -59,6 +59,7 @@ graph TD
   P7["P7 Test hardening"]
   P8["P8 Integration boundary handoff"]
 
+  P1 --> P2
   P2 --> P3
   P1 --> P4
   P2 --> P4
@@ -98,8 +99,8 @@ machine-side scope: not implemented in this delivery, inherited by the separate 
 ## Frontier rule and the P8 hard stop
 
 Work any ticket whose blockers are all done, **one ticket per session** (00 §5.1). After the
-done 0.1, **P1 and P2 open simultaneously** and are the only frontier; the frontier then
-advances edge by edge (P2 → P3; P1+P2+P3 → P4 and P5; P4+P5 → P6 → P7 → P8). Freeze the P2
+done 0.1, **P1 opens alone and the P-series runs strictly one ticket at a time**
+(ADR-0018 D2): P1 → P2 → P3, then P4 and P5 in ticket order, then P6 → P7 → P8. Freeze the P2
 contracts before P3/P4/P5 open, and never parallelize edits to `panel-domain` schemas, the
 `MachineGateway` interface, or approval/audit presentation semantics (15 §11, applied to the
 panel seams). Every ticket ends with green checks, independent review, a commit citing the

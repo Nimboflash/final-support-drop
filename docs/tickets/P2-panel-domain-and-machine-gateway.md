@@ -24,9 +24,9 @@ adr_constraints:
 in_scope:
   - "packages/panel-domain — Zod schemas, inferred DTO types and valid/invalid fixtures for: MachineSummary (Machines 01–05: id, machine number, name key, capability and connection/health presentation including a disconnected representation for scenario 13); WorkflowDefinition, WorkflowDefinitionVersion (06 §9.1 status vocabulary), WorkflowNodeDefinition (07 §2 node kinds; machine stage nodes and HUMAN_APPROVAL_GATE as a separate node kind per 18 §8), WorkflowEdgeDefinition (dependency and loop-back edges); WorkflowRunSummary, WorkflowRun, StageAttempt (attempt history with timing and safe diagnostics) — stage and run states exactly per ADR-0012, waiting reason codes per ADR-0012 D4; StartRunCommand, ApprovalCommand (ADR-0013 decision enum, acted-as role, reason, idempotency key), CommandReceipt (with an explicit mock/dev origin marker so mock actions can be labeled, 18 §12); ArtifactSummary with version info; AuditEvent (name enum = 10 §9 taxonomy plus the ADR-0014 additions; envelope fields per 18 §9); RunFilters, AuditFilters"
   - "packages/panel-domain — remaining (18 §7.1) entity coverage the P4 surfaces need: UserSummary with role; ProgramSummary/Program and WeeklyLensSummary/WeeklyLens (ADR-0015 status enums); ResearchSourceSummary and coverage-gap presentation; RetrievalRequestSummary (ADR-0015 request statuses); NotificationSummary"
-  - "packages/machine-gateway — the (18 §6) MachineGateway interface VERBATIM as the required rule; a typed gateway error model (unknown id, machine system disconnected, unauthorized, timeout/stale) that scenarios 13 and 14 present through; a companion read-only WorkspaceDirectory interface for the (18 §7.1) entities MachineGateway does not carry (users/roles, Programs, Weekly Lenses, research sources and coverage gaps, retrieval requests, notifications) — recorded as a provisional panel-side contract per (18 §9), see the note in the body"
+  - "packages/machine-gateway — the (18 §6) MachineGateway interface VERBATIM as the required rule; a typed gateway error model (unknown id, machine system disconnected, unauthorized, timeout/stale) that scenarios 13 and 14 present through; a companion read-only PanelGateway interface for exactly the entity groups the owner named (ADR-0018 D1): Programs, Weekly Lenses, approval lists, requests, and notifications — recorded as a provisional panel-side contract per (18 §9), see the note in the body"
   - "packages/machine-gateway — the adapter-contract conformance suite, exported as a reusable test factory that any implementation (Mock in P3, Real later) must pass: schema-valid DTOs from every method, typed errors for unknown ids, filter behavior, command receipts with observable state changes on subsequent reads, determinism under an injected clock"
-  - "Repo checks (ADR-0017 D3): amend tests/repo/workspace-integrity.test.ts to the thirteen-frozen-plus-three-panel membership; add tests/repo/placeholder-purity.test.ts asserting the frozen machine-side packages remain inert 0.1 placeholders"
+  - "Repo checks (ADR-0017 D3): amend tests/repo/workspace-integrity.test.ts to the thirteen-frozen-plus-three-panel membership; add tests/repo/placeholder-purity.test.ts asserting the frozen machine-side packages AND apps/worker remain inert 0.1 placeholders (ADR-0018 D3)"
   - "ESLint boundary-zone additions with bad fixtures (18 §7): apps/web components and packages/ui must not import @drop/mock-data; packages/panel-domain and packages/machine-gateway must not import React, Next.js or React Flow"
 out_of_scope:
   - "Fixture content, the fourteen scenarios and MockMachineGateway (P3); UI components and surfaces (P1/P4)"
@@ -46,10 +46,10 @@ failure_states:
   - "Gateway methods reject unknown ids and disconnected/unauthorized conditions with the typed error model, never undefined or silent nulls"
 test_seams:
   - "Seam A: Zod contract tests on panel DTOs in packages/panel-domain — accepting and rejecting fixtures per schema, exact-membership enum tests, rejection reasons asserted"
-  - "Adapter-contract seam: the exported MachineGateway/WorkspaceDirectory conformance suite, proven runnable (and failable) against a throwaway in-test stub"
+  - "Adapter-contract seam: the exported MachineGateway/PanelGateway conformance suite, proven runnable (and failable) against a throwaway in-test stub"
   - "Seam F: workspace-integrity amendment, placeholder-purity check, ESLint zone bad fixtures, verbatim-interface static check"
 acceptance_criteria: "AC-P2.1 through AC-P2.11 — see checkbox list in the body"
-dependencies: ["0.1"]
+dependencies: ["P1"]
 files_owned:
   - "packages/panel-domain/** (schemas, types, fixtures, Seam A tests)"
   - "packages/machine-gateway/** (interfaces, error model, adapter-contract suite; the mock adapter itself arrives in P3)"
@@ -99,13 +99,16 @@ Key mechanics:
      listAuditEvents(filters?: AuditFilters): Promise<AuditEvent[]>;
    }
    ```
-3. **Recorded addition — `WorkspaceDirectory`.** The (18 §7.1) entity set (Programs, Lenses,
-   users, sources, requests, notifications) exceeds MachineGateway's method set, and (18 §6)
-   requires all UI data to flow through application-level interfaces. This ticket therefore
-   defines a companion read-only `WorkspaceDirectory` interface beside the verbatim
-   MachineGateway — an addition, not a modification. It is a provisional panel-side contract
-   in the (18 §9) sense and is reported in the handoff as an open coordination point with the
-   machine build; it must never be silently imposed on it.
+3. **Recorded addition — `PanelGateway`** (ADR-0018 D1). The (18 §7.1) entity set exceeds
+   MachineGateway's method set, and (18 §6) requires all UI data to flow through
+   application-level interfaces. This ticket therefore defines a companion read-only
+   `PanelGateway` interface beside the verbatim MachineGateway, covering exactly the owner's
+   five entity groups: **Programs, Weekly Lenses, approval lists, requests, and
+   notifications**. MachineGateway gains no members. Users/roles remain a session concern;
+   research sources and coverage gaps keep their P3 fixtures, with their transport contract
+   recorded as an open P8 coordination decision. PanelGateway is a provisional panel-side
+   contract in the (18 §9) sense and is reported in the handoff as an open coordination
+   point with the machine build; it must never be silently imposed on it.
 4. **Event mapping note** (18 §9; ADR-0017 D4). Doc 18 §9 sketches event families
    (`workflow.run.created`, `approval.resolved`, ...); ADR-0017 D4 rules that the recorded
    10 §9 + ADR-0014 taxonomy is the presentation vocabulary, so the AuditEvent enum uses those
@@ -116,7 +119,7 @@ Key mechanics:
 5. **Frozen-set reconciliation (recorded, not silent).** ADR-0017 D3 freezes the 0.1
    packages, while ADR-0017 D2 supersedes 0.12 → P1 and 0.13 → P4/P5, whose scopes own
    packages/ui and packages/workflow-ui — both named in the (18 §10) panel boundary. The
-   placeholder-purity check therefore enforces inertness for the eleven machine-side packages
+   placeholder-purity check therefore enforces inertness for the eleven machine-side packages and apps/worker (ADR-0018 D3)
    — core, studio, contracts, db, pipeline, ai-gateway, retrieval, storage, config,
    observability, testing — for the whole panel scope, and treats packages/ui (activated by
    P1) and packages/workflow-ui (activated by the workflow-surface ticket) as panel packages.
@@ -153,8 +156,8 @@ this freeze lands.
   enums pass exact-membership tests against fixtures transcribed from ADR-0015; a status
   outside the enum rejects. *Seam: Seam A.*
 - [ ] **AC-P2.6 Verbatim interface** (18 §6) — the exported MachineGateway declaration matches
-  the committed (18 §6) text character-for-character via a static check; WorkspaceDirectory
-  is a separate interface and MachineGateway gains no extra members. *Seam: Seam F.*
+  the committed (18 §6) text character-for-character via a static check; PanelGateway
+  is a separate interface (ADR-0018 D1) and MachineGateway gains no extra members. *Seam: Seam F.*
 - [ ] **AC-P2.7 Conformance suite** — the adapter-contract factory is exported from
   @drop/machine-gateway, runs green against the in-test reference stub, and fails against the
   committed broken-stub fixture for the specified reason. *Seam: adapter-contract seam.*
