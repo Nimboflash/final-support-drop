@@ -23,7 +23,7 @@ adr_constraints:
 in_scope:
   - "packages/mock-data: typed, schema-validated fixture modules for every (18 §7.1) entity, Persian-first content with bidi-safe English identifiers; stable IDs; an injectable controllable clock; seeded value generation; a scenario registry keyed by stable scenario IDs 1–14 with a switcher (dev/demo configuration only, isolated from production config)"
   - "All fourteen (18 §7.2) scenarios as named scenario modules, each a complete world (users, programs, definitions, runs, approvals, artifacts, audit trail) that parses through the P2 panel-domain schemas"
-  - "MockMachineGateway and MockWorkspaceDirectory in packages/machine-gateway, backed by mock-data, implementing the P2 interfaces and passing the P2 adapter-contract suite unmodified"
+  - "MockMachineGateway and MockPanelGateway in packages/machine-gateway, backed by mock-data, implementing the P2 interfaces and passing the P2 adapter-contract suite unmodified"
   - "Mocked command behavior (18 §7.3): startRun creates/reveals a mocked run and advances it through a controlled, clock-driven progression; pauseRun updates state and appends run.paused; retryStage creates a new StageAttempt preserving prior attempt history; submitApproval updates approval state, appends approval.decided, and enforces the ADR-0013 presentation semantics (distinct approvers, HUMAN-only, quorum at N distinct APPROVED decisions; CHANGES_REQUESTED routes the loop-back presentation of scenario 6)"
   - "Refresh/synchronize simulation: success, latency, timeout, disconnected and stale-data cases via the P2 typed error model (scenario 13 is the disconnected world)"
   - "Dev/demo marking (18 §12): every receipt from the mock adapters carries the P2 mock-origin marker; no fixture text or mocked state claims real machine work occurred"
@@ -45,14 +45,14 @@ failure_states:
   - "An unknown scenario ID fails the switcher with a typed error listing valid IDs"
 test_seams:
   - "Seam A: every fixture and every mock-mutated state parses through the P2 schemas"
-  - "Adapter-contract seam: MockMachineGateway and MockWorkspaceDirectory pass the P2 conformance suite unmodified"
+  - "Adapter-contract seam: MockMachineGateway and MockPanelGateway pass the P2 conformance suite unmodified"
   - "Scenario seam: one test per (18 §7.2) scenario reproducing its defining state and, where commands apply, its transitions and audit events"
   - "Seam F: dependency check that @drop/mock-data is imported only by the machine-gateway mock adapters and test code (the ESLint zone from P2 stays green)"
 acceptance_criteria: "AC-P3.1 through AC-P3.10 — see checkbox list in the body"
 dependencies: ["P2"]
 files_owned:
   - "packages/mock-data/** (fixtures, scenario modules, clock, switcher, scenario-seam tests)"
-  - "packages/machine-gateway/src/mock/** (MockMachineGateway, MockWorkspaceDirectory and their suite runs — additive; P2's interface and suite files are frozen)"
+  - "packages/machine-gateway/src/mock/** (MockMachineGateway, MockPanelGateway and their suite runs — additive; P2's interface and suite files are frozen)"
 handoff_required: true
 ```
 
@@ -117,7 +117,7 @@ P2 (the frozen DTOs, interfaces and conformance suite). Can run in parallel with
 - [ ] **AC-P3.2 Determinism** — loading the same scenario twice with the same seed and clock
   yields deep-equal serialized state; no Date.now/Math.random reachable from fixture or
   adapter code (static check plus repeat-run test). *Seam: scenario seam.*
-- [ ] **AC-P3.3 Conformance** — MockMachineGateway and MockWorkspaceDirectory pass the P2
+- [ ] **AC-P3.3 Conformance** — MockMachineGateway and MockPanelGateway pass the P2
   adapter-contract suite unmodified. *Seam: adapter-contract seam.*
 - [ ] **AC-P3.4 Scenario switcher** — every scenario is selectable by stable ID; an unknown ID
   fails typed; the switcher is dev/demo-only configuration, proven absent from the

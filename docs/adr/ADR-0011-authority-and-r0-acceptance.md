@@ -1,6 +1,6 @@
 # ADR-0011 — Authority Hierarchy and Release 0 Acceptance Restoration
 
-**Status:** Proposed — pending human-owner ratification (a one-line ruling; see Decision D1)
+**Status:** Accepted — ratified by the human owner 2026-08-21, as amended by ADR-0017 (ratification recorded in ADR-0018 D5)
 **Date:** 2026-08-21
 
 ## Context

@@ -20,12 +20,12 @@ adr_constraints:
   - "ADR-0015 — Program/Lens/request statuses render only the recorded enumerations"
   - "ADR-0017 D5 — no PostgreSQL/Redis/queues/providers; no UI state may claim a real machine operation occurred (18 §12): mock-origin receipts render with the dev/demo marking"
 in_scope:
-  - "Panel application services in apps/web: DI wiring that hands surfaces a MachineGateway and WorkspaceDirectory (MockMachineGateway from P3 in dev/demo; the seam RealMachineGateway plugs into later), plus the scenario switcher exposure in dev/demo configuration only"
+  - "Panel application services in apps/web: DI wiring that hands surfaces a MachineGateway and PanelGateway (MockMachineGateway from P3 in dev/demo; the seam RealMachineGateway plugs into later), plus the scenario switcher exposure in dev/demo configuration only"
   - "Overview (04 §6.1, skeleton scope): waiting actions, blocked/failed runs, machine status summary across Machines 01–05 — fed via the gateway"
   - "Program list and detail; Weekly Lens list and detail including the scenario 12 derivation link to the approved parent Program/Concept Bible"
   - "Approvals inbox and gate interactions: pending approvals list, approval detail with quorum presentation (N distinct human approvers, decisions so far), approve / reject / request-changes flows through submitApproval, decision receipts and rejection states rendered in Persian"
   - "Artifact views: artifact summaries and versions for a run/Program (scenario 11); research-source and coverage-gap presentation (scenario 8)"
-  - "Request views: retrieval/human requests with ADR-0015 statuses; audit view: filtered AuditEvent list (AuditFilters) with Persian labels, Jalali timestamps and LTR-isolated IDs; notifications surface from WorkspaceDirectory"
+  - "Request views: retrieval/human requests with ADR-0015 statuses; audit view: filtered AuditEvent list (AuditFilters) with Persian labels, Jalali timestamps and LTR-isolated IDs; notifications surface from PanelGateway"
   - "Permission-aware navigation visibility and role-aware landing over mock users/roles (04 §2, §7), including the scenario 14 role"
   - "Every (18 §4.1) state wired on every surface in scope using the P1 primitives: loading, empty, error, offline, permission-denied, degraded — with scenario 13 (machine system disconnected) rendering the degraded/stale treatment and scenario 14 (unauthorized) rendering permission-denied without data leakage"
 out_of_scope:
@@ -123,7 +123,7 @@ adapters).
 - [ ] **AC-P4.8 Requests, audit, notifications**: request views render ADR-0015 statuses; the
   audit view renders filtered events with recorded names, central Persian labels, Jalali
   timestamps and LTR-isolated IDs (09 §9, §12); notifications render from
-  WorkspaceDirectory. *Seam: component seam.*
+  PanelGateway. *Seam: component seam.*
 - [ ] **AC-P4.9 Every degraded state wired** (18 §4.1): per surface in scope, loading, empty,
   error, offline, permission-denied and degraded render through the P1 primitives — proven
   by component tests plus visual captures. *Seam: component seam + Seam E.*
