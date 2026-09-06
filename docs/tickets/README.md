@@ -39,14 +39,18 @@ project tabs and the approved brand tokens; Ticket 0.1 stays untouchable.
 | ID | Title | Depends on | Status |
 |---|---|---|---|
 | P1 | Panel shell and FA-first RTL baseline (owned shadcn/ui, tokens, fonts, `/studio` shell) | 0.1 (done) | **done** — superseded in part by P1-R |
-| P1-R | Five-destination shell, seven project tabs, approved tokens, RTL and responsive primitives | P1 — frontier | ready |
-| P2 | Preserve `MachineGateway`; panel/revision contracts, version-linked review and calendar/package DTOs | P1-R | partially done (contract freeze committed; V2 additions pending) |
-| P3 | Deterministic seed, scenario recipes, shared repository, persistence and command behavior | P2 | ready |
-| P4 | Full start → concept → content → package → calendar card journey, inbox and global views | P3 | ready |
-| P5 | Synchronized graph with branches, localized loops, inspectors and definition inspection | P4 | ready |
-| P6 | Functional commands, version conflicts, errors, stale dependencies, downloadable mock ZIP | P5 | ready |
-| P7 | Behavior/contract checks plus responsive, RTL, keyboard and visual QA | P6 | ready |
-| P8 | Future integration mapping, unresolved contracts and frontend handoff; stop before machine work | P7 | ready |
+| P1-R | Five-destination shell, seven project tabs, approved tokens, RTL and responsive primitives | P1 — frontier | **done** |
+| P2 | Preserve `MachineGateway`; panel/revision contracts, version-linked review and calendar/package DTOs | P1-R | **done** |
+| P3 | Deterministic seed, scenario recipes, shared repository, persistence and command behavior | P2 | **done** |
+| P4 | Full start → concept → content → package → calendar card journey, inbox and global views | P3 | **done** |
+| P5 | Synchronized graph with branches, localized loops, inspectors and definition inspection | P4 | **done** |
+| P6 | Functional commands, version conflicts, errors, stale dependencies, downloadable mock ZIP | P5 | **done** |
+| P7 | Behavior/contract checks plus responsive, RTL, keyboard and visual QA | P6 | **done** |
+| P8 | Future integration mapping, unresolved contracts and frontend handoff; stop before machine work | P7 | **done** |
+
+All P-tickets are **delivered**; the frontend handoff is
+`docs/handoff/P8-frontend-to-machine-build.md`. Machine work does not begin
+automatically (ADR-0019 D20).
 
 **Exactly one frontier** (ADR-0018 D2, ADR-0019 D20 — sequential execution). The order is
 **P1-R → P2 → P3 → P4 → P5 → P6 → P7 → P8**; each ticket starts only when its predecessor
