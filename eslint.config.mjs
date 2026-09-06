@@ -172,6 +172,30 @@ export default tseslint.config(
     },
   },
   {
+    // ---- ticket P4: the composition root ----
+    //
+    // 18 §6 / V2 03 §1 forbid FIXTURE IMPORTS IN COMPONENTS. `apps/web/lib/demo`
+    // is not a component: it is the one place the demo world is constructed and
+    // the adapters are injected, and it necessarily names the mock package to do
+    // that. Banning it here would not improve the boundary — it would only force
+    // the same import somewhere less obvious.
+    //
+    // The carve-out is deliberately narrow: this zone matches ONLY the
+    // composition root, and `tests/repo/eslint-zone-terminality.test.ts` proves
+    // that `apps/web/app/**` and `apps/web/components/**` still cannot reach
+    // fixtures at their real source paths. Every other restriction the component
+    // zone applies is restated, because flat config replaces rather than merges.
+    files: ["apps/web/lib/demo/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@drop/panel-domain/fixtures", "@drop/panel-domain/fixtures/*"], message: "18 §7: even the composition root uses the gateways, never fixture shapes." },
+          { group: ["drizzle-orm", "drizzle-orm/*"], message: "05 §4: React components must not write directly to Drizzle." },
+        ],
+      }],
+    },
+  },
+  {
     // 18 §6 / ADR-0017 D5: the panel contract packages are pure TypeScript plus
     // Zod \u2014 no framework, no transport, no canvas types.
     files: [

@@ -1,20 +1,22 @@
-import { EmptyState } from "@drop/ui";
+"use client";
 
-/**
- * V2 02 §5 tab «خروجی نهایی» — چک‌لیست آیتم‌های الزامی، آمادگی، پیش‌نمایش بسته و بارگیری.
- * Shell only (P1-R); the surface arrives with ticket P4.
- *
- * A not-yet-available stage states its prerequisite plainly rather than hiding
- * the tab or disabling it without explanation (V2 02 §5).
- */
-export default function Page() {
+import { use } from "react";
+import { OutputsView } from "../../../../../components/panel/outputs-view";
+import { QueryBoundary } from "../../../../../components/panel/states";
+import { usePanelSnapshot } from "../../../../../lib/demo/queries";
+
+/** V2 02 §5 tab «خروجی نهایی». */
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const query = usePanelSnapshot();
   return (
     <section aria-labelledby="tab-heading-outputs" className="space-y-3">
-      <h2 id="tab-heading-outputs" className="text-lg font-semibold">خروجی نهایی</h2>
-      <EmptyState
-        title="هنوز چیزی برای نمایش نیست"
-        detail="وقتی همهٔ محتواهای الزامی تأیید شوند، بسته به‌صورت خودکار ساخته می‌شود."
-      />
+      <h2 id="tab-heading-outputs" className="text-lg font-semibold">
+        خروجی نهایی
+      </h2>
+      <QueryBoundary query={query}>
+        {(world) => <OutputsView world={world} projectId={id} />}
+      </QueryBoundary>
     </section>
   );
 }

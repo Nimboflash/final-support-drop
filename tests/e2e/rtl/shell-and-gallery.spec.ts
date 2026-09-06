@@ -114,9 +114,9 @@ test.describe("/studio shell (AC-P1.9)", () => {
     await page.waitForURL("**/studio/projects");
   });
 
-  test("route scaffolds and unknown routes resolve to the EmptyState primitive, never a 404", async ({ page }) => {
-    await page.goto("/studio/reviews");
-    await expect(page.getByTestId("empty-state")).toBeVisible();
+  test("an unknown route resolves to the EmptyState primitive, never a 404", async ({ page }) => {
+    // P4 filled the real destinations, so the surviving scaffold case is the
+    // catch-all itself — which must still render rather than 404.
     await page.goto("/studio/not/built/yet");
     await expect(page.getByTestId("studio-catch-all")).toBeVisible();
     await expect(page.getByTestId("empty-state")).toBeVisible();
@@ -129,10 +129,9 @@ test.describe("/studio shell (AC-P1.9)", () => {
       await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
     await expect(page.getByTestId("stage-strip")).toBeVisible();
-    // A stage that is not yet reachable explains itself rather than hiding.
+    // Every tab stays visible after navigating between them (V2 02 §5).
     await page.getByRole("link", { name: "کانسپت‌ها", exact: true }).click();
     await page.waitForURL("**/studio/projects/p1/concepts");
-    await expect(page.getByTestId("empty-state")).toBeVisible();
     for (const label of PROJECT_TAB_LABELS) {
       await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
@@ -143,6 +142,8 @@ test.describe("/studio shell (AC-P1.9)", () => {
       await page.setViewportSize({ width: bp.width, height: bp.height });
       await page.goto("/studio");
       await expect(page.getByText("دراپ او اس — ماژول استودیو")).toBeVisible();
+      // P4 filled this surface; wait for its content so the baseline is stable.
+      await expect(page.getByTestId("overview-counter").first()).toBeVisible();
       await expect(page).toHaveScreenshot(`studio-shell-${bp.name}.png`, { fullPage: false });
     });
   }

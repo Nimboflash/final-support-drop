@@ -92,7 +92,13 @@ describe("the apps/web component trees are governed by the component zone", () =
   // AC-P3.15 — proven at REAL source paths. A fixture under tests/repo/ can
   // never observe the terminal configuration a file inside apps/web actually
   // receives, so a fixture-only assertion here would be vacuous.
-  for (const path of ["apps/web/lib/zone-probe.tmp.ts", "apps/web/app/zone-probe.tmp.ts"]) {
+  // NOT apps/web/lib/demo/**, which is the composition root and has its own
+  // narrow zone (ticket P4). These are the trees that must stay closed.
+  for (const path of [
+    "apps/web/lib/zone-probe.tmp.ts",
+    "apps/web/app/zone-probe.tmp.ts",
+    "apps/web/components/zone-probe.tmp.ts",
+  ]) {
     it(`rejects @drop/mock-data at ${path}`, () => {
       const out = lintAt(
         path,
@@ -109,6 +115,23 @@ describe("the apps/web component trees are governed by the component zone", () =
       expect(out).toContain("fixture shapes are for adapters");
     });
   }
+
+  it("the composition root may name the mock package, and only it", () => {
+    // apps/web/lib/demo is where the demo world is constructed; banning the
+    // import there would only push it somewhere less obvious.
+    const allowed = lintAt(
+      "apps/web/lib/demo/zone-probe.tmp.ts",
+      'import { baseWorld } from "@drop/mock-data";\nexport const x = baseWorld;\n',
+    );
+    expect(allowed).toBe("");
+
+    // ...but even the composition root may not reach fixture SHAPES.
+    const denied = lintAt(
+      "apps/web/lib/demo/zone-probe.tmp.ts",
+      'import { VALID_FIXTURES } from "@drop/panel-domain/fixtures";\nexport const x = VALID_FIXTURES;\n',
+    );
+    expect(denied).toContain("even the composition root uses the gateways");
+  });
 
   it("still allows apps/web its legitimate 05 §4 edges", () => {
     // pipeline <- web is ALLOWED; widening the packages/ui ban to apps/web is

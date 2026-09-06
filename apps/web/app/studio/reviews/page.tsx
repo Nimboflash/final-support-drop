@@ -1,11 +1,16 @@
-import { EmptyState } from "@drop/ui";
+"use client";
 
-/** V2 02 §2 destination (ADR-0019 D13). The surface arrives with ticket P4. */
+import { ReviewsQueue } from "../../../components/panel/reviews-queue";
+import { QueryBoundary } from "../../../components/panel/states";
+import { usePanelSnapshot } from "../../../lib/demo/queries";
+
+/** V2 02 §2 — the cross-project concept and content review queue. */
 export default function Page() {
+  const query = usePanelSnapshot();
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">بررسی‌ها</h1>
-      <EmptyState detail="صف بررسی کانسپت و محتوا در تیکت P4 ساخته می‌شود." />
+      <QueryBoundary query={query}>{(world) => <ReviewsQueue world={world} />}</QueryBoundary>
     </div>
   );
 }

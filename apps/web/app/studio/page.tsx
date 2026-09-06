@@ -1,11 +1,17 @@
-import { EmptyState } from "@drop/ui";
+"use client";
 
-/** Route scaffold (ticket P1) — the surface itself arrives with its owning ticket. */
+import { Overview } from "../../components/panel/overview";
+import { QueryBoundary } from "../../components/panel/states";
+import { usePanelSnapshot } from "../../lib/demo/queries";
+import { useDemoSession } from "../../lib/demo/providers";
+
+/** V2 02 §3 — the overview, and the work inbox ADR-0019 D13 redirects to. */
 export default function Page() {
+  const query = usePanelSnapshot();
+  const session = useDemoSession();
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">نمای کلی</h1>
-      <EmptyState detail="نمای کلی فضای کاری در تیکت P4 ساخته می‌شود." />
-    </div>
+    <QueryBoundary query={query} lastSyncedAt={session.clock.now()}>
+      {(world) => <Overview world={world} />}
+    </QueryBoundary>
   );
 }

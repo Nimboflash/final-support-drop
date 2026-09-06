@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { DirectionProvider } from "@drop/ui";
 import { ThemeProvider } from "./theme-provider";
+import { DemoProviders } from "../lib/demo/providers";
 import "./globals.css";
 
 /**
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="fa-IR" dir="rtl" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <DirectionProvider dir="rtl">{children}</DirectionProvider>
+          <DirectionProvider dir="rtl">
+            {/* Inside <body>: layout.test.tsx asserts the root element is html. */}
+            <DemoProviders>{children}</DemoProviders>
+          </DirectionProvider>
         </ThemeProvider>
       </body>
     </html>

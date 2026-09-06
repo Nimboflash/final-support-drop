@@ -25,7 +25,32 @@ export class UnknownScenarioError extends Error {
   }
 }
 
+/**
+ * The sentinel for "no overlay": the seeded base world itself.
+ *
+ * The base world is the panel's DEFAULT demo state — V2 04 §2's density
+ * requirement (6-8 projects across meaningful stages) exists precisely so the
+ * panel has something populated to open on. The twenty-four scenarios are
+ * OVERLAYS that narrow it to exercise one situation, selected from settings.
+ */
+export const BASE_WORLD_ID = "BASE";
+
 export function loadScenario(id: string): LoadedScenario {
+  if (id === BASE_WORLD_ID) {
+    return {
+      scenario: {
+        id: BASE_WORLD_ID,
+        name: "جهان پایهٔ نمایشی",
+        acceptanceId: "-",
+        setup: "The seeded base world, with no scenario overlay applied.",
+        action: "Browse the panel",
+        apply: (world) => world,
+      },
+      snapshot: baseWorld(),
+      policy: {},
+      discoverySeed: 1,
+    };
+  }
   const scenario = SCENARIOS_BY_ID.get(id);
   if (scenario === undefined) throw new UnknownScenarioError(id);
   const snapshot = scenario.apply(baseWorld());
