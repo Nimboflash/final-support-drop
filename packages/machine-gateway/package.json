@@ -13,6 +13,7 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
+    "@drop/mock-data": "workspace:*",
     "@drop/panel-domain": "workspace:*",
     "zod": "4.4.3"
   },

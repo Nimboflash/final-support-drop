@@ -17,3 +17,6 @@ export type { ReviewApplicationService } from "./review-application-service";
 export * from "./errors";
 export * from "./conformance/index";
 export * from "./conformance/review-path";
+
+// The P3 mock world: all four adapters over ONE shared demo repository.
+export * from "./mock/mock-world";

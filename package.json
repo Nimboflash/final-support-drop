@@ -2,7 +2,7 @@
   "name": "drop-os",
   "private": true,
   "version": "0.0.1",
-  "description": "DROP Studio OS \u2014 versioned creative operating system (Release 0)",
+  "description": "DROP Studio OS — versioned creative operating system (Release 0)",
   "engines": {
     "node": ">=24"
   },
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@drop/mock-data": "workspace:*",
     "@playwright/test": "1.62.1",
     "@types/node": "26.2.0",
     "@vitejs/plugin-react": "6.1.0",

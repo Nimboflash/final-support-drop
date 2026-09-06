@@ -88,13 +88,36 @@ describe("packages/ui keeps every restriction that applies to it", () => {
   });
 });
 
-describe("apps/web/lib is governed by the component zone", () => {
-  it("rejects @drop/mock-data at a real apps/web/lib path", () => {
+describe("the apps/web component trees are governed by the component zone", () => {
+  // AC-P3.15 — proven at REAL source paths. A fixture under tests/repo/ can
+  // never observe the terminal configuration a file inside apps/web actually
+  // receives, so a fixture-only assertion here would be vacuous.
+  for (const path of ["apps/web/lib/zone-probe.tmp.ts", "apps/web/app/zone-probe.tmp.ts"]) {
+    it(`rejects @drop/mock-data at ${path}`, () => {
+      const out = lintAt(
+        path,
+        'import { baseWorld } from "@drop/mock-data";\nexport const x = baseWorld;\n',
+      );
+      expect(out).toContain("components must never import fixtures directly");
+    });
+
+    it(`rejects panel-domain's fixture subpath at ${path}`, () => {
+      const out = lintAt(
+        path,
+        'import { VALID_FIXTURES } from "@drop/panel-domain/fixtures";\nexport const x = VALID_FIXTURES;\n',
+      );
+      expect(out).toContain("fixture shapes are for adapters");
+    });
+  }
+
+  it("still allows apps/web its legitimate 05 §4 edges", () => {
+    // pipeline <- web is ALLOWED; widening the packages/ui ban to apps/web is
+    // exactly the regression P1-R repaired.
     const out = lintAt(
       "apps/web/lib/zone-probe.tmp.ts",
-      'import { packageInfo } from "@drop/mock-data";\nexport const x = packageInfo;\n',
+      'import { allowedEdges } from "@drop/pipeline";\nexport const x = allowedEdges;\n',
     );
-    expect(out).toContain("components must never import fixtures directly");
+    expect(out).toBe("");
   });
 });
 

@@ -11,6 +11,9 @@ importers:
       '@axe-core/playwright':
         specifier: 4.13.0
         version: 4.13.0(playwright-core@1.62.1)
+      '@drop/mock-data':
+        specifier: workspace:*
+        version: link:packages/mock-data
       '@playwright/test':
         specifier: 1.62.1
         version: 1.62.1
@@ -159,6 +162,9 @@ importers:
 
   packages/machine-gateway:
     dependencies:
+      '@drop/mock-data':
+        specifier: workspace:*
+        version: link:../mock-data
       '@drop/panel-domain':
         specifier: workspace:*
         version: link:../panel-domain
