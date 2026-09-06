@@ -89,6 +89,128 @@ export function createMockWorld(options: MockWorldOptions): MockWorld {
     throw error;
   }
 
+  /**
+   * Automatic package assembly (AC-P6.8; V2 01 §6).
+   *
+   * "Once ready, the deterministic mock stage automatically assembles a package"
+   * — this is PACKAGING of already-reviewed content, not a new approval gate and
+   * not a Machine 06.
+   *
+   * The key is project + included content-version ids + plan revision, so a
+   * retry after a failure produces the SAME key rather than a second family, and
+   * re-running on an unchanged world is a no-op. Unselected candidate concepts
+   * are absent from the denominator by construction: readiness reads the frozen
+   * plan's required ids.
+   */
+  function assembleIfReady(draft: PanelSnapshot, projectId: string): string | null {
+    const project = draft.projects.find((p) => p.id === projectId);
+    if (project === undefined) return null;
+
+    const required = project.outputPlan.requiredContentIds;
+    if (required.length === 0) return null;
+
+    const items = required.map((id) => draft.content.find((c) => c.id === id));
+    const ready = items.every(
+      (item) =>
+        item !== undefined &&
+        item.reviewStatus === "APPROVED" &&
+        item.freshness === "CURRENT" &&
+        item.generationState !== "BLOCKED" &&
+        item.editorialStatus !== "PENDING",
+    );
+    if (!ready) return null;
+
+    const contentVersionIds = items.map((item) => item!.activeVersionId).sort();
+    const familyId = `pkg-${projectId}`;
+
+    // Idempotent by the TUPLE, not by an encoded id: `idSchema` requires ids to
+    // be URL-safe opaque (`^[A-Za-z0-9_-]+$`), so packing the version list and
+    // plan revision into the id would produce an id the schemas reject. The
+    // identity is the same either way — same content at the same plan revision
+    // is the same package, however many times assembly is retried.
+    const sameTuple = (snapshot: PanelSnapshot["packages"][number]) =>
+      snapshot.familyId === familyId &&
+      snapshot.planRevision === project.outputPlan.revision &&
+      JSON.stringify([...snapshot.contentVersionIds].sort()) === JSON.stringify(contentVersionIds);
+
+    const existing = draft.packages.find(sameTuple);
+    if (existing !== undefined) return existing.id;
+
+    const version = draft.packages.filter((snapshot) => snapshot.familyId === familyId).length + 1;
+    const key = `${familyId}-v${String(version)}`;
+
+    const conceptVersionIds = [...project.selectedConceptVersionIds].sort();
+    const files = [
+      {
+        path: "README.md",
+        contentVersionId: null,
+        body: `# ${project.titleFa}\n\nبستهٔ نمایشی. محتوای تأییدشدهٔ ساختگی؛ هیچ پژوهش یا انتشار واقعی انجام نشده است.\n`,
+      },
+      ...items.map((item) => {
+        const version = draft.contentVersions.find((v) => v.id === item!.activeVersionId);
+        return {
+          path: `content/${item!.activeVersionId}.md`,
+          contentVersionId: item!.activeVersionId,
+          body: `# ${version?.titleFa ?? item!.id}\n\n${version?.bodyFa ?? ""}\n`,
+        };
+      }),
+      {
+        path: "research/index.md",
+        contentVersionId: null,
+        body: "# فهرست تحقیق\n\nهمهٔ منابع این نمایش ساختگی‌اند و هیچ‌کدام قابل بازیابی نیستند.\n",
+      },
+    ];
+
+    // Historical versions stay downloadable but stop being current (V2 01 §6).
+    for (const snapshot of draft.packages) {
+      if (snapshot.familyId === familyId && snapshot.status === "CURRENT") {
+        snapshot.status = "HISTORICAL";
+      }
+    }
+
+    draft.packages.push({
+      id: key,
+      familyId,
+      projectId,
+      version,
+      planRevision: project.outputPlan.revision,
+      status: "CURRENT",
+      conceptVersionIds,
+      contentVersionIds,
+      files,
+      createdAt: clock.now(),
+      isMock: true,
+    });
+
+    // Calendar creation is idempotent per package FAMILY (ADR-0019 D7): a new
+    // package version relinks the existing entry rather than duplicating it.
+    const entry = draft.calendar.find((c) => c.packageFamilyId === familyId);
+    if (entry === undefined) {
+      draft.calendar.push({
+        id: `cal-${familyId}`,
+        projectId,
+        packageFamilyId: familyId,
+        packageVersionId: key,
+        titleFa: project.titleFa,
+        // PLANNED with a null date IS the unscheduled tray (ADR-0019 D7). A date
+        // is never invented (V2 01 §7).
+        status: "PLANNED",
+        date: project.targetDate,
+        endDate: null,
+        startsAt: null,
+        timezone: "Asia/Tehran",
+        ownerId: project.ownerId,
+        noteFa: "",
+        rowVersion: 1,
+      });
+    } else {
+      entry.packageVersionId = key;
+      entry.rowVersion += 1;
+    }
+
+    return key;
+  }
+
   /** The ONE decision write path (ADR-0013 D1). */
   function submitApprovalImpl(command: ApprovalCommand): Promise<CommandReceipt> {
     guard("submit an approval");
@@ -113,6 +235,11 @@ export function createMockWorld(options: MockWorldOptions): MockWorld {
             }
           }
           const kind = draft.concepts.some((c) => c.id === targetId) ? "CONCEPT" : "CONTENT";
+          // The last required approval assembles the package (V2 01 §6).
+          if (kind === "CONTENT" && reviewStatus === "APPROVED") {
+            const owner = draft.content.find((c) => c.id === targetId)?.projectId;
+            if (owner !== undefined) assembleIfReady(draft, owner);
+          }
           draft.decisions.push({
             id: `d-${command.commandId}`,
             target: { type: kind, id: targetId, versionId: command.subjectVersionId },

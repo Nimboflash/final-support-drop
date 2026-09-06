@@ -61,8 +61,9 @@ test.describe("the panel journey renders on the seeded world", () => {
     await expect(sheet).toBeVisible();
     await expect(sheet).toHaveAttribute("dir", "rtl");
     await expect(page.getByTestId("review-footer")).toContainText("c1-v1");
-    // Wiring is P6: every action is disabled WITH a stated reason, never hidden.
-    await expect(page.getByTestId("approve-action")).toBeDisabled();
+    // P6 wired the actions; the sheet mounts the SAME control the cards do, so
+    // scope to the footer rather than matching every card's copy.
+    await expect(page.getByTestId("review-footer").getByTestId("approve-action")).toBeEnabled();
   });
 
   test("the same sheet opens from the global review queue", async ({ page }) => {
@@ -76,9 +77,10 @@ test.describe("the panel journey renders on the seeded world", () => {
     await page.goto("/studio/projects/p1/content");
     await expect(page.getByTestId("content-card").first()).toBeVisible();
     // A08 — blocking stays local: the blocked reason is shown, and other cards
-    // in the same branch still render their own actions.
+    // in the same branch still render their own (enabled) actions.
     await expect(page.getByTestId("content-blocked-reason").first()).toBeVisible();
-    expect(await page.getByTestId("approve-content").count()).toBeGreaterThan(1);
+    const enabled = page.getByTestId("content-card").getByTestId("approve-action");
+    expect(await enabled.count()).toBeGreaterThan(1);
   });
 
   test("outputs reads N of M rather than a percentage, and never shows a progress bar", async ({ page }) => {

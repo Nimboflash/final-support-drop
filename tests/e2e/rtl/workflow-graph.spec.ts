@@ -61,18 +61,20 @@ test.describe("the accessible stage list is equivalent (AC-P5.10)", () => {
 });
 
 test.describe("review shortcuts and machine identity", () => {
-  test("review shortcuts render disabled with a reason naming P6 (AC-P5.11)", async ({ page }) => {
+  test("review shortcuts call the same approval path as the card (AC-P5.11, P6)", async ({ page }) => {
     await page.goto(WORKFLOW);
     await page
       .getByTestId("stage-list-item")
       .filter({ hasText: "بررسی کانسپت" })
       .first()
       .click();
-    const approve = page.getByTestId("graph-approve-shortcut");
-    await expect(approve).toBeVisible();
-    // Visible but disabled: not wired here, and not silently absent either.
-    await expect(approve).toBeDisabled();
-    await expect(page.getByText("در تیکت P6")).toBeVisible();
+    const shortcut = page.getByTestId("graph-review-shortcut");
+    await expect(shortcut).toBeVisible();
+    // P5 rendered these disabled; P6 wired them to the SAME control the card and
+    // the queue mount, which is what makes journey A14's "one audit event from
+    // any door" hold by construction rather than by convention.
+    await expect(shortcut.getByTestId("approve-action")).toBeEnabled();
+    await expect(page.getByText("همان مسیر تأیید کارت و صف بررسی")).toBeVisible();
   });
 
   test("no machine row appears when the definition supplies no machine number (AC-P5.3)", async ({ page }) => {

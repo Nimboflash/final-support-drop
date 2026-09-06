@@ -18,6 +18,7 @@ import {
 } from "@drop/ui";
 import type { ContentItem, PanelSnapshot } from "@drop/panel-domain";
 import { ReviewSheet, contentView, type ReviewTargetView } from "./review-sheet";
+import { ReviewActions } from "./review-actions";
 
 /**
  * Content and research (V2 01 §5, 02 §5, §7).
@@ -238,21 +239,14 @@ function ContentCard({
           <bdi dir="ltr">{item.conceptId}</bdi>
         </p>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            disabled
-            data-testid="approve-content"
-            // Blocking stays LOCAL: this item's approval is unavailable with its
-            // reason, and unrelated items keep their own reviewable state.
-            title={blocked ? (item.blockedReasonFa ?? undefined) : undefined}
-          >
-            تأیید
-          </Button>
-          <Button size="sm" variant="outline" disabled data-testid="revise-content">
-            درخواست بازنگری
-          </Button>
-        </div>
+        {/* Blocking stays LOCAL (journey A08): this item's approval is refused
+            with its reason while unrelated items keep their own reviewable
+            state. The control is explained, never removed. */}
+        <ReviewActions
+          target={{ type: "CONTENT", id: item.id, versionId: item.activeVersionId }}
+          expectedRowVersion={item.rowVersion}
+          disabledReasonFa={blocked ? item.blockedReasonFa : null}
+        />
       </CardContent>
     </Card>
   );

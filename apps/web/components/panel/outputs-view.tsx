@@ -18,6 +18,7 @@ import {
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { readinessFor, type ReadinessBlocker } from "../../lib/demo/read-models";
+import { commandErrorFa, useDownloadPackage } from "../../lib/demo/commands";
 
 /**
  * Outputs (V2 01 §6, 02 §8).
@@ -135,13 +136,9 @@ export function OutputsView({ world, projectId }: { world: PanelSnapshot; projec
                         ))}
                       </ul>
                     </details>
-                    {/* Download requires an explicit click and is wired in P6. */}
-                    <Button size="sm" disabled data-testid="download-package">
-                      بارگیری ZIP
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      بارگیری در تیکت P6 فعال می‌شود.
-                    </p>
+                    {/* V2 01 §6 — download requires an EXPLICIT click; nothing
+                        downloads on render. */}
+                    <DownloadButton packageVersionId={snapshot.id} />
                   </CardContent>
                 </Card>
               </li>
@@ -150,5 +147,40 @@ export function OutputsView({ world, projectId }: { world: PanelSnapshot; projec
         )}
       </TabsContent>
     </Tabs>
+  );
+}
+
+/**
+ * The download control (AC-P6.9).
+ *
+ * `exportPackage` returns `PackageExport { bytes, filename, mediaType }` because
+ * the contract packages are transport-free (ADR-0019 D17); `apps/web` is the one
+ * place a `Blob` is constructed. The archive contains real files matching its
+ * synthesized manifest — never an empty placeholder behind a working-looking
+ * button (V2 01 §6).
+ */
+function DownloadButton({ packageVersionId }: { packageVersionId: string }) {
+  const download = useDownloadPackage();
+  return (
+    <div className="space-y-1">
+      <Button
+        size="sm"
+        data-testid="download-package"
+        disabled={download.isPending}
+        onClick={() => download.mutate(packageVersionId)}
+      >
+        {download.isPending ? "در حال آماده‌سازی…" : "بارگیری ZIP"}
+      </Button>
+      {download.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {commandErrorFa(download.error)}
+        </p>
+      ) : null}
+      {download.isSuccess ? (
+        <p className="text-xs text-muted-foreground" data-testid="download-done">
+          بستهٔ نمایشی بارگیری شد: <bdi dir="ltr">{download.data}</bdi>
+        </p>
+      ) : null}
+    </div>
   );
 }

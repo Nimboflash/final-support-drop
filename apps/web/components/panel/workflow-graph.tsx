@@ -25,6 +25,7 @@ import {
   type ProductNode,
 } from "@drop/workflow-ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
+import { ReviewActions } from "./review-actions";
 
 /**
  * The workflow tab (V2 02 §9; ADR-0019 D18).
@@ -101,7 +102,9 @@ export function WorkflowGraph({
         </TabsContent>
       </Tabs>
 
-      {selected === null ? null : <NodeInspector node={selected} projectId={projectId} />}
+      {selected === null ? null : (
+        <NodeInspector node={selected} projectId={projectId} world={world} />
+      )}
     </div>
   );
 }
@@ -114,8 +117,33 @@ export function WorkflowGraph({
  * shortcuts render disabled with a Persian reason naming P6; they are not
  * hidden, and nothing here can reach a gateway.
  */
-function NodeInspector({ node, projectId }: { node: ProductNode; projectId: string }) {
+function NodeInspector({
+  node,
+  projectId,
+  world,
+}: {
+  node: ProductNode;
+  projectId: string;
+  world: PanelSnapshot;
+}) {
   const isReviewNode = node.nodeClass === "CONCEPT_REVIEW" || node.nodeClass === "CONTENT_REVIEW";
+  // The graph shortcut acts on the same exact version the card would.
+  const reviewTarget = (() => {
+    if (node.subject === null) return null;
+    if (node.subject.kind === "CONCEPT") {
+      const concept = world.concepts.find((c) => c.id === node.subject!.id);
+      return concept === undefined
+        ? null
+        : ({ type: "CONCEPT", id: concept.id, versionId: concept.activeVersionId } as const);
+    }
+    if (node.subject.kind === "CONTENT") {
+      const item = world.content.find((c) => c.id === node.subject!.id);
+      return item === undefined
+        ? null
+        : ({ type: "CONTENT", id: item.id, versionId: item.activeVersionId } as const);
+    }
+    return null;
+  })();
   return (
     <Card data-testid="node-inspector" className="gap-3">
       <CardHeader>
@@ -152,19 +180,13 @@ function NodeInspector({ node, projectId }: { node: ProductNode; projectId: stri
           </p>
         )}
 
-        {isReviewNode ? (
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" disabled data-testid="graph-approve-shortcut">
-                تأیید
-              </Button>
-              <Button size="sm" variant="outline" disabled data-testid="graph-revise-shortcut">
-                درخواست اصلاح
-              </Button>
-            </div>
+        {isReviewNode && reviewTarget !== null ? (
+          <div className="space-y-2" data-testid="graph-review-shortcut">
+            {/* The SAME control the card and the queue mount, so journey A14's
+                "one audit event from any door" holds by construction. */}
+            <ReviewActions target={reviewTarget} />
             <p className="text-xs text-muted-foreground">
-              میان‌برهای بررسی در تیکت P6 به همان مسیر تأیید کارت و صف بررسی وصل می‌شوند؛ اینجا
-              فقط نمایش داده می‌شوند.
+              این میان‌بر همان مسیر تأیید کارت و صف بررسی را صدا می‌زند.
             </p>
           </div>
         ) : null}

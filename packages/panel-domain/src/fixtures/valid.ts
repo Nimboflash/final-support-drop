@@ -648,6 +648,7 @@ export const VALID_FIXTURES: Readonly<
       familyId: "fam-p2",
       projectId: "p2",
       version: 1,
+      planRevision: 1,
       status: "CURRENT",
       conceptVersionIds: ["c5-v1"],
       contentVersionIds: ["o5-v1", "o6-v1"],

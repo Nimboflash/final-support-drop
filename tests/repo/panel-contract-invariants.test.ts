@@ -152,3 +152,73 @@ describe("one clock, no entropy (AC-P2.22; ADR-0019 D16)", () => {
     }
   });
 });
+
+describe("ApprovalCommand has exactly one construction site (AC-P6.2)", () => {
+  /**
+   * ADR-0013 D1 says the approval endpoint is the only write path. An interface
+   * shape cannot enforce that on its own: any module could assemble an
+   * ApprovalCommand and hand it to the gateway, and the result would still
+   * type-check. What keeps the rule true is that exactly ONE module builds one.
+   *
+   * Counted structurally rather than by grep for a name, so a rename cannot
+   * quietly satisfy it.
+   */
+  function sourceFiles(): string[] {
+    return [
+      ...walk(join(ROOT, "packages", "machine-gateway", "src")),
+      ...walk(join(ROOT, "packages", "mock-data", "src")),
+      ...walk(join(ROOT, "apps", "web", "lib")),
+      ...walk(join(ROOT, "apps", "web", "components")),
+    ].filter((file) => !file.endsWith(".test.ts") && !file.endsWith(".test.tsx"));
+  }
+
+  /**
+   * The two modules permitted to construct one, named explicitly rather than
+   * excluded by a pattern — a blanket exclusion would let a third slip in.
+   *
+   *  - the mock adapter's review facade: the single write path itself;
+   *  - the conformance reference world: the deliberately minimal implementation
+   *    that exists to prove the suite can run AND fail, and which the suite
+   *    severs to demonstrate no second path exists.
+   */
+  const PERMITTED_BUILDERS = [
+    "packages/machine-gateway/src/conformance/review-reference-world.ts",
+    "packages/machine-gateway/src/mock/mock-world.ts",
+  ];
+
+  it("only the review facade and its conformance reference build an approval command", () => {
+    // The tell of a construction: an object literal carrying the two fields
+    // only an ApprovalCommand has together.
+    const builders = sourceFiles().filter((file) => {
+      const source = readFileSync(file, "utf8");
+      return /approvalRequestId\s*:/.test(source) && /subjectVersionId\s*:/.test(source);
+    });
+    expect(
+      builders.map((f) => f.slice(ROOT.length + 1)).sort(),
+      "no module outside the recorded two may construct an ApprovalCommand",
+    ).toEqual(PERMITTED_BUILDERS);
+  });
+
+  it("no surface calls submitApproval directly", () => {
+    for (const file of [
+      ...walk(join(ROOT, "apps", "web", "components")),
+      ...walk(join(ROOT, "apps", "web", "app")),
+    ]) {
+      expect(
+        codeOnly(readFileSync(file, "utf8")),
+        `${file.slice(ROOT.length + 1)} must reach the write path through reviewItem`,
+      ).not.toContain("submitApproval");
+    }
+  });
+
+  it("no gate verb exists as a run command anywhere", () => {
+    // ADR-0013 D2 removed these from the runtime command set; they must not
+    // reappear as strings a caller could send.
+    for (const file of sourceFiles()) {
+      const code = codeOnly(readFileSync(file, "utf8"));
+      for (const verb of ["APPROVE_GATE", "REQUEST_CHANGES_GATE", "ESCALATE_GATE"]) {
+        expect(code, `${file.slice(ROOT.length + 1)} names ${verb}`).not.toContain(verb);
+      }
+    }
+  });
+});

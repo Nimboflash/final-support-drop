@@ -438,6 +438,15 @@ export const packageSnapshotSchema = z
     familyId: idSchema,
     projectId: idSchema,
     version: z.int().positive("PACKAGE_VERSION_MUST_BE_POSITIVE"),
+    /**
+     * The output-plan revision this snapshot was assembled against.
+     *
+     * V2 03 §7 keys assembly on "project + included content-version IDs + plan
+     * revision". The first two are already fields; carrying the third makes the
+     * identity checkable without encoding it into the id, which `idSchema`
+     * would reject as not URL-safe opaque.
+     */
+    planRevision: rowVersionSchema,
     status: z.enum(PACKAGE_STATUSES),
     conceptVersionIds: z.array(idSchema).min(1, "PACKAGE_REQUIRES_A_CONCEPT_VERSION"),
     contentVersionIds: z.array(idSchema).min(1, "PACKAGE_REQUIRES_A_CONTENT_VERSION"),

@@ -259,6 +259,9 @@ export function normalizePackage(wire: Record<string, unknown>): PackageSnapshot
   return packageSnapshotSchema.parse({
     ...wire,
     status: toStoredCode(String(wire.status)),
+    // The V2 seed predates the plan-revision key; its single package was
+    // assembled against plan revision 1.
+    planRevision: (wire.planRevision as number | undefined) ?? 1,
   });
 }
 

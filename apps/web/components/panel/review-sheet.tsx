@@ -17,6 +17,7 @@ import {
   TabsTrigger,
   useIsMobile,
 } from "@drop/ui";
+import { ReviewActions } from "./review-actions";
 import type {
   Concept,
   ContentItem,
@@ -163,7 +164,7 @@ export function ReviewSheet({
           </TabsContent>
         </Tabs>
 
-        <ReviewFooter view={view} />
+        <ReviewFooter view={view} onDone={() => onOpenChange(false)} />
       </SheetContent>
     </Sheet>
   );
@@ -191,32 +192,28 @@ function CommentList({ world, target }: { world: PanelSnapshot; target: Target }
 }
 
 /**
- * The footer names the exact target version and states why an action is
- * unavailable. "Buttons show pending state; failures retain draft feedback"
- * (V2 02 §6) — the wiring itself is P6, so every control is disabled with its
- * reason rather than hidden.
+ * The footer names the exact target version and delegates to the shared review
+ * controls, so the sheet is not a fourth place approval logic lives.
+ *
+ * A blocked item's approval is refused WITH its reason (V2 01 §5: critical
+ * missing evidence blocks approval of affected required content), rather than
+ * the control disappearing.
  */
-function ReviewFooter({ view }: { view: ReviewTargetView }) {
-  const blocked = view.blockedReasonFa !== null;
-  const reason = blocked
-    ? "تا زمانی که وابستگی نبود مدرک برطرف نشود، تأیید ممکن نیست."
-    : "ثبت تصمیم در تیکت P6 فعال می‌شود.";
+function ReviewFooter({ view, onDone }: { view: ReviewTargetView; onDone?: () => void }) {
   return (
     <div className="mt-auto space-y-2 border-t p-4" data-testid="review-footer">
       <p className="text-xs text-muted-foreground">
-        تصمیم روی نسخهٔ <bdi dir="ltr">{view.versionLabel}</bdi> ثبت می‌شود. {reason}
+        تصمیم روی نسخهٔ <bdi dir="ltr">{view.versionLabel}</bdi> ثبت می‌شود.
       </p>
-      <div className="flex flex-wrap gap-2">
-        <Button disabled data-testid="approve-action">
-          تأیید
-        </Button>
-        <Button variant="outline" disabled data-testid="request-changes-action">
-          درخواست اصلاح
-        </Button>
-        <Button variant="ghost" disabled data-testid="reject-action">
-          رد کردن
-        </Button>
-      </div>
+      <ReviewActions
+        target={view.target}
+        disabledReasonFa={
+          view.blockedReasonFa === null
+            ? null
+            : "تا زمانی که وابستگی نبود مدرک برطرف نشود، تأیید ممکن نیست."
+        }
+        onDone={onDone}
+      />
     </div>
   );
 }

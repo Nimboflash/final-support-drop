@@ -15,6 +15,8 @@ import {
 } from "@drop/ui";
 import type { Concept, PanelSnapshot, ReviewStatus } from "@drop/panel-domain";
 import { ReviewSheet, conceptView, type ReviewTargetView } from "./review-sheet";
+import { ReviewActions } from "./review-actions";
+import { commandErrorFa, useRequestRevision } from "../../lib/demo/commands";
 
 /**
  * The candidate grid (V2 01 §4, 02 §6).
@@ -180,29 +182,73 @@ function ConceptCard({
           نسخهٔ <bdi dir="ltr">{active?.number ?? 1}</bdi> — {toPersianDigits(String(comments))} نظر
         </p>
 
-        <div className="flex flex-wrap gap-2">
-          {concept.reviewStatus === "REJECTED" ? (
-            <>
-              {/* V2 01 §4 — rejection offers an explicit revise OR replace. */}
-              <Button size="sm" variant="outline" disabled data-testid="revise-idea">
-                بازنگری این ایده
-              </Button>
-              <Button size="sm" variant="ghost" disabled data-testid="generate-replacement">
-                ساخت جایگزین
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button size="sm" disabled data-testid="approve-concept">
-                تأیید
-              </Button>
-              <Button size="sm" variant="outline" disabled data-testid="request-changes-concept">
-                درخواست اصلاح
-              </Button>
-            </>
-          )}
-        </div>
+        {concept.reviewStatus === "REJECTED" ? (
+          // V2 01 §4 — a rejected card offers an explicit revise OR replace, and
+          // stays visible either way. Rejection is never deletion.
+          <RejectedFollowUp concept={concept} />
+        ) : (
+          <ReviewActions
+            target={{ type: "CONCEPT", id: concept.id, versionId: concept.activeVersionId }}
+            expectedRowVersion={concept.rowVersion}
+          />
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * What a rejected concept offers next (V2 01 §4; AC-P6.3).
+ *
+ * Revise keeps the concept id and produces a new version that returns to review
+ * without inheriting approval. Replace mints a new id carrying
+ * `replacesConceptId`, and the original stays visible in history. Neither
+ * deletes anything, and neither starts an unreviewable loop: both land back in
+ * review.
+ */
+function RejectedFollowUp({ concept }: { concept: Concept }) {
+  const revision = useRequestRevision();
+  const target = { type: "CONCEPT" as const, id: concept.id, versionId: concept.activeVersionId };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="revise-idea"
+          disabled={revision.isPending}
+          onClick={() =>
+            revision.mutate({
+              target,
+              feedbackFa: concept.rejectionReasonFa ?? "بازنگری پس از رد.",
+              route: "CONCEPT_REVISION",
+            })
+          }
+        >
+          بازنگری این ایده
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          data-testid="generate-replacement"
+          disabled={revision.isPending}
+          onClick={() =>
+            revision.mutate({
+              target,
+              feedbackFa: concept.rejectionReasonFa ?? "ساخت جایگزین پس از رد.",
+              route: "CONCEPT_REPLACEMENT",
+            })
+          }
+        >
+          ساخت جایگزین
+        </Button>
+      </div>
+      {revision.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {commandErrorFa(revision.error)}
+        </p>
+      ) : null}
+    </div>
   );
 }
