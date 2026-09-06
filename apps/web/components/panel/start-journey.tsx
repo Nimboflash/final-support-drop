@@ -79,7 +79,7 @@ export function StartJourneyDialog({
         </DialogHeader>
 
         {mode === "CHOOSE" ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(14rem,100%),1fr))]">
             <EntryCard
               testId="entry-blank"
               titleFa="بدون ورودی"

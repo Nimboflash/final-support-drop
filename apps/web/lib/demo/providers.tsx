@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { GatewayError } from "@drop/machine-gateway";
 import { createDemoSession, DEFAULT_SCENARIO_ID, type DemoSession } from "./session";
@@ -45,16 +46,17 @@ function createQueryClient(): QueryClient {
   });
 }
 
-export function DemoProviders({
-  children,
-  scenarioId = DEFAULT_SCENARIO_ID,
-}: {
-  children: ReactNode;
-  scenarioId?: string;
-}) {
-  // useState, not useMemo: the client and the session must survive re-renders,
-  // and useMemo is a caching hint React may discard.
+export function DemoProviders({ children }: { children: ReactNode }) {
+  // useState, not useMemo: the client must survive re-renders, and useMemo is a
+  // caching hint React may discard.
   const [queryClient] = useState(createQueryClient);
+
+  // The selected scenario lives in the URL, like every other view-state choice
+  // in this panel (ADR-0019 D13). That makes a scenario linkable, shareable and
+  // reload-safe without adding a second storage key beside the one ADR-0019 D2
+  // allows.
+  const params = useSearchParams();
+  const scenarioId = params.get("scenario") ?? DEFAULT_SCENARIO_ID;
   const session = useMemo(() => createDemoSession(scenarioId), [scenarioId]);
 
   return (

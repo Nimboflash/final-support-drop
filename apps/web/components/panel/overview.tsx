@@ -70,7 +70,7 @@ export function Overview({ world }: { world: PanelSnapshot }) {
     <div className="space-y-6">
       <OverviewHeader />
 
-      <section aria-label="شمارنده‌ها" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="شمارنده‌ها" className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(14rem,100%),1fr))]">
         <Counter label="پروژه‌های فعال" value={counters.activeProjects} />
         <Counter label="در انتظار بررسی" value={counters.pendingReviews} />
         <Counter label="موارد متوقف" value={counters.blockedItems} tone="danger" />
@@ -116,7 +116,7 @@ export function Overview({ world }: { world: PanelSnapshot }) {
             <h2 id="projects-heading" className="text-lg font-semibold">
               پروژه‌های فعال
             </h2>
-            <ul className="grid gap-3 md:grid-cols-2">
+            <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]">
               {world.projects.map((project) => {
                 const readiness = readinessFor(world, project);
                 return (

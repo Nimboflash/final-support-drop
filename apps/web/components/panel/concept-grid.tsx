@@ -21,8 +21,15 @@ import { commandErrorFa, useRequestRevision } from "../../lib/demo/commands";
 /**
  * The candidate grid (V2 01 §4, 02 §6).
  *
- * Three columns at wide desktop, two at medium, one at mobile, with readability
- * — not the column count — setting the ~300px minimum.
+ * V2 02 §6 asks for three columns at wide desktop, two at medium and one at
+ * mobile, with readability — not the column count — setting the ~300px minimum.
+ *
+ * That is expressed as `auto-fill` over the CONTAINER rather than as viewport
+ * breakpoints, because the two disagree: at a 768px viewport Tailwind's `sm:`
+ * applies and asks for two columns, but the sidebar takes 256px so the track is
+ * only 464px, and two 288px cards overflow the document. `min(18rem, 100%)`
+ * makes a column incapable of exceeding its container, so the count follows the
+ * space that actually exists.
  *
  * A rejected card STAYS VISIBLE with its reason: "Rejected does not silently
  * mean deleted" (V2 01 §4). Its revise-versus-replace choice is rendered here
@@ -90,10 +97,10 @@ export function ConceptGrid({ world, projectId }: { world: PanelSnapshot; projec
       ) : (
         <ul
           data-testid="concept-grid"
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]"
         >
           {shown.map((concept) => (
-            <li key={concept.id} className="min-w-[18rem]">
+            <li key={concept.id}>
               <ConceptCard
                 world={world}
                 concept={concept}

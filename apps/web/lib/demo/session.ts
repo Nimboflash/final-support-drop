@@ -56,6 +56,9 @@ export function createDemoSession(scenarioId: string = DEFAULT_SCENARIO_ID): Dem
  * settings page legitimately shows, so it crosses here, at the composition
  * root, rather than by widening the zone.
  */
+/** Shown for the un-narrowed base world in the scenario picker. */
+export const BASE_WORLD_LABEL_FA = "جهان پایهٔ نمایشی";
+
 export interface ScenarioSummary {
   readonly id: string;
   readonly name: string;

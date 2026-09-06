@@ -115,7 +115,7 @@ export function ContentView({ world, projectId }: { world: PanelSnapshot; projec
         ))}
       </div>
 
-      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="content-grid">
+      <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]" data-testid="content-grid">
         {shown.map((item) => (
           <li key={item.id}>
             <ContentCard

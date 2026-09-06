@@ -63,7 +63,7 @@ export function ProjectList({ world }: { world: PanelSnapshot }) {
       {shown.length === 0 ? (
         <EmptyState title="پروژه‌ای با این فیلتر نیست" detail="فیلتر دیگری را امتحان کنید." />
       ) : (
-        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="project-list">
+        <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]" data-testid="project-list">
           {shown.map((project) => {
             const readiness = readinessFor(world, project);
             const open = openReviewCount(world, project.id);
