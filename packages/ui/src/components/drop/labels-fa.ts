@@ -74,7 +74,24 @@ export const FA_LABELS = {
     PENDING: "در انتظار تصمیم",
     APPROVED: "تأییدشده",
     CHANGES_REQUESTED: "نیازمند اصلاح",
+    REJECTED: "ردشده",
     ESCALATED: "ارجاع‌شده",
+  },
+  review: {
+    DRAFT: "پیش‌نویس",
+    IN_REVIEW: "در حال بررسی",
+    REVISION_REQUESTED: "درخواست بازنگری",
+    APPROVED: "تأییدشده",
+    REJECTED: "ردشده",
+  },
+  freshness: {
+    CURRENT: "به‌روز",
+    STALE: "کهنه‌شده",
+  },
+  packageStatus: {
+    CURRENT: "نسخهٔ جاری",
+    HISTORICAL: "بایگانی",
+    STALE: "کهنه‌شده",
   },
   role: {
     WORKSPACE_OWNER: "مالک فضای کاری",

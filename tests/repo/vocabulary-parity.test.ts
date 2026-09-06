@@ -72,32 +72,62 @@ describe("packages/ui and packages/panel-domain transcribe the same vocabulary",
   });
 });
 
-describe("recorded divergence: approval states (ticket P2 finding)", () => {
+describe("approval states: the recorded P2 divergence, now closed", () => {
   /**
-   * FINDING, reported in the P2 handoff rather than repaired here.
+   * HISTORY. Ticket P2 found that `packages/ui`'s `APPROVAL_STATES` omitted
+   * `REJECTED`, which ADR-0013 D2 lists in the decision set and ADR-0012 D1
+   * gives a stage transition for (WAITING_FOR_APPROVAL + REJECTED →
+   * FAILED_FINAL). A rejected approval therefore had no badge at all.
    *
-   * `packages/ui`'s `APPROVAL_STATES` is
-   * PENDING|APPROVED|CHANGES_REQUESTED|ESCALATED — it omits `REJECTED`, which
-   * ADR-0013 D2 lists in the decision set and which ADR-0012 D1 gives a stage
-   * transition for (WAITING_FOR_APPROVAL + REJECTED → FAILED_FINAL, the
-   * `rejection_behavior` terminal case). panel-domain's
-   * `APPROVAL_REQUEST_STATES` includes it, so a rejected approval has no badge
-   * today.
+   * P2 could not repair it: `packages/ui` was outside its files_owned and P1's
+   * component API was frozen. So P2 pinned the divergence and left a note
+   * saying the repair belonged to whichever ticket owned the badge.
    *
-   * P1's component API is frozen and `packages/ui` is outside P2's files_owned,
-   * so this pins the divergence instead of silently patching it. Repair belongs
-   * to the ticket that owns the badge (P4, or P7's hardening pass). When someone
-   * fixes packages/ui, this test fails and points them at this note — intended.
+   * P1-R owns it (ADR-0019 D14, AC-P1R.9). The gap is closed and this test now
+   * asserts the parity it used to assert the absence of.
    */
-  it("packages/ui still omits REJECTED — the gap is recorded, not silently patched", () => {
+  it("packages/ui carries the full ADR-0013 D2 decision set plus PENDING", () => {
     const ui = extractArray(uiSource, "APPROVAL_STATES", "packages/ui");
-    expect(ui).toEqual(["PENDING", "APPROVED", "CHANGES_REQUESTED", "ESCALATED"]);
-    expect(ui).not.toContain("REJECTED");
+    expect(ui).toEqual(["PENDING", "APPROVED", "CHANGES_REQUESTED", "REJECTED", "ESCALATED"]);
   });
 
   it("panel-domain does carry REJECTED, per ADR-0013 D2", () => {
     expect(extractArray(panelSource, "APPROVAL_DECISIONS", "packages/panel-domain")).toContain(
       "REJECTED",
     );
+  });
+
+  it("every ADR-0013 decision has a packages/ui presentation state", () => {
+    const ui = extractArray(uiSource, "APPROVAL_STATES", "packages/ui");
+    for (const decision of extractArray(panelSource, "APPROVAL_DECISIONS", "packages/panel-domain")) {
+      expect(ui, `decision ${decision} needs a badge`).toContain(decision);
+    }
+  });
+});
+
+describe("the V2 card review axis is additive, not a replacement (ADR-0019 D5)", () => {
+  it("REVIEW_STATUSES is exactly the recorded five", () => {
+    expect(extractArray(uiSource, "REVIEW_STATUSES", "packages/ui")).toEqual([
+      "DRAFT", "IN_REVIEW", "REVISION_REQUESTED", "APPROVED", "REJECTED",
+    ]);
+  });
+
+  it("it does not disturb APPROVAL_STATES, which stays the decision vocabulary", () => {
+    const review = extractArray(uiSource, "REVIEW_STATUSES", "packages/ui");
+    const approval = extractArray(uiSource, "APPROVAL_STATES", "packages/ui");
+    // The two axes overlap on APPROVED/REJECTED by design, but the review axis
+    // must never acquire a decision-only member: CHANGES_REQUESTED is what a
+    // reviewer SUBMITS, REVISION_REQUESTED is what the card then SHOWS.
+    expect(review).not.toContain("CHANGES_REQUESTED");
+    expect(review).not.toContain("ESCALATED");
+    expect(approval).not.toContain("REVISION_REQUESTED");
+    expect(approval).not.toContain("IN_REVIEW");
+  });
+
+  it("freshness is a separate axis and never a review status (V2 01 §8)", () => {
+    const freshness = extractArray(uiSource, "FRESHNESS_STATES", "packages/ui");
+    expect(freshness).toEqual(["CURRENT", "STALE"]);
+    const review = extractArray(uiSource, "REVIEW_STATUSES", "packages/ui");
+    for (const value of freshness) expect(review).not.toContain(value);
   });
 });

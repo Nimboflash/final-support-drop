@@ -2,61 +2,23 @@
 
 import {
   ACTOR_ROLES,
+  APPROVAL_STATES,
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  AlertDialog,
-  AlertDialogTrigger,
-  Calendar,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  ContextMenu,
-  ContextMenuTrigger,
-  Dialog,
-  DialogTrigger,
-  Drawer,
-  DrawerTrigger,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  Field,
-  FieldLabel,
-  HoverCard,
-  HoverCardTrigger,
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  Popover,
-  PopoverTrigger,
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-  ScrollArea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Sheet,
-  SheetTrigger,
-  Toaster,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  APPROVAL_STATES,
   ActorRoleChip,
   Alert,
   AlertDescription,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
   AlertTitle,
   ApprovalBadge,
   Badge,
@@ -69,25 +31,80 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   Button,
+  Calendar,
   Checkbox,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  ContextMenu,
+  ContextMenuTrigger,
   DegradedModeBanner,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   EmptyState,
   ErrorState,
+  Field,
+  FieldLabel,
+  HoverCard,
+  HoverCardTrigger,
   Input,
   Label,
   LoadingState,
   OfflineState,
   PROGRAM_STATUSES,
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
   PermissionDeniedState,
   PersianDateTime,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   ProgramStatusBadge,
   Progress,
   RUN_STATUSES,
   RadioGroup,
   RadioGroupItem,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
   RunStatusBadge,
   STAGE_STATUSES,
+  ScrollArea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Separator,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
   Skeleton,
   StageStatusBadge,
   Table,
@@ -101,6 +118,11 @@ import {
   TabsList,
   TabsTrigger,
   Textarea,
+  Toaster,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
   cn,
 } from "@drop/ui";
 
@@ -370,28 +392,64 @@ export function GalleryContent({ dark }: { dark: boolean }) {
 
         <Section id="overlays" title="پنجره‌ها و منوها (نمایش بسته)">
           {/*
-            Overlay open-states are P7's visual pass: portals over the full page would
-            make these full-page baselines nondeterministic. Triggers prove the owned
-            components mount and are keyboard-reachable.
+            Overlay open-states stay OUT of the full-page baselines — a portal over
+            the page makes them nondeterministic, which is why P1 deferred them.
+            They do now carry content, because AC-P1R.7 requires proving portal
+            direction (V2 02 §1: "Set direction explicitly in sheets/popovers/dialog
+            portals"), and an empty portal proves nothing. The e2e opens each one
+            and asserts dir=rtl inside; the snapshots never open them.
           */}
           <div className="flex flex-wrap items-center gap-3">
             <Dialog>
               <DialogTrigger asChild><Button variant="outline">گفت‌وگو</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>عنوان گفت‌وگو</DialogTitle>
+                  <DialogDescription>متن توضیحی کوتاه برای آزمون جهت.</DialogDescription>
+                </DialogHeader>
+              </DialogContent>
             </Dialog>
             <AlertDialog>
               <AlertDialogTrigger asChild><Button variant="outline">تأیید حذف</Button></AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>حذف انجام شود؟</AlertDialogTitle>
+                  <AlertDialogDescription>این کار بازگشت‌پذیر نیست.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>انصراف</AlertDialogCancel>
+                  <AlertDialogAction>حذف</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
             </AlertDialog>
             <Sheet>
               <SheetTrigger asChild><Button variant="outline">پنل کناری</Button></SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>پنل بررسی</SheetTitle>
+                  <SheetDescription>پنل بازبینی در تیکت P4 پر می‌شود.</SheetDescription>
+                </SheetHeader>
+              </SheetContent>
             </Sheet>
             <Drawer>
               <DrawerTrigger asChild><Button variant="outline">کشو</Button></DrawerTrigger>
+              <DrawerContent>
+                <DrawerHeader>
+                  <DrawerTitle>کشوی موبایل</DrawerTitle>
+                  <DrawerDescription>در نمایش موبایل جای پنل کناری را می‌گیرد.</DrawerDescription>
+                </DrawerHeader>
+              </DrawerContent>
             </Drawer>
             <DropdownMenu>
               <DropdownMenuTrigger asChild><Button variant="outline">منوی عملیات</Button></DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem>بازبینی</DropdownMenuItem>
+                <DropdownMenuItem>رد کردن</DropdownMenuItem>
+              </DropdownMenuContent>
             </DropdownMenu>
             <Popover>
               <PopoverTrigger asChild><Button variant="outline">پاپ‌اور</Button></PopoverTrigger>
+              <PopoverContent>محتوای پاپ‌اور برای آزمون جهت.</PopoverContent>
             </Popover>
             <TooltipProvider>
               <Tooltip>

@@ -11,11 +11,14 @@ import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  // enableSystem is false app-side (ADR-0019 D14), so "system" was never a
+  // reachable value here; dark is the default workspace theme.
+  const { theme = "dark" } = useTheme()
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
+      dir="rtl"
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

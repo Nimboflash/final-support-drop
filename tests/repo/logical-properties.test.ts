@@ -50,16 +50,40 @@ describe("single theme file (AC-P1.4, 09 §3)", () => {
     expect(theme).toContain("layer 2: semantic");
     expect(theme).toContain("layer 3: component");
     expect(theme).toContain("PROVISIONAL");
-    // one Lens accent TOKEN: --accent/--ring only ever reference it (ADR 0010 D10);
-    // each theme block may redefine the token itself (runtime Lens replacement point).
+    // ONE brand accent TOKEN (ADR 0010 D10, not amended). It carries focus,
+    // selection and active navigation; each theme block may redefine the token
+    // itself, which is the runtime Lens replacement point.
+    //
+    // ADR-0019 D14 split `--accent` off it. `--accent` is upstream shadcn's
+    // NEUTRAL hover tint — while it aliased the brand accent, every surface
+    // built on it rendered rust, loading skeletons included. So the assertion
+    // inverts for --accent and holds for --ring and --selected.
     const accentRefs = theme.match(/--accent:\s*([^;]+);/g) ?? [];
+    expect(accentRefs.length, "--accent is defined in both theme blocks").toBeGreaterThanOrEqual(2);
     for (const ref of accentRefs) {
-      expect(ref, "--accent must reference the Lens accent token, never a literal").toContain("var(--drop-lens-accent)");
+      expect(ref, "--accent is the neutral hover tint and must NOT alias the brand accent (ADR-0019 D14)").not.toContain("var(--drop-lens-accent)");
     }
-    const ringRefs = theme.match(/--ring:\s*([^;]+);/g) ?? [];
-    for (const ref of ringRefs) {
-      expect(ref, "--ring must reference the Lens accent token, never a literal").toContain("var(--drop-lens-accent)");
+    for (const [name, refs] of [
+      ["--ring", theme.match(/--ring:\s*([^;]+);/g) ?? []],
+      ["--selected", theme.match(/--selected:\s*([^;]+);/g) ?? []],
+    ] as const) {
+      expect(refs.length, `${name} is defined in both theme blocks`).toBeGreaterThanOrEqual(2);
+      for (const ref of refs) {
+        expect(ref, `${name} must reference the Lens accent token, never a literal`).toContain("var(--drop-lens-accent)");
+      }
     }
     expect((theme.match(/--drop-lens-accent:/g) ?? []).length, "token defined once per theme block at most").toBeLessThanOrEqual(2);
+  });
+
+  it("carries the four owner-approved DROP colors (ADR-0019 D14, V2 02 §1)", () => {
+    const theme = readFileSync(join(ROOT, "packages", "ui", "src", "theme.css"), "utf8");
+    for (const [name, value] of [
+      ["--drop-charcoal", "#121212"],
+      ["--drop-paper", "#f5f5f5"],
+      ["--drop-aluminium", "#b3b6b9"],
+      ["--drop-logo-charcoal", "#1e1e1e"],
+    ]) {
+      expect(theme, `${name} carries its approved value`).toContain(`${name}: ${value}`);
+    }
   });
 });

@@ -15,6 +15,7 @@ export * from "./components/ui/badge";
 export * from "./components/ui/breadcrumb";
 export * from "./components/ui/button";
 export * from "./components/ui/calendar";
+export * from "./components/ui/card";
 export * from "./components/ui/checkbox";
 export * from "./components/ui/collapsible";
 export * from "./components/ui/command";
@@ -45,8 +46,12 @@ export * from "./components/ui/textarea";
 export * from "./components/ui/tooltip";
 
 // ---- DROP domain layer ----
+// hooks — P4/P6 need the responsive switch for the review sheet (V2 02 §6)
+export { useIsMobile } from "./hooks/use-mobile";
+
 export * from "./components/drop/vocabulary";
 export * from "./components/drop/labels-fa";
+export * from "./components/drop/stage-strip";
 export * from "./components/drop/status";
 export * from "./components/drop/primitives";
 

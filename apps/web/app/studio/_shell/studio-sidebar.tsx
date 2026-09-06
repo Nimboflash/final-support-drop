@@ -3,46 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  CalendarDays,
-  FolderKanban,
-  Inbox,
-  Layers,
-  LayoutDashboard,
-  Library,
-  PlayCircle,
-  Settings,
-  Telescope,
-  Users,
-  Workflow,
-} from "lucide-react";
-import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@drop/ui";
+import { STUDIO_NAV, isNavItemActive } from "./studio-nav";
 
-/** The 04 §2 global navigation — Persian labels, right-side RTL placement. */
-export const STUDIO_NAV = [
-  { label: "نمای کلی", href: "/studio", icon: LayoutDashboard },
-  { label: "پروژه‌ها", href: "/studio/projects", icon: FolderKanban },
-  { label: "برنامه‌ها", href: "/studio/programs", icon: Layers },
-  { label: "لنزهای هفته", href: "/studio/lenses", icon: Telescope },
-  { label: "درخواست‌ها", href: "/studio/requests", icon: Inbox },
-  { label: "تقویم", href: "/studio/calendar", icon: CalendarDays },
-  { label: "اجراها", href: "/studio/runs", icon: PlayCircle },
-  { label: "جریان‌های کاری", href: "/studio/workflows", icon: Workflow },
-  { label: "رجیسترها", href: "/studio/registries", icon: Library },
-  { label: "تیم و دسترسی", href: "/studio/team", icon: Users },
-  { label: "تنظیمات", href: "/studio/settings", icon: Settings },
-] as const;
-
+/** The V2 02 §2 navigation — five destinations plus a secondary Settings. */
 export function StudioSidebar() {
   const pathname = usePathname();
+  const primary = STUDIO_NAV.filter((item) => !item.secondary);
+  const secondary = STUDIO_NAV.filter((item) => item.secondary);
+
   return (
     <Sidebar side="right" collapsible="icon" aria-label="ناوبری اصلی استودیو">
       <SidebarHeader>
@@ -52,24 +31,48 @@ export function StudioSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {STUDIO_NAV.map((item) => {
-                const active =
-                  item.href === "/studio" ? pathname === "/studio" : pathname.startsWith(item.href);
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={active}>
-                      <Link href={item.href}>
-                        <item.icon aria-hidden="true" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {primary.map((item) => (
+                <NavRow key={item.href} item={item} pathname={pathname} />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarSeparator />
+        <SidebarMenu>
+          {secondary.map((item) => (
+            <NavRow key={item.href} item={item} pathname={pathname} />
+          ))}
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function NavRow({
+  item,
+  pathname,
+}: {
+  item: (typeof STUDIO_NAV)[number];
+  pathname: string;
+}) {
+  const active = isNavItemActive(item.href, pathname);
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        isActive={active}
+        // The active destination is the one place the brand accent tints a
+        // surface (ADR-0019 D14). Position is never the only cue: aria-current
+        // carries it for assistive technology.
+        className={active ? "border-e-2 border-e-selected font-medium" : undefined}
+      >
+        <Link href={item.href} aria-current={active ? "page" : undefined}>
+          <item.icon aria-hidden="true" />
+          <span>{item.label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 }
