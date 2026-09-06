@@ -14,6 +14,12 @@ records the ruling; the affected documents are edited to match and cite this num
 
 ### D1 — PanelGateway joins P2; MachineGateway stays untouched
 
+> **Amended in part by ADR-0019 D3 (owner ruling, 2026-09-06).** The read-only guarantee below
+> attaches to `PanelGateway` specifically, and still holds: its seven members are unchanged and
+> it gains no mutation. The V2 pack's panel-resource writes land on a **separate**
+> `PanelCommandGateway`, and targeted regeneration on a separate `RevisionGateway`.
+> `MachineGateway` remains character-for-character unchanged and gains no members.
+
 Ticket P2 defines a second read-only contract, **`PanelGateway`**, for exactly the entity
 groups the owner named: **Programs, Weekly Lenses, approval lists, requests, and
 notifications**. The doc 18 §6 `MachineGateway` interface remains character-for-character
@@ -40,6 +46,10 @@ twelve (eleven packages + `apps/worker`). Panel-active workspaces: `apps/web`,
 `machine-gateway`, `mock-data`).
 
 ### D4 — P3 coverage is binding
+
+> **Extended by ADR-0019 D15 (2026-09-06).** The fourteen (18 §7.2) scenarios remain binding and
+> untrimmable; the V2 pack's S01–S14 are those same fourteen, verified 1:1 and in order. S15–S24
+> are **additive**, which this decision permits. Doc 18 §7.2 is not edited.
 
 P3 must ship fixtures for **every** (18 §7.1) mock entity class and **all fourteen**
 (18 §7.2) scenarios. This is already written into P3's in_scope and AC set; this ADR makes it

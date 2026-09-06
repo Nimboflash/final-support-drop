@@ -7,31 +7,46 @@ auditable creative operating system. Five governed AI machines (01 Concept → 0
 This file exists per `docs/implementation/16_CLAUDE_CODE_BUILD_PROTOCOL.md` §2. It is
 navigation and discipline, not authority. When it disagrees with the documents below, they win.
 
-## Current scope (ADR-0017 — read this first)
+## Current scope (ADR-0017, narrowed by ADR-0019 — read this first)
 
-**Panel first.** This delivery builds the operational dashboard/control panel, the workflow
-graph, and the minimum backend the panel needs — nothing else. Machines 01–05, their runtime,
-queues, DB infrastructure and AI providers are a **separate build** connected later through
-the `MachineGateway` adapter. Everything machine-dependent runs on deterministic typed mocks
-(`docs/implementation/18_SCOPE_CORRECTION_PANEL_FIRST_AND_MOCK_MACHINES.md`). Active tickets
-are the P-series in `docs/tickets/`, run **strictly sequentially** (ADR-0018 D2); tickets
-0.2–0.16 are deferred or superseded per ADR-0017 D2. `apps/worker` and the eleven
-machine-oriented packages are **implementation-frozen through P8** (ADR-0018 D3). Never add
-machine logic, provider calls, or machine infrastructure here.
+**Panel first, and now frontend only.** This delivery builds the operational dashboard/control
+panel and the workflow graph on deterministic typed mocks — nothing else. ADR-0019 D2 withdrew
+doc 18 §4.2's permission for mock API routes and a local mock server: there is **no backend in
+this scope**. Demo state lives in one versioned browser key `drop-panel-demo-v2`, validated on
+hydration, with Reset Demo on corrupt data.
 
-## Authority order (ADR-0011, amended by ADR-0017)
+Machines 01–05, their runtime, queues, DB infrastructure and AI providers are a **separate
+build** connected later through the `MachineGateway` adapter
+(`docs/implementation/18_SCOPE_CORRECTION_PANEL_FIRST_AND_MOCK_MACHINES.md`; the owner's V2
+narrowing is `docs/frontend-v2/`). Active tickets are the P-series in `docs/tickets/`, run
+**strictly sequentially** (ADR-0018 D2, ADR-0019 D20: P1-R → P2 → … → P8); tickets 0.2–0.16 are
+deferred or superseded per ADR-0017 D2. `apps/worker` and the eleven machine-oriented packages
+are **implementation-frozen through P8** (ADR-0018 D3). Never add machine logic, provider calls,
+or machine infrastructure here.
+
+The product journey the panel serves: start with `input=null` or a reference → concept cards →
+approve/reject/comment and selectively regenerate → research and content per approved concept →
+review and regenerate each content item independently → an automatically assembled versioned
+package → a calendar entry, or the unscheduled tray when no date exists.
+
+## Authority order (ADR-0011, amended by ADR-0017 and ADR-0019)
 
 1. `docs/source-material/DROP_BRAND_DNA_v3.0.md` — permanent brand truth.
-2. `docs/implementation/18_...` — **build scope** (panel-first; ADR-0017 D1).
-3. Recorded decisions in `docs/implementation/03_SOURCE_RECONCILIATION_AND_DECISIONS.md`,
+2. `docs/frontend-v2/` — the owner's V2 pack, **build scope only** (ADR-0019 D1).
+3. `docs/implementation/18_...` — **build scope** (panel-first; ADR-0017 D1).
+4. Recorded decisions in `docs/implementation/03_SOURCE_RECONCILIATION_AND_DECISIONS.md`,
    then repo ADRs in `docs/adr/` (0011–0016 repair the bundle's verified defects).
-4. `docs/implementation/02_ADR_0010_DASHBOARD_AND_WORKFLOW_UI.md`.
-5. The numbered implementation docs `docs/implementation/00–17` — the build contract
+5. `docs/implementation/02_ADR_0010_DASHBOARD_AND_WORKFLOW_UI.md`.
+6. The numbered implementation docs `docs/implementation/00–17` — the build contract
    (product language, domain concepts, states, RBAC/approval/audit semantics, and future
    integration contracts; their machine-build instructions are deferred by ADR-0017).
-6. `docs/source-material/{project-master-document,spec-v0,execution-plan}.md` (2026-08-15).
-7. `docs/source-material/DROP_STUDIO_OS_MASTER_BUILD_SPEC_v1.0.md` — baseline reference.
-8. The two PDFs — supporting visual references only.
+7. `docs/source-material/{project-master-document,spec-v0,execution-plan}.md` (2026-08-15).
+8. `docs/source-material/DROP_STUDIO_OS_MASTER_BUILD_SPEC_v1.0.md` — baseline reference.
+9. The two PDFs — supporting visual references only.
+
+The V2 pack governs **scope** — what is built, the navigation, the journey, the tokens. It does
+not govern domain vocabulary, workflow states or approval semantics; those stay with the ADRs,
+reached through projection adapters (ADR-0019 D5, D6, D7, D12).
 
 Never silently resolve a conflict. Follow a recorded decision, or stop and write a new ADR
 (`docs/adr/`, next number). ADR-0011 is **ratified** (owner, 2026-08-21; ADR-0018 D5).
@@ -77,7 +92,8 @@ fixtures in `tests/repo/boundary-fixtures-bad/`:
 ## Build discipline
 
 - **One ticket at a time**, from `docs/tickets/` — work the frontier (all blockers done);
-  0.1 is the sole start. Never implement adjacent tickets.
+  0.1 is the sole start. Never implement adjacent tickets. Current frontier order
+  (ADR-0019 D20): P1-R → P2 → P3 → P4 → P5 → P6 → P7 → P8.
 - TDD at the ticket's declared seams (`docs/testing-strategy.md` defines the five canonical
   seams). Freeze tests/contracts before implementation.
 - Business logic in shared packages, never route handlers or React components.
@@ -91,8 +107,14 @@ fixtures in `tests/repo/boundary-fixtures-bad/`:
   human owner.
 - Stop conditions in doc 16 §6 are hard stops — request a named decision, do not improvise.
 
-## Open client gates (doc 15 §12)
+## Open client gates (doc 15 §12, amended by ADR-0019 D14)
 
 Role holders (Owner / Guardian / FA_EDITORIAL), real project brief, AI provider approval,
-React Flow Pro license, visual identity guide, source vetting. All have documented fallbacks;
-none blocks Release 0. Production approval gates stay blocked until real humans are assigned.
+React Flow Pro license, source vetting. All have documented fallbacks; none blocks Release 0.
+Production approval gates stay blocked until real humans are assigned.
+
+**Visual identity is now partially closed.** The owner approved four DROP colors — Charcoal
+`#121212`, Paper White `#F5F5F5`, Aluminum `#B3B6B9`, Logo Charcoal `#1E1E1E` — a dark-first
+restrained editorial UI, and no warm sepia palette. `--drop-lens-accent` survives as the single
+brand accent (ADR-0010 D10 is not amended). Typography, iconography and imagery direction remain
+open.
