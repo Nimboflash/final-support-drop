@@ -1,0 +1,98 @@
+{
+  "isMock": true,
+  "actors": [
+    {
+      "id": "actor-guardian",
+      "nameFa": "نگار — نمونه",
+      "capabilities": [
+        "concept.review"
+      ]
+    },
+    {
+      "id": "actor-editor",
+      "nameFa": "آرمان — نمونه",
+      "capabilities": [
+        "content.review",
+        "fa.editorial",
+        "comment.create"
+      ]
+    },
+    {
+      "id": "actor-planner",
+      "nameFa": "سارا — نمونه",
+      "capabilities": [
+        "calendar.edit"
+      ]
+    },
+    {
+      "id": "actor-viewer",
+      "nameFa": "بازبین — نمونه",
+      "capabilities": [
+        "read"
+      ]
+    }
+  ],
+  "bibles": [
+    {
+      "id": "bible-p2-v1",
+      "programId": "p2",
+      "approved": true,
+      "conceptVersionIds": [
+        "c4-v1"
+      ],
+      "isMock": true
+    }
+  ],
+  "coveragePlans": [
+    {
+      "id": "coverage-c1-v1",
+      "conceptVersionId": "c1-v1",
+      "frozenAt": "2026-09-06T09:00:00Z",
+      "buckets": [
+        {
+          "region": "iran",
+          "target": 2,
+          "availableSourceIds": [
+            "s1"
+          ],
+          "blockedSourceIds": [
+            "s3"
+          ]
+        },
+        {
+          "region": "international",
+          "target": 2,
+          "availableSourceIds": [
+            "s2"
+          ],
+          "blockedSourceIds": []
+        }
+      ]
+    }
+  ],
+  "retrievalRequests": [
+    {
+      "id": "retrieval-s3",
+      "sourceId": "s3",
+      "affectedContentIds": [
+        "o2"
+      ],
+      "status": "open",
+      "reasonFa": "دسترسی به منبع نمونه مسدود است؛ دریافت قانونی توسط پژوهشگر لازم است."
+    }
+  ],
+  "notifications": [
+    {
+      "id": "n1",
+      "projectId": "p1",
+      "messageFa": "نسخه دوم «رد دست» آماده بررسی است.",
+      "href": "/studio/projects/p1/concepts?concept=c2&version=c2-v2"
+    },
+    {
+      "id": "n2",
+      "projectId": "p1",
+      "messageFa": "مرجع پیشنهاد فیلم در دسترس نیست.",
+      "href": "/studio/projects/p1/content?item=o2"
+    }
+  ]
+}
