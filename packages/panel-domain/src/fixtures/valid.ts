@@ -9,9 +9,15 @@ import * as S from "../index";
  * themselves.
  */
 
-const T0 = "2026-08-21T09:00:00Z";
-const T1 = "2026-08-21T09:05:00Z";
-const T2 = "2026-08-21T09:10:00Z";
+/**
+ * ADR-0019 D16 — the single demo epoch. Re-based from 2026-08-21T09:00:00Z when
+ * the V2 pack landed: its seed, its scenario `fixedClock` and doc 04 §2 all
+ * anchor at 2026-09-06T09:00:00Z, and two clocks in one world make "sort by
+ * recent activity" (V2 02 §4) meaningless.
+ */
+const T0 = "2026-09-06T09:00:00Z";
+const T1 = "2026-09-06T09:05:00Z";
+const T2 = "2026-09-06T09:10:00Z";
 
 export const gatePolicy: S.GatePolicy = {
   gateKey: "CONCEPT_DIRECTION_APPROVAL",
@@ -230,6 +236,16 @@ export const programSummary: S.ProgramSummary = {
   rowVersion: 4,
 };
 
+/** The full Program, reused by both `programSchema` and `panelProjectSchema`'s
+ * PROGRAM arm — the arm EMBEDS this schema so its refines keep firing. */
+export const program: S.Program = {
+  summary: programSummary,
+  constitutionVersionId: "cv_01",
+  sourceBriefId: "brief_01",
+  createdByActorId: "actor_lead",
+  createdAt: T0,
+};
+
 export const weeklyLensSummary: S.WeeklyLensSummary = {
   id: "lens_34",
   programId: "prg_01",
@@ -314,6 +330,9 @@ export const VALID_FIXTURES: Readonly<
     value: {
       workflowDefinitionVersionId: "wfv_01",
       programId: "prg_01",
+      commandId: "cmd_start_01",
+      workspaceId: "drop-demo",
+      actorId: "actor_lead",
       actedAsRole: "PROJECT_LEAD",
       idempotencyKey: "idem_0000000001",
     },
@@ -324,6 +343,9 @@ export const VALID_FIXTURES: Readonly<
       verb: "RETRY_STAGE",
       runId: "run_01",
       stageId: "sr_01",
+      commandId: "cmd_retry_01",
+      workspaceId: "drop-demo",
+      actorId: "actor_lead",
       actedAsRole: "PROJECT_LEAD",
       idempotencyKey: "idem_0000000002",
       expectedRowVersion: 5,
@@ -336,9 +358,23 @@ export const VALID_FIXTURES: Readonly<
       decision: "APPROVED",
       reason: "با معیار DROP FIT هم‌خوان است.",
       subjectVersionId: "dirv_2",
+      commandId: "cmd_approve_01",
+      workspaceId: "drop-demo",
+      actorId: "actor_guardian",
       actedAsRole: "DROP_GUARDIAN",
       idempotencyKey: "idem_0000000003",
       expectedRowVersion: 1,
+    },
+  },
+  commandEnvelopeSchema: {
+    schema: S.commandEnvelopeSchema,
+    value: {
+      commandId: "cmd_env_01",
+      workspaceId: "drop-demo",
+      actorId: "actor_lead",
+      actedAsRole: "PROJECT_LEAD",
+      idempotencyKey: "idem_0000000004",
+      expectedRowVersion: 3,
     },
   },
   commandReceiptSchema: {
@@ -346,6 +382,8 @@ export const VALID_FIXTURES: Readonly<
     value: {
       commandId: "cmd_01",
       accepted: true,
+      status: "SUCCEEDED",
+      correlationId: "corr_01",
       occurredAt: T2,
       origin: "MOCK",
       idempotencyKey: "idem_0000000003",
@@ -390,16 +428,7 @@ export const VALID_FIXTURES: Readonly<
     },
   },
   programSummarySchema: { schema: S.programSummarySchema, value: programSummary },
-  programSchema: {
-    schema: S.programSchema,
-    value: {
-      summary: programSummary,
-      constitutionVersionId: "cv_01",
-      sourceBriefId: "brief_01",
-      createdByActorId: "actor_lead",
-      createdAt: T0,
-    },
-  },
+  programSchema: { schema: S.programSchema, value: program },
   weeklyLensSummarySchema: { schema: S.weeklyLensSummarySchema, value: weeklyLensSummary },
   weeklyLensSchema: {
     schema: S.weeklyLensSchema,
@@ -465,6 +494,250 @@ export const VALID_FIXTURES: Readonly<
       recipientActorId: "actor_lead",
       createdAt: T2,
       kindKey: "APPROVAL_DECIDED",
+    },
+  },
+
+  // ---- ticket P2, V2 product entities (ADR-0019 D11, D12) ----
+  // Shapes and Persian content are transcribed from docs/frontend-v2/mock/seed.json
+  // (project p1, "زیبایی ناتمام"), normalized to the stored UPPER_SNAKE form.
+  referenceInputSchema: {
+    schema: S.referenceInputSchema,
+    value: { kind: "URL", url: "https://example.invalid/imperfection-essay" },
+  },
+  startInputSchema: {
+    schema: S.startInputSchema,
+    // The blank-discovery mode — V2's `input: null`, made explicit.
+    value: { mode: "BLANK" },
+  },
+  outputPlanSchema: {
+    schema: S.outputPlanSchema,
+    value: {
+      revision: 1,
+      includedConceptIds: ["c1"],
+      requiredContentIds: ["o1", "o2", "o3", "o4"],
+      optionalContentIds: [],
+    },
+  },
+  panelProjectSchema: {
+    schema: S.panelProjectSchema,
+    value: {
+      id: "p1",
+      workspaceId: "drop-demo",
+      rowVersion: 1,
+      titleFa: "زیبایی ناتمام",
+      type: "PROGRAM",
+      program,
+      stage: "RESEARCH_CONTENT",
+      input: { mode: "BLANK" },
+      ownerId: "actor-editor",
+      selectedConceptVersionIds: ["c1-v1"],
+      outputPlan: {
+        revision: 1,
+        includedConceptIds: ["c1"],
+        requiredContentIds: ["o1", "o2", "o3", "o4"],
+        optionalContentIds: [],
+      },
+      targetDate: null,
+      createdAt: T0,
+      updatedAt: T2,
+    },
+  },
+  conceptVersionSchema: {
+    schema: S.conceptVersionSchema,
+    value: {
+      id: "c1-v1",
+      conceptId: "c1",
+      number: 1,
+      titleFa: "زیبایی ناتمام",
+      titleEn: "Beautiful Imperfection",
+      thesisFa:
+        "نقص کوچک می‌تواند رد حضور انسان باشد؛ چیزی که تجربه را از یک محصول بی‌نام جدا می‌کند.",
+      dropRationaleFa: "توجه به شخصیت ماده و انتخاب آگاهانه، پیوند این ایده با Taste است.",
+      directions: ["EDITORIAL", "FILM", "MUSIC", "LANDING"],
+      feedbackAppliedFa: null,
+      createdAt: T0,
+    },
+  },
+  conceptSchema: {
+    schema: S.conceptSchema,
+    value: {
+      id: "c1",
+      projectId: "p1",
+      batchId: "batch-p1-1",
+      activeVersionId: "c1-v1",
+      reviewStatus: "APPROVED",
+      freshness: "CURRENT",
+      pendingRevisionId: null,
+      replacesConceptId: null,
+      rejectionReasonFa: null,
+      rowVersion: 2,
+      updatedAt: T1,
+    },
+  },
+  contentVersionSchema: {
+    schema: S.contentVersionSchema,
+    value: {
+      id: "o1-v1",
+      contentId: "o1",
+      conceptVersionId: "c1-v1",
+      number: 1,
+      titleFa: "روایت سردبیری: رد انگشت روی لعاب",
+      bodyFa: "متن نمونهٔ فارسی برای نمایش؛ این محتوا واقعی نیست و ادعای پژوهش ندارد.",
+      sourceIds: ["s1", "s2"],
+      createdAt: T1,
+    },
+  },
+  contentItemSchema: {
+    schema: S.contentItemSchema,
+    value: {
+      id: "o1",
+      projectId: "p1",
+      conceptId: "c1",
+      type: "EDITORIAL",
+      activeVersionId: "o1-v1",
+      reviewStatus: "IN_REVIEW",
+      freshness: "CURRENT",
+      editorialStatus: "PENDING",
+      generationState: "SUCCEEDED",
+      blockedReasonCode: null,
+      blockedReasonFa: null,
+      pendingRevisionId: null,
+      rowVersion: 1,
+      updatedAt: T1,
+      // AC-P2.24 — the graph join travels as a complete pair or not at all.
+      workflowDefinitionVersionId: "wfv_01",
+      nodeKey: "CONTENT_GENERATION",
+    },
+  },
+  panelCommentSchema: {
+    schema: S.panelCommentSchema,
+    value: {
+      id: "cm1",
+      target: { type: "CONCEPT", id: "c1", versionId: "c1-v1" },
+      actorId: "actor-editor",
+      bodyFa: "زاویهٔ روایی خوب است؛ لطفاً پیوند با Taste را صریح‌تر کنید.",
+      createdAt: T1,
+    },
+  },
+  panelDecisionSchema: {
+    schema: S.panelDecisionSchema,
+    value: {
+      id: "d1",
+      target: { type: "CONCEPT", id: "c1", versionId: "c1-v1" },
+      actorId: "actor-editor",
+      activeRole: "REVIEWER_EDITOR",
+      outcome: "APPROVED",
+      // The seed ships approvals with a null reason; the READ model tolerates
+      // it and the write path rejects it (ADR-0019 D5).
+      reasonFa: null,
+      createdAt: T1,
+    },
+  },
+  packageFileSchema: {
+    schema: S.packageFileSchema,
+    value: {
+      path: "content/o5-v1.md",
+      contentVersionId: "o5-v1",
+      body: "# روایت سردبیری\n\nمتن نمونه.",
+    },
+  },
+  packageSnapshotSchema: {
+    schema: S.packageSnapshotSchema,
+    value: {
+      id: "pkg-p2-v1",
+      familyId: "fam-p2",
+      projectId: "p2",
+      version: 1,
+      status: "CURRENT",
+      conceptVersionIds: ["c5-v1"],
+      contentVersionIds: ["o5-v1", "o6-v1"],
+      files: [
+        { path: "README.md", contentVersionId: null, body: "# بستهٔ نمایشی" },
+        { path: "content/o5-v1.md", contentVersionId: "o5-v1", body: "متن نمونه." },
+      ],
+      createdAt: T2,
+      isMock: true,
+    },
+  },
+  panelCalendarEntrySchema: {
+    schema: S.panelCalendarEntrySchema,
+    value: {
+      id: "cal-p2",
+      projectId: "p2",
+      packageFamilyId: "fam-p2",
+      packageVersionId: "pkg-p2-v1",
+      titleFa: "انتشار بستهٔ زیبایی ناتمام",
+      // ADR-0019 D7 — V2's "planned" is PLANNED with a date; "unscheduled" is
+      // PLANNED with date === null. ADR-0015 D5's set is not amended.
+      status: "PLANNED",
+      date: "2026-09-12",
+      endDate: null,
+      startsAt: null,
+      timezone: "Asia/Tehran",
+      ownerId: "actor-editor",
+      noteFa: "",
+      rowVersion: 1,
+    },
+  },
+  panelSnapshotSchema: {
+    schema: S.panelSnapshotSchema,
+    value: {
+      schemaVersion: S.PANEL_SCHEMA_VERSION,
+      snapshotKind: "drop.panel.mock.v2",
+      revision: 1,
+      clock: T0,
+      discoverySeed: 1,
+      projects: [],
+      concepts: [],
+      conceptVersions: [],
+      content: [],
+      contentVersions: [],
+      comments: [],
+      decisions: [],
+      packages: [],
+      calendar: [],
+    },
+  },
+
+  // ---- ticket P2, V2 delta (ADR-0019 D8, D11, D17) ----
+  panelEventSchema: {
+    schema: S.panelEventSchema,
+    value: {
+      eventId: "evt_panel_01",
+      schemaVersion: S.PANEL_SCHEMA_VERSION,
+      workspaceId: "drop-demo",
+      aggregateId: "c1",
+      aggregateRevision: 2,
+      correlationId: "corr_01",
+      occurredAt: T1,
+      type: "panel.concept.reviewed",
+      data: { conceptId: "c1", versionId: "c1-v1" },
+    },
+  },
+  calendarDateSchema: {
+    schema: S.calendarDateSchema,
+    // V2 seed: project p2 carries targetDate "2026-09-12".
+    value: "2026-09-12",
+  },
+  subjectRefSchema: {
+    schema: S.subjectRefSchema,
+    // Whole-aggregate subject: an audit event need not name a version.
+    value: { type: "PROGRAM", id: "prg_01" },
+  },
+  versionedSubjectRefSchema: {
+    schema: S.versionedSubjectRefSchema,
+    value: { type: "ARTIFACT", id: "art_01", versionId: "artv_01" },
+  },
+  targetSchema: {
+    schema: S.targetSchema,
+    value: { type: "CONCEPT", id: "cpt_01", versionId: "cptv_01" },
+  },
+  packageExportSchema: {
+    schema: S.packageExportSchema,
+    value: {
+      bytes: new Uint8Array([0x50, 0x4b, 0x03, 0x04]), // "PK\x03\x04" — a ZIP local file header
+      filename: "DEMO_PACKAGE_p2_v1.zip",
+      mediaType: "application/zip",
     },
   },
 };

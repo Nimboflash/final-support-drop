@@ -76,6 +76,11 @@ export function createReferenceStub(options: ReferenceStubOptions): MachineGatew
     return {
       commandId: `cmd_stub_${commandCounter}`,
       accepted,
+      // ADR-0019 D10 — the V2 tri-state alongside the recorded flag. The stub
+      // reports SUCCEEDED because it applies its effect synchronously; a real
+      // adapter that only queues work must report ACCEPTED (18 §12).
+      status: accepted ? "SUCCEEDED" : "REJECTED",
+      correlationId: `corr_stub_${commandCounter}`,
       occurredAt: now(),
       origin: "MOCK",
       idempotencyKey: `idem_stub_${String(commandCounter).padStart(6, "0")}`,

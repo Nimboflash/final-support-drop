@@ -16,7 +16,7 @@ import { createReferenceStub, REFERENCE_STUB_FIXTURES } from "./reference-stub";
  */
 
 /** 18 §7 — a controllable clock; the stub mints every timestamp from it. */
-const FIXED_NOW = "2026-08-21T12:00:00Z";
+const FIXED_NOW = "2026-09-06T12:00:00Z";
 const fixedClock = () => FIXED_NOW;
 
 describe("the conformance suite runs green against the reference stub", () => {

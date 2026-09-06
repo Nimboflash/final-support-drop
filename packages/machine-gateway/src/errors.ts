@@ -26,6 +26,15 @@ export const GATEWAY_ERROR_REASONS = [
   "INVALID_STATE_TRANSITION",
   /** The payload failed panel-domain validation before transport. */
   "SCHEMA_VALIDATION_FAILED",
+  /**
+   * ADR-0019 D10 — the caller's `expectedRowVersion` is stale.
+   *
+   * Deliberately NOT retryable: V2 03 §4 says the mock "rejects stale
+   * expectedRevision with CONFLICT and asks the UI to refresh while preserving
+   * typed feedback". Replaying the identical command would be stale again, so
+   * the resolution is refresh-then-resubmit, never a retry loop.
+   */
+  "REVISION_CONFLICT",
 ] as const;
 export type GatewayErrorReason = (typeof GATEWAY_ERROR_REASONS)[number];
 
@@ -82,4 +91,15 @@ export const gatewayErrors = {
     new GatewayError("UNAUTHORIZED", `UNAUTHORIZED: current role may not ${action}`, {
       retryable: false,
     }),
+  /**
+   * ADR-0019 D10. The message names both revisions so the UI can tell the user
+   * what changed underneath them, and `nextPermittedActions` points at the
+   * refresh rather than at a retry.
+   */
+  revisionConflict: (kind: string, expected: number, actual: number): GatewayError =>
+    new GatewayError(
+      "REVISION_CONFLICT",
+      `REVISION_CONFLICT: ${kind} moved from revision ${String(expected)} to ${String(actual)}`,
+      { nextPermittedActions: ["REFRESH_AND_RESUBMIT"] },
+    ),
 } as const;

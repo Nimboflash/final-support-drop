@@ -9,5 +9,11 @@
  */
 export type { MachineGateway } from "./machine-gateway";
 export type { PanelGateway } from "./panel-gateway";
+// ADR-0019 D3 — the V2 write surface, kept OFF the read-only PanelGateway.
+export type { PanelCommandGateway } from "./panel-command-gateway";
+export type { RevisionGateway } from "./revision-gateway";
+// ADR-0019 D4 — the facade above the gateways; a member of none of them.
+export type { ReviewApplicationService } from "./review-application-service";
 export * from "./errors";
 export * from "./conformance/index";
+export * from "./conformance/review-path";

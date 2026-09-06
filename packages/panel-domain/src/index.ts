@@ -20,3 +20,13 @@ export * from "./schemas/command";
 export * from "./schemas/artifact";
 export * from "./schemas/audit";
 export * from "./schemas/panel-entities";
+export * from "./schemas/panel-product";
+export * from "./schemas/panel-event";
+
+/**
+ * The projection layer (ADR-0019 D5, D6, D12) — the only place the V2 product
+ * vocabularies meet the recorded ADR vocabularies. Nothing else translates.
+ */
+export * from "./projection/review-status";
+export * from "./projection/product-stage";
+export * from "./projection/wire-codec";

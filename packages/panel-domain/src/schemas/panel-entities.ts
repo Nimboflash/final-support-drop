@@ -21,6 +21,7 @@ import {
   paginationSchema,
   rowVersionSchema,
   stableCodeSchema,
+  versionedSubjectRefSchema,
 } from "./common";
 
 /**
@@ -199,9 +200,7 @@ export const approvalRequestSummarySchema = z
     id: idSchema,
     state: z.enum(APPROVAL_REQUEST_STATES),
     /** 06 §2.2 — a durable request against an exact subject version. */
-    subject: z
-      .object({ type: z.string().min(1), id: idSchema, versionId: idSchema })
-      .strict(),
+    subject: versionedSubjectRefSchema,
     policy: gatePolicySchema,
     runId: idSchema.optional(),
     stageId: idSchema.optional(),

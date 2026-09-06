@@ -10,3 +10,4 @@ export * from "./status";
 export * from "./workflow";
 export * from "./identity";
 export * from "./research";
+export * from "./product";

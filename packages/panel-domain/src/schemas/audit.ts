@@ -11,6 +11,7 @@ import {
   paginationSchema,
   schemaVersionSchema,
   sequenceNumberSchema,
+  subjectRefSchema,
 } from "./common";
 
 /**
@@ -61,10 +62,7 @@ export const auditEventSchema = z
     actor: eventActorSchema.optional(),
     origin: eventOriginSchema.optional(),
     /** 06 §2.2 — the exact immutable subject version a decision bound to. */
-    subject: z
-      .object({ type: z.string().min(1), id: idSchema, versionId: idSchema.optional() })
-      .strict()
-      .optional(),
+    subject: subjectRefSchema.optional(),
   })
   .strict()
   .superRefine((event, ctx) => {

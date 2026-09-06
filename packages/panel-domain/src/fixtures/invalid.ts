@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import * as S from "../index";
-import { VALID_FIXTURES, gatePolicy, definitionVersion, runSummary, stageRun, approvalRequest, programSummary, weeklyLensSummary, artifactVersion } from "./valid";
+import { VALID_FIXTURES, program, programSummary, gatePolicy, definitionVersion, runSummary, stageRun, approvalRequest, weeklyLensSummary, artifactVersion } from "./valid";
 
 /**
  * Rejecting fixtures — every one cites the rule it violates (AC-P2.1) and the
@@ -47,7 +47,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     schemaName: "instantSchema",
     schema: S.instantSchema,
     rule: "06 §1 — UTC persistence; Tehran/Jalali is display only (09 §12)",
-    value: "2026-08-21T09:00:00+03:30",
+    value: "2026-09-06T09:00:00+03:30",
     expectMessage: "INSTANT_MUST_BE_UTC_ISO_8601",
   },
   {
@@ -97,7 +97,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     schemaName: "safeDiagnosticSchema",
     schema: S.safeDiagnosticSchema,
     rule: "18 §4.1 — diagnostics carry a stable code, not free-form provider text",
-    value: { code: "unreachable source", diagnosticId: "diag_7f3a", occurredAt: "2026-08-21T09:05:00Z" },
+    value: { code: "unreachable source", diagnosticId: "diag_7f3a", occurredAt: "2026-09-06T09:05:00Z" },
     expectPath: "code",
   },
   {
@@ -113,7 +113,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     schemaName: "machineConnectionSchema",
     schema: S.machineConnectionSchema,
     rule: "18 §7.2.13 — a disconnected machine is a recorded state, not an arbitrary string",
-    value: { state: "OFFLINE", checkedAt: "2026-08-21T09:10:00Z" },
+    value: { state: "OFFLINE", checkedAt: "2026-09-06T09:10:00Z" },
     expectPath: "state",
   },
   {
@@ -221,7 +221,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     schemaName: "stageAttemptSchema",
     schema: S.stageAttemptSchema,
     rule: "ADR-0012 — a stage state outside the recorded fourteen",
-    value: { id: "att_x", attemptNumber: 1, status: "BLOCKED", startedAt: "2026-08-21T09:00:00Z" },
+    value: { id: "att_x", attemptNumber: 1, status: "BLOCKED", startedAt: "2026-09-06T09:00:00Z" },
     expectPath: "status",
   },
   {
@@ -243,7 +243,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     rule: "18 §7.3 — retry preserves previous attempt history; numbering cannot skip",
     value: {
       ...stageRun,
-      attempts: [{ id: "att_a", attemptNumber: 2, status: "SUCCEEDED", startedAt: "2026-08-21T09:00:00Z" }],
+      attempts: [{ id: "att_a", attemptNumber: 2, status: "SUCCEEDED", startedAt: "2026-09-06T09:00:00Z" }],
     },
     expectMessage: "ATTEMPT_HISTORY_MUST_BE_CONTIGUOUS_FROM_ONE",
   },
@@ -309,6 +309,9 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
       verb: "SKIP_STAGE",
       runId: "run_01",
       stageId: "sr_01",
+      commandId: "cmd_fx",
+      workspaceId: "drop-demo",
+      actorId: "actor_lead",
       actedAsRole: "PROJECT_LEAD",
       idempotencyKey: "idem_0000000010",
     },
@@ -321,6 +324,9 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     rule: "06 §9.2 — a run's subject is a Program or a Weekly Lens",
     value: {
       workflowDefinitionVersionId: "wfv_01",
+      commandId: "cmd_fx",
+      workspaceId: "drop-demo",
+      actorId: "actor_lead",
       actedAsRole: "PROJECT_LEAD",
       idempotencyKey: "idem_0000000011",
     },
@@ -361,7 +367,9 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     value: {
       commandId: "cmd_02",
       accepted: false,
-      occurredAt: "2026-08-21T09:10:00Z",
+      status: "REJECTED",
+      correlationId: "corr_03",
+      occurredAt: "2026-09-06T09:10:00Z",
       origin: "MOCK",
       idempotencyKey: "idem_0000000014",
     },
@@ -375,7 +383,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     value: {
       commandId: "cmd_03",
       accepted: true,
-      occurredAt: "2026-08-21T09:10:00Z",
+      occurredAt: "2026-09-06T09:10:00Z",
       idempotencyKey: "idem_0000000015",
     },
     expectPath: "origin",
@@ -398,7 +406,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
       validatorCodeVersion: "1.2.0",
       validatorChecksum: "sha256-abc",
       passed: true,
-      checkedAt: "2026-08-21T09:05:00Z",
+      checkedAt: "2026-09-06T09:05:00Z",
       findings: [{ code: "MISSING_CITATION" }],
     },
     expectPath: "passed",
@@ -491,7 +499,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     value: {
       summary: { ...programSummary, status: "PUBLISHED" },
       createdByActorId: "actor_lead",
-      createdAt: "2026-08-21T09:00:00Z",
+      createdAt: "2026-09-06T09:00:00Z",
     },
     expectPath: "summary.status",
   },
@@ -499,7 +507,7 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     schemaName: "weeklyLensSummarySchema",
     schema: S.weeklyLensSummarySchema,
     rule: "06 §3.4 — database check: end must be after start",
-    value: { ...weeklyLensSummary, plannedStartAt: "2026-08-21T09:10:00Z", plannedEndAt: "2026-08-21T09:00:00Z" },
+    value: { ...weeklyLensSummary, plannedStartAt: "2026-09-06T09:10:00Z", plannedEndAt: "2026-09-06T09:00:00Z" },
     expectPath: "plannedEndAt",
     expectMessage: "LENS_END_MUST_BE_AFTER_START",
   },
@@ -572,5 +580,261 @@ export const INVALID_FIXTURES: readonly RejectionFixture[] = [
     rule: "06 §2.3 — a notification references a durable source event",
     value: withOverride(valid("notificationSummarySchema") as object, { sourceEventId: "" }),
     expectPath: "sourceEventId",
+  },
+
+  // ---- ticket P2, V2 product entities (ADR-0019 D11, D12) ----
+  //
+  // AC-P2.12: the four refines below live on `programSchema`/`weeklyLensSchema`.
+  // They are asserted THROUGH `panelProjectSchema` on purpose — that is what
+  // proves the union arms EMBED the recorded schemas rather than restating
+  // their fields, which would silently drop every one of them.
+  {
+    schemaName: "panelProjectSchema",
+    schema: S.panelProjectSchema,
+    rule: "06 §3.3 — an IN_PIPELINE Program requires an active run; the embedded programSchema refine must still fire through the union arm",
+    value: {
+      ...(valid("panelProjectSchema") as Record<string, unknown>),
+      program: {
+        ...program,
+        summary: { ...programSummary, status: "IN_PIPELINE", activePipelineRunId: undefined },
+      },
+    },
+    expectMessage: "IN_PIPELINE_PROGRAM_REQUIRES_AN_ACTIVE_RUN",
+  },
+  {
+    schemaName: "panelProjectSchema",
+    schema: S.panelProjectSchema,
+    rule: "06 §3.4 — a Lens end must be after its start; the embedded weeklyLensSchema refine must still fire through the union arm",
+    value: {
+      ...(valid("panelProjectSchema") as Record<string, unknown>),
+      type: "WEEKLY_LENS",
+      program: undefined,
+      lens: {
+        summary: { ...weeklyLensSummary, plannedStartAt: "2026-09-06T09:10:00Z", plannedEndAt: "2026-09-06T09:00:00Z" },
+      },
+      parentProgramId: "prg_01",
+      parentBibleVersionId: "bib_01",
+    },
+    expectMessage: "LENS_END_MUST_BE_AFTER_START",
+  },
+  {
+    schemaName: "panelProjectSchema",
+    schema: S.panelProjectSchema,
+    rule: "06 §3.4 — an APPROVED Lens requires a current context artifact and its exact parent Bible version (18 §7.2 scenario 12)",
+    value: {
+      ...(valid("panelProjectSchema") as Record<string, unknown>),
+      type: "WEEKLY_LENS",
+      program: undefined,
+      lens: { summary: { ...weeklyLensSummary, status: "APPROVED" } },
+      parentProgramId: "prg_01",
+      parentBibleVersionId: "bib_01",
+    },
+    expectMessage: "APPROVED_LENS_REQUIRES_A_CURRENT_CONTEXT_ARTIFACT",
+  },
+  {
+    schemaName: "panelProjectSchema",
+    schema: S.panelProjectSchema,
+    rule: "ADR-0019 D18 / AC-P2.24 — a nodeKey is unique only within a definition version, so half a graph join is rejected",
+    value: { ...(valid("panelProjectSchema") as Record<string, unknown>), nodeKey: "CONCEPT_GENERATION" },
+    expectPath: "workflowDefinitionVersionId",
+    expectMessage: "NODE_KEY_REQUIRES_ITS_DEFINITION_VERSION",
+  },
+  {
+    schemaName: "startInputSchema",
+    schema: S.startInputSchema,
+    rule: "V2 01 §3 — the reference-led mode «با رفرنس» requires at least one valid reference; an empty list is the blank mode wearing the wrong label",
+    value: { mode: "REFERENCE", references: [] },
+    expectMessage: "REFERENCE_START_REQUIRES_AT_LEAST_ONE_REFERENCE",
+  },
+  {
+    schemaName: "referenceInputSchema",
+    schema: S.referenceInputSchema,
+    rule: "V2 01 §3 — URLs allow HTTP(S) only and are never fetched; a file: URL is not an accepted reference",
+    value: { kind: "URL", url: "file:///etc/passwd" },
+    expectMessage: "URL_MUST_BE_HTTP_OR_HTTPS",
+  },
+  {
+    schemaName: "outputPlanSchema",
+    schema: S.outputPlanSchema,
+    rule: "V2 01 §6 — readiness counts required items; an id that is both required and optional makes the denominator meaningless",
+    value: {
+      revision: 1,
+      includedConceptIds: ["c1"],
+      requiredContentIds: ["o1"],
+      optionalContentIds: ["o1"],
+    },
+    expectMessage: "CONTENT_CANNOT_BE_BOTH_REQUIRED_AND_OPTIONAL",
+  },
+  {
+    schemaName: "conceptSchema",
+    schema: S.conceptSchema,
+    rule: "V2 01 §4 — «Reject | Reason required»; a rejected card with no reason is the silent deletion the pack rules out",
+    value: {
+      ...(valid("conceptSchema") as Record<string, unknown>),
+      reviewStatus: "REJECTED",
+      rejectionReasonFa: null,
+    },
+    expectMessage: "REJECTED_CONCEPT_REQUIRES_A_REASON",
+  },
+  {
+    schemaName: "conceptVersionSchema",
+    schema: S.conceptVersionSchema,
+    rule: "ADR-0019 D6 — output types are stored UPPER_SNAKE; V2's lowercase wire literal must go through the codec, never straight into a schema",
+    value: { ...(valid("conceptVersionSchema") as Record<string, unknown>), directions: ["editorial"] },
+    expectPath: "directions.0",
+  },
+  {
+    schemaName: "contentItemSchema",
+    schema: S.contentItemSchema,
+    rule: "00 §4 fail closed — blocked content cannot be approved; V2 01 §5 «critical missing evidence blocks approval of affected required content»",
+    value: {
+      ...(valid("contentItemSchema") as Record<string, unknown>),
+      generationState: "BLOCKED",
+      blockedReasonCode: "SOURCE_UNREACHABLE",
+      blockedReasonFa: "منبع در دسترس نیست.",
+      reviewStatus: "APPROVED",
+    },
+    expectMessage: "BLOCKED_CONTENT_CANNOT_BE_APPROVED",
+  },
+  {
+    schemaName: "contentVersionSchema",
+    schema: S.contentVersionSchema,
+    rule: "V2 01 §5 — every content version is frozen against an exact concept version; version numbers start at 1",
+    value: { ...(valid("contentVersionSchema") as Record<string, unknown>), number: 0 },
+    expectPath: "number",
+  },
+  {
+    schemaName: "panelCommentSchema",
+    schema: S.panelCommentSchema,
+    rule: "ADR-0019 D11 — a Comment is structurally incapable of carrying a decision; V2 01 §4 «Comment … no approval change»",
+    value: { ...(valid("panelCommentSchema") as Record<string, unknown>), outcome: "APPROVED" },
+    expectMessage: "outcome",
+  },
+  {
+    schemaName: "panelDecisionSchema",
+    schema: S.panelDecisionSchema,
+    rule: "V2 01 §4 — «Request changes | Reason plus actionable feedback» and «Reject | Reason required»; only an approval may omit one",
+    value: { ...(valid("panelDecisionSchema") as Record<string, unknown>), outcome: "REJECTED", reasonFa: null },
+    expectMessage: "REJECTION_AND_REVISION_REQUIRE_A_REASON",
+  },
+  {
+    schemaName: "packageFileSchema",
+    schema: S.packageFileSchema,
+    rule: "V2 01 §6 — the manifest names exact item/version IDs; a path is never empty",
+    value: { path: "", contentVersionId: null, body: "x" },
+    expectPath: "path",
+  },
+  {
+    schemaName: "packageSnapshotSchema",
+    schema: S.packageSnapshotSchema,
+    rule: "V2 01 §6 — «no dead download buttons or empty fake archives»; a package with no files is exactly that",
+    value: { ...(valid("packageSnapshotSchema") as Record<string, unknown>), files: [] },
+    expectMessage: "PACKAGE_REQUIRES_AT_LEAST_ONE_FILE",
+  },
+  {
+    schemaName: "panelCalendarEntrySchema",
+    schema: S.panelCalendarEntrySchema,
+    rule: "V2 01 §7 / ADR-0019 D7 — an unscheduled entry is PLANNED with date === null; a range end without a start date is not a date range",
+    value: { ...(valid("panelCalendarEntrySchema") as Record<string, unknown>), date: null, endDate: "2026-09-14" },
+    expectMessage: "RANGE_END_REQUIRES_A_START_DATE",
+  },
+  {
+    schemaName: "panelSnapshotSchema",
+    schema: S.panelSnapshotSchema,
+    rule: "ADR-0019 D8 — schemaVersion stays semver; V2's drop.panel.mock.v2 rides alongside as snapshotKind and never replaces it",
+    value: { ...(valid("panelSnapshotSchema") as Record<string, unknown>), schemaVersion: "drop.panel.mock.v2" },
+    expectMessage: "SCHEMA_VERSION_MUST_BE_SEMVER",
+  },
+
+  // ---- ticket P2, V2 delta (ADR-0019 D8, D11, D17) ----
+  {
+    schemaName: "calendarDateSchema",
+    schema: S.calendarDateSchema,
+    rule: "V2 01 §7 / ADR-0019 D8 — all-day dates persist as ISO CALENDAR DATES; an instant is a different type and must not pass",
+    value: "2026-09-12T00:00:00Z",
+    expectMessage: "CALENDAR_DATE_MUST_BE_ISO_YYYY_MM_DD",
+  },
+  {
+    schemaName: "calendarDateSchema",
+    schema: S.calendarDateSchema,
+    rule: "ADR-0019 D8 — a well-formed but impossible date is still not a date; the regex alone would accept it",
+    value: "2026-02-31",
+    expectMessage: "CALENDAR_DATE_MUST_BE_A_REAL_DATE",
+  },
+  {
+    schemaName: "subjectRefSchema",
+    schema: S.subjectRefSchema,
+    rule: "ADR-0019 D6 — the stored field is `type`; V2's wire name `kind` is translated by the codec, never accepted raw (.strict())",
+    // `type` is present and correct, so the ONLY thing wrong here is the extra
+    // `kind` — which is what makes this fixture prove the codec is mandatory.
+    value: { type: "CONCEPT", id: "cpt_01", kind: "concept" },
+    expectMessage: "kind",
+  },
+  {
+    schemaName: "versionedSubjectRefSchema",
+    schema: S.versionedSubjectRefSchema,
+    rule: "06 §2.2 — a durable approval request binds to an EXACT version; the version id is not optional here",
+    value: { type: "ARTIFACT", id: "art_01" },
+    expectPath: "versionId",
+  },
+  {
+    schemaName: "targetSchema",
+    schema: S.targetSchema,
+    rule: "ADR-0019 D11 — Target narrows the subject to the two reviewable product entities; PROGRAM is not one of them",
+    value: { type: "PROGRAM", id: "prg_01", versionId: "prgv_01" },
+    expectPath: "type",
+  },
+  {
+    schemaName: "packageExportSchema",
+    schema: S.packageExportSchema,
+    rule: "ADR-0019 D17 — the export is bytes plus a filename; a DOM Blob or a string body is exactly what the transport-free rule forbids",
+    value: { bytes: "UEsDBA==", filename: "p.zip", mediaType: "application/zip" },
+    expectPath: "bytes",
+  },
+  {
+    schemaName: "commandEnvelopeSchema",
+    schema: S.commandEnvelopeSchema,
+    rule: "ADR-0019 D10 / V2 03 §5 — activeRole narrows to the closed ACTOR_ROLES enum; an open string would resolve the recorded eight-vs-seven role conflict by accident",
+    value: {
+      commandId: "cmd_env_02",
+      workspaceId: "drop-demo",
+      actorId: "actor_lead",
+      actedAsRole: "demo_concept_reviewer",
+      idempotencyKey: "idem_0000000005",
+    },
+    expectPath: "actedAsRole",
+  },
+  {
+    schemaName: "commandReceiptSchema",
+    schema: S.commandReceiptSchema,
+    rule: "ADR-0019 D10 — the tri-state status and the recorded accepted flag describe one outcome and must not disagree",
+    value: {
+      commandId: "cmd_02",
+      accepted: true,
+      status: "REJECTED",
+      correlationId: "corr_02",
+      occurredAt: "2026-09-06T09:10:00Z",
+      origin: "MOCK",
+      idempotencyKey: "idem_0000000006",
+    },
+    expectMessage: "ACCEPTED_RECEIPT_MUST_NOT_CARRY_REJECTED_STATUS",
+  },
+  {
+    schemaName: "panelEventSchema",
+    schema: S.panelEventSchema,
+    rule: "ADR-0019 D9 — PanelEvent is a distinct DTO from AuditEvent; its type is dotted lower-case, so a recorded audit name in SCREAMING form is not a panel event type",
+    value: {
+      eventId: "evt_panel_02",
+      schemaVersion: "1.0.0",
+      workspaceId: "drop-demo",
+      aggregateId: "c1",
+      aggregateRevision: 1,
+      correlationId: "corr_02",
+      occurredAt: "2026-09-06T09:05:00Z",
+      type: "APPROVAL_DECIDED",
+      data: {},
+    },
+    expectPath: "type",
+    expectMessage: "PANEL_EVENT_TYPE_MUST_BE_DOTTED_LOWER",
   },
 ];

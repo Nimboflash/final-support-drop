@@ -21,8 +21,25 @@ import {
  * 18 §12 (no UI state may claim a real machine operation occurred).
  */
 
-/** 10 §3 — every mutating request carries this envelope. */
+/**
+ * 10 §3 — every mutating request carries this envelope, extended by ADR-0019 D10
+ * with the V2 `CommandMeta` fields.
+ *
+ * Two deliberate narrowings against `docs/frontend-v2/mock/panel-contracts.ts`:
+ *
+ *  - V2 types `activeRole` as a bare `string`. It stays the closed `ACTOR_ROLES`
+ *    enum here — V2 03 §5 itself forbids resolving the recorded eight-roles-
+ *    versus-seven conflict by picking a production count, and an open string
+ *    would do exactly that by accident.
+ *  - V2 names the concurrency token `expectedRevision`. `expectedRowVersion` is
+ *    the recorded name (06 §1) and stays canonical; the alias is accepted only
+ *    at the adapter boundary, by `normalizeCommandMeta` below.
+ */
 const commandEnvelope = {
+  /** V2 03 §4 — idempotency handle; the same id twice returns the first receipt. */
+  commandId: idSchema,
+  workspaceId: idSchema,
+  actorId: idSchema,
   /** 10 §3 — acted-as role where an actor holds multiple roles. */
   actedAsRole: z.enum(ACTOR_ROLES),
   /** 10 §3 — `Idempotency-Key` for commands that can be retried. */
@@ -30,6 +47,39 @@ const commandEnvelope = {
   /** 10 §3 — `expectedRowVersion` for mutable aggregate updates. */
   expectedRowVersion: rowVersionSchema.optional(),
 };
+
+/** The envelope as a schema in its own right (ADR-0019 D10). */
+export const commandEnvelopeSchema = z.object(commandEnvelope).strict();
+export type CommandEnvelope = z.infer<typeof commandEnvelopeSchema>;
+
+/**
+ * Accepts V2's `CommandMeta` shape and returns the canonical envelope.
+ *
+ * `idempotencyKey` derives from `commandId` when absent: V2's `commandId` has no
+ * length floor and `idempotencyKeySchema` requires eight characters, so a short
+ * demo id would otherwise fail validation for a reason that has nothing to do
+ * with the caller's intent.
+ */
+export function normalizeCommandMeta(meta: {
+  commandId: string;
+  workspaceId: string;
+  actorId: string;
+  actedAsRole?: string;
+  activeRole?: string;
+  idempotencyKey?: string;
+  expectedRowVersion?: number;
+  expectedRevision?: number;
+}): unknown {
+  const role = meta.actedAsRole ?? meta.activeRole;
+  return {
+    commandId: meta.commandId,
+    workspaceId: meta.workspaceId,
+    actorId: meta.actorId,
+    actedAsRole: role,
+    idempotencyKey: meta.idempotencyKey ?? `cmd-${meta.commandId}`,
+    expectedRowVersion: meta.expectedRowVersion ?? meta.expectedRevision,
+  };
+}
 
 /**
  * ADR-0013 D2 — the gate verbs are rejected as run/stage command names with a
@@ -142,10 +192,22 @@ export type ApprovalCommand = z.infer<typeof approvalCommandSchema>;
 export const COMMAND_ORIGINS = ["MOCK", "REAL"] as const;
 export type CommandOrigin = (typeof COMMAND_ORIGINS)[number];
 
+/**
+ * V2 03 §4 — "Accepted is not completed." The tri-state is load-bearing: a mock
+ * that returns SUCCEEDED for work it merely queued would be exactly the false
+ * claim 18 §12 forbids.
+ */
+export const RECEIPT_STATUSES = ["ACCEPTED", "SUCCEEDED", "REJECTED"] as const;
+export type ReceiptStatus = (typeof RECEIPT_STATUSES)[number];
+
 export const commandReceiptSchema = z
   .object({
     commandId: idSchema,
     accepted: z.boolean(),
+    /** ADR-0019 D10 — the V2 tri-state, alongside the recorded `accepted` flag. */
+    status: z.enum(RECEIPT_STATUSES),
+    /** V2 03 §4 — ties the receipt to the events the command produced. */
+    correlationId: idSchema,
     occurredAt: instantSchema,
     origin: z.enum(COMMAND_ORIGINS),
     /** Echoes the caller's key so duplicate submissions are recognisable (10 §3). */
@@ -163,6 +225,21 @@ export const commandReceiptSchema = z
         code: "custom",
         path: ["rejectionCode"],
         message: "REJECTED_RECEIPT_REQUIRES_A_REJECTION_CODE",
+      });
+    }
+    // The two flags describe the same outcome and must not disagree.
+    if (receipt.accepted === false && receipt.status !== "REJECTED") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["status"],
+        message: "REJECTED_RECEIPT_MUST_CARRY_REJECTED_STATUS",
+      });
+    }
+    if (receipt.accepted === true && receipt.status === "REJECTED") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["status"],
+        message: "ACCEPTED_RECEIPT_MUST_NOT_CARRY_REJECTED_STATUS",
       });
     }
   });
