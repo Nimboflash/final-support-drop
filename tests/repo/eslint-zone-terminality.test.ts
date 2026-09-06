@@ -133,6 +133,47 @@ describe("the apps/web component trees are governed by the component zone", () =
     expect(denied).toContain("even the composition root uses the gateways");
   });
 
+  it("React Flow is confined to packages/workflow-ui (ticket P5)", () => {
+    // A surface importing the canvas library would let React Flow types become
+    // the integration contract, which 18 §6 forbids.
+    const denied = lintAt(
+      "apps/web/components/zone-probe.tmp.tsx",
+      'import { ReactFlow } from "@xyflow/react";\nexport const x = ReactFlow;\n',
+    );
+    expect(denied).toContain("React Flow lives in packages/workflow-ui only");
+
+    const allowed = lintAt(
+      "packages/workflow-ui/src/zone-probe.tmp.tsx",
+      'import { ReactFlow } from "@xyflow/react";\nexport const x = ReactFlow;\n',
+    );
+    expect(allowed).toBe("");
+  });
+
+  it("packages/workflow-ui keeps every other component restriction", () => {
+    const out = lintAt(
+      "packages/workflow-ui/src/zone-probe.tmp.tsx",
+      'import { baseWorld } from "@drop/mock-data";\nexport const x = baseWorld;\n',
+    );
+    expect(out).toContain("components must never import fixtures directly");
+  });
+
+  it("a TEST file may load a scenario world, but a component may not", () => {
+    // The ban protects components at runtime; a test needs a world to assert
+    // against, and routing it through the gateway would test the gateway.
+    const allowed = lintAt(
+      "packages/workflow-ui/src/zone-probe.tmp.test.ts",
+      'import { loadScenario } from "@drop/mock-data";\nexport const x = loadScenario;\n',
+    );
+    expect(allowed).toBe("");
+
+    // ...and even a test may not reach raw fixture shapes.
+    const denied = lintAt(
+      "packages/workflow-ui/src/zone-probe.tmp.test.ts",
+      'import { VALID_FIXTURES } from "@drop/panel-domain/fixtures";\nexport const x = VALID_FIXTURES;\n',
+    );
+    expect(denied).toContain("even a test asserts against scenario worlds");
+  });
+
   it("still allows apps/web its legitimate 05 §4 edges", () => {
     // pipeline <- web is ALLOWED; widening the packages/ui ban to apps/web is
     // exactly the regression P1-R repaired.

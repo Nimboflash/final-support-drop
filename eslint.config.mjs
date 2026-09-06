@@ -154,7 +154,6 @@ export default tseslint.config(
   },
   {
     files: [
-      "packages/workflow-ui/**/*.{ts,tsx}",
       "apps/web/app/**/*.{ts,tsx}",
       "apps/web/components/**/*.{ts,tsx}",
       "apps/web/lib/**/*.{ts,tsx}",
@@ -165,7 +164,27 @@ export default tseslint.config(
         patterns: [
           { group: ["@drop/mock-data", "@drop/mock-data/*"], message: "18 §6-§7: components must never import fixtures directly \u2014 depend on the gateway interfaces." },
           { group: ["@drop/panel-domain/fixtures", "@drop/panel-domain/fixtures/*"], message: "18 §7: fixture shapes are for adapters, mocks and contract tests \u2014 not for components." },
+          // ticket P5 (18 §6; ADR-0019 D18): the canvas library lives in
+          // packages/workflow-ui and nowhere else, so React Flow objects can
+          // never leak into a surface and become the integration contract.
+          // apps/web imports the DERIVED view model, not the canvas types.
+          { group: ["@xyflow/react", "@xyflow/*"], message: "18 §6: React Flow lives in packages/workflow-ui only \u2014 surfaces consume the derived view model." },
           // Restated from the ticket-0.1 component zone (05 §4).
+          { group: ["drizzle-orm", "drizzle-orm/*"], message: "05 §4: React components must not write directly to Drizzle." },
+        ],
+      }],
+    },
+  },
+  {
+    // packages/workflow-ui OWNS the canvas: React Flow is permitted here and
+    // only here. Every other component-zone restriction still applies, restated
+    // because flat config replaces rather than merges a repeated rule.
+    files: ["packages/workflow-ui/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@drop/mock-data", "@drop/mock-data/*"], message: "18 §6-§7: components must never import fixtures directly \u2014 depend on the gateway interfaces." },
+          { group: ["@drop/panel-domain/fixtures", "@drop/panel-domain/fixtures/*"], message: "18 §7: fixture shapes are for adapters, mocks and contract tests \u2014 not for components." },
           { group: ["drizzle-orm", "drizzle-orm/*"], message: "05 §4: React components must not write directly to Drizzle." },
         ],
       }],
@@ -190,6 +209,28 @@ export default tseslint.config(
       "no-restricted-imports": ["error", {
         patterns: [
           { group: ["@drop/panel-domain/fixtures", "@drop/panel-domain/fixtures/*"], message: "18 §7: even the composition root uses the gateways, never fixture shapes." },
+          { group: ["drizzle-orm", "drizzle-orm/*"], message: "05 §4: React components must not write directly to Drizzle." },
+        ],
+      }],
+    },
+  },
+  {
+    // ---- test files are not components (tickets P4, P5) ----
+    //
+    // The fixture ban exists so a COMPONENT cannot depend on fixture shapes at
+    // runtime (18 §6-§7). A test necessarily loads a scenario world to have
+    // something to assert against, and forcing it through the gateway would
+    // test the gateway rather than the unit. The carve-out is limited to test
+    // files; every other restriction on these trees still applies, restated
+    // because flat config replaces rather than merges.
+    files: [
+      "packages/workflow-ui/**/*.test.{ts,tsx}",
+      "apps/web/**/*.test.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@drop/panel-domain/fixtures", "@drop/panel-domain/fixtures/*"], message: "18 §7: even a test asserts against scenario worlds, not raw fixture shapes." },
           { group: ["drizzle-orm", "drizzle-orm/*"], message: "05 §4: React components must not write directly to Drizzle." },
         ],
       }],

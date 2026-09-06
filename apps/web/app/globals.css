@@ -7,8 +7,12 @@
 @import "tw-animate-css";
 @import "@drop/ui/theme.css";
 
-/* scan the owned component package for utility classes */
+/* Scan every owned component package for utility classes.
+   Missing a package here does not fail any check — it silently omits the
+   classes that package uses, so its components render unstyled: no height, no
+   padding, no borders. packages/workflow-ui was added with ticket P5. */
 @source "../../../packages/ui/src";
+@source "../../../packages/workflow-ui/src";
 
 @custom-variant dark (&:is(.dark *));
 
