@@ -3,14 +3,25 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
 
-// Ticket 0.1 AC-2/AC-3/AC-7 — the workspace-integrity seam.
-// The thirteen-package list of 16 §3 is the binding contract for this ticket.
+// Ticket 0.1 AC-2/AC-3/AC-7 — the workspace-integrity seam,
+// amended by ticket P2 (AC-P2.8) per ADR-0017 D3.
+//
+// The 16 §3 thirteen-package membership contract is amended to
+// "thirteen-frozen-plus-three-panel": the original thirteen stay (as frozen
+// inert placeholders, ADR-0018 D3 — see placeholder-purity.test.ts), and the
+// three (18 §10) panel packages join them.
 const ROOT = join(__dirname, "..", "..");
 
-const EXPECTED_PACKAGES = [
+/** The thirteen of 16 §3. */
+const PACKAGES_16_3 = [
   "core", "studio", "contracts", "db", "pipeline", "workflow-ui",
   "ai-gateway", "retrieval", "storage", "ui", "config", "observability", "testing",
-].sort();
+];
+
+/** The three added by 18 §10 / ADR-0017 D3. */
+const PANEL_PACKAGES_18_10 = ["panel-domain", "machine-gateway", "mock-data"];
+
+const EXPECTED_PACKAGES = [...PACKAGES_16_3, ...PANEL_PACKAGES_18_10].sort();
 const EXPECTED_APPS = ["web", "worker"].sort();
 
 function workspaceDirs(kind: "apps" | "packages"): string[] {
@@ -26,8 +37,23 @@ describe("workspace membership (AC-2)", () => {
     expect(ws.packages.sort()).toEqual(["apps/*", "packages/*"]);
   });
 
-  it("packages/ contains exactly the thirteen 16 §3 packages", () => {
+  it("packages/ contains exactly the sixteen packages (13 of 16 §3 + 3 of 18 §10)", () => {
     expect(workspaceDirs("packages")).toEqual(EXPECTED_PACKAGES);
+    expect(EXPECTED_PACKAGES).toHaveLength(16);
+  });
+
+  it("the amendment is additive — every 16 §3 package survives (ADR-0017 D3)", () => {
+    // ADR-0017 D3: the thirteen "stay as frozen inert placeholders — removing
+    // them would churn a green, committed ticket for no scope gain".
+    for (const pkg of PACKAGES_16_3) {
+      expect(workspaceDirs("packages")).toContain(pkg);
+    }
+  });
+
+  it("the three 18 §10 panel packages are present", () => {
+    for (const pkg of PANEL_PACKAGES_18_10) {
+      expect(workspaceDirs("packages")).toContain(pkg);
+    }
   });
 
   it("apps/ contains exactly web and worker", () => {

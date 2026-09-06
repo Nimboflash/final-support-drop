@@ -30,13 +30,20 @@ describe("forbidden import classes fail lint (AC-4, 05 §4)", () => {
 
   it("has one fixture per forbidden class", () => {
     expect(fixtures.sort()).toEqual([
+      // ticket 0.1 (05 §4)
       "component-imports-drizzle-subpath.ts",
       "component-imports-drizzle.ts",
       "domain-imports-nextjs.ts",
       "domain-imports-provider-sdk.ts",
       "domain-imports-react-flow.ts",
       "ui-imports-domain-services.ts",
-    ]);
+      // ticket P2 (18 §6-§7; AC-P2.10)
+      "component-imports-mock-data.ts",
+      "component-imports-panel-fixtures.ts",
+      "panel-domain-imports-next.ts",
+      "panel-domain-imports-react-flow.ts",
+      "panel-domain-imports-react.ts",
+    ].sort());
   });
 
   it.each(readdirSync(BAD_DIR).filter((f) => f.endsWith(".ts")))(

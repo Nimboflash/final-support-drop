@@ -1,0 +1,23 @@
+{
+  "name": "@drop/machine-gateway",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The 18 §6 MachineGateway interface, the companion PanelGateway (ADR-0018 D1), the typed gateway error model and the adapter-contract conformance suite (ticket P2)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./conformance": "./src/conformance/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@drop/panel-domain": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  }
+}
