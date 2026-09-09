@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@drop/ui";
 import { useDemoSession } from "../../../lib/demo/providers";
 import { BASE_WORLD_LABEL_FA, scenarioCatalogue } from "../../../lib/demo/session";
@@ -13,6 +12,12 @@ import { BASE_WORLD_LABEL_FA, scenarioCatalogue } from "../../../lib/demo/sessio
  * hidden state: the choice lives in the URL, so a particular demo world is
  * shareable, bookmarkable and survives a reload — the same rule the panel
  * applies to filters and sheet identity (ADR-0019 D13).
+ *
+ * These are plain anchors, not `next/link`, deliberately. A client-side
+ * navigation would change the URL without remounting the provider that reads
+ * it, leaving the panel showing the previous world under the new address. A
+ * full navigation reseeds the demo world, which is also the honest semantics: a
+ * different scenario IS a different world.
  *
  * "Settings should not expose API keys or pretend to connect live providers"
  * (V2 02 §2), so the integration section states what is NOT connected rather
@@ -45,7 +50,7 @@ export default function Page() {
             </Badge>
             {active === "BASE" ? null : (
               <Button asChild size="sm" variant="outline">
-                <Link href="/studio/settings">بازگشت به جهان پایه</Link>
+                <a href="/studio/settings">بازگشت به جهان پایه</a>
               </Button>
             )}
           </div>
@@ -107,7 +112,7 @@ function ScenarioRow({
 }) {
   const href = id === "BASE" ? "/studio/settings" : `/studio/settings?scenario=${id}`;
   return (
-    <Link
+    <a
       href={href}
       data-testid="scenario-option"
       data-scenario={id}
@@ -129,6 +134,6 @@ function ScenarioRow({
         {active ? <Badge>فعال</Badge> : null}
       </div>
       <p className="pt-1 text-xs text-muted-foreground">{setup}</p>
-    </Link>
+    </a>
   );
 }

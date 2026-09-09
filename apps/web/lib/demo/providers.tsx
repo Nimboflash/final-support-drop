@@ -1,7 +1,6 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { GatewayError } from "@drop/machine-gateway";
 import { createDemoSession, DEFAULT_SCENARIO_ID, type DemoSession } from "./session";
@@ -21,6 +20,11 @@ export function useDemoSession(): DemoSession {
     throw new Error("useDemoSession must be used inside <DemoProviders>");
   }
   return session;
+}
+
+function readScenarioFromLocation(): string {
+  if (typeof window === "undefined") return DEFAULT_SCENARIO_ID;
+  return new URLSearchParams(window.location.search).get("scenario") ?? DEFAULT_SCENARIO_ID;
 }
 
 function createQueryClient(): QueryClient {
@@ -52,11 +56,19 @@ export function DemoProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createQueryClient);
 
   // The selected scenario lives in the URL, like every other view-state choice
-  // in this panel (ADR-0019 D13). That makes a scenario linkable, shareable and
-  // reload-safe without adding a second storage key beside the one ADR-0019 D2
-  // allows.
-  const params = useSearchParams();
-  const scenarioId = params.get("scenario") ?? DEFAULT_SCENARIO_ID;
+  // in this panel (ADR-0019 D13) — linkable, shareable and reload-safe without a
+  // second storage key beside the one ADR-0019 D2 allows.
+  //
+  // Read from `window.location` rather than `useSearchParams`. This provider is
+  // mounted in the /studio LAYOUT, and `useSearchParams` in a client component
+  // at layout level suspends and never resolves in dev — the whole panel sat on
+  // its loading fallback forever, while production rendered fine. Reading the
+  // location directly has no such boundary.
+  //
+  // Switching scenario is therefore a full navigation (see the Settings links),
+  // which is also the honest semantics: a different scenario is a different
+  // demo world, and reseeding it from scratch is exactly what should happen.
+  const [scenarioId] = useState(() => readScenarioFromLocation());
   const session = useMemo(() => createDemoSession(scenarioId), [scenarioId]);
 
   return (
