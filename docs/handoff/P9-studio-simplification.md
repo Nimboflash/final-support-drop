@@ -196,10 +196,11 @@ from `window.location` instead. A boundary there would only hide it again.
 
 P8 §6.1 through §6.6 all still stand. Two are amended and one is added:
 
-- **§6.1 — there is still no CI, and it is still the highest standing risk.** The repository has
-  no `.github/` and no pipeline. Every guard here is advisory until a human runs it. The counts
-  in §6 below pass today because they were run by hand; nothing prevents the next change from
-  landing red. This remains the single highest-value next step.
+- **§6.1 — CLOSED. CI exists.** `.github/workflows/checks.yml` runs all six canonical checks on
+  every push and every pull request to `main`, and `tests/repo/ci.test.ts` fails if it stops
+  running one of them. The browser job runs on macOS because the visual baselines are
+  platform-pinned to darwin. This was the repository's highest standing risk for its whole life
+  and it is no longer advisory.
 - **§6.3 — the graph still has no committed pixel baseline.** ELK lays out asynchronously and
   React Flow fits on mount, so a baseline would be timing-sensitive. Engine's derived nodes and
   its stage-list equivalence are asserted instead. Unchanged by this work.
@@ -249,7 +250,7 @@ it is proved twice — once at desktop and once at mobile, as §15 instructs.
 
 ## 7. Verified check results
 
-Recorded when the ticket closed. See §5 — nothing re-runs these automatically.
+Recorded when the ticket closed, and re-run on every push since CI landed (§5).
 
 | Command | Result |
 |---|---|

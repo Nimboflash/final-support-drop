@@ -245,14 +245,24 @@ one.
 
 ## 6. Known limitations and standing risks
 
-### 6.1 There is no CI — the highest standing risk
+### 6.1 CI now exists — this risk is closed
 
-The repository has no `.github/` and no pipeline. **Every guard in this repo is advisory unless a
-human runs it.** The frozen-package check, the verbatim-interface check, the boundary zones, the
-determinism scan and 647 tests all pass today because they were run by hand; nothing prevents the
-next change from landing red.
+**Resolved after P9.** `.github/workflows/checks.yml` runs all six canonical checks on every
+push to any branch and on every pull request to `main`. `tests/repo/ci.test.ts` is the guard on
+the guard: it fails if the workflow stops running one of the six, if a second Node or pnpm
+version is pinned beside the ones developers use, or if an install stops being frozen.
 
-Adding CI was out of scope for the V2 pack. It is the single highest-value next step.
+The historical statement, kept because it explains why so much of this repository is written as
+a repo check rather than a convention: until that file existed the repository had no `.github/`
+and no pipeline, so the frozen-package check, the verbatim-interface check, the boundary zones,
+the determinism scan and every test passed only because a human ran them. Adding CI was out of
+scope for the V2 pack, and it stayed the single highest-value next step until the owner asked
+for it.
+
+One property is worth knowing before reading a red run: the browser job runs on **macOS**,
+because Playwright names visual baselines per platform and the committed ones are
+`*-chromium-darwin.png`. A Linux runner would not find them, and would not be comparing the same
+text rendering if it did.
 
 ### 6.2 Zustand was specified but is not used
 

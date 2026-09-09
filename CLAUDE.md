@@ -118,7 +118,10 @@ fixtures in `tests/repo/boundary-fixtures-bad/`:
   parallel lanes open (doc 15 §11). Never edit migrations, `packages/contracts`, or
   approval/audit semantics in parallel lanes.
 - Check commands (established in ticket 0.1, then canonical): `pnpm typecheck`, `pnpm lint`,
-  `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`.
+  `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`. **CI runs all six**
+  (`.github/workflows/checks.yml`) on every push and every PR to `main`; `tests/repo/ci.test.ts`
+  fails if the workflow stops running one of them. Adding a seventh check means adding it in
+  three places — the manifest, the workflow, and that guard's list — and the guard enforces it.
 - Every ticket ends with green checks, independent review (doc 16 §8), a commit citing the
   ticket ID, and the structured handoff of doc 16 §9. Stop at every release gate for the
   human owner.
