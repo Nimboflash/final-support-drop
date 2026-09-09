@@ -140,15 +140,15 @@ export function expandDensity(base: PanelSnapshot): PanelSnapshot {
     updatedAt: DEMO_EPOCH,
   } as PanelSnapshot["projects"][number]);
 
-  cloneProjectBranch(world, "p2", "p5", "بستهٔ آمادهٔ بدون تاریخ", {
+  cloneProjectBranch(world, "p2", "p5", "خروجی آماده بدون تاریخ", {
     stage: "PACKAGE",
     targetDate: null,
   });
-  cloneProjectBranch(world, "p2", "p6", "بستهٔ زمان‌بندی‌شده", {
+  cloneProjectBranch(world, "p2", "p6", "خروجی زمان‌بندی‌شده", {
     stage: "CALENDAR",
     targetDate: "2026-09-15",
   });
-  cloneProjectBranch(world, "p2", "p7", "بسته با خطای ساخت", {
+  cloneProjectBranch(world, "p2", "p7", "خروجی با خطای ساخت", {
     stage: "PACKAGE",
     targetDate: null,
   });
@@ -160,7 +160,7 @@ export function expandDensity(base: PanelSnapshot): PanelSnapshot {
     p7Blocked.generationState = "BLOCKED";
     p7Blocked.reviewStatus = "IN_REVIEW";
     p7Blocked.blockedReasonCode = "ASSEMBLY_FAILED_RETRYABLE";
-    p7Blocked.blockedReasonFa = "ساخت بسته با خطای قابل تلاش دوباره متوقف شد.";
+    p7Blocked.blockedReasonFa = "ساخت خروجی با خطایی متوقف شد که می‌توان دوباره تلاش کرد.";
   }
 
   return panelSnapshotSchema.parse(world);

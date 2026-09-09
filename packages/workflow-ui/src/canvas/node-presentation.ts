@@ -38,7 +38,9 @@ export const NODE_CLASS_LABEL_FA: Readonly<Record<ProductNodeClass, string>> = {
   RESEARCH: "تحقیق",
   CONTENT_GENERATION: "تولید محتوا",
   CONTENT_REVIEW: "بررسی محتوا",
-  PACKAGE: "بسته",
+  // The node CLASS keeps its recorded name `PACKAGE`; only what a person reads
+  // changes (ADR-0020 D5).
+  PACKAGE: "خروجی",
   CALENDAR: "تقویم",
 };
 

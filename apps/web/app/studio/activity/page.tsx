@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { LoadingState } from "@drop/ui";
-import { OutputsPage } from "../../../components/panel/outputs-page";
+import { ActivityPage } from "../../../components/panel/activity-page";
 import { QueryBoundary } from "../../../components/panel/states";
 import { usePanelSnapshot } from "../../../lib/demo/queries";
 
@@ -21,5 +21,5 @@ export default function Page() {
 
 function Surface() {
   const query = usePanelSnapshot();
-  return <QueryBoundary query={query}>{(world) => <OutputsPage world={world} />}</QueryBoundary>;
+  return <QueryBoundary query={query}>{(world) => <ActivityPage world={world} />}</QueryBoundary>;
 }

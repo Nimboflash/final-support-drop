@@ -1,16 +1,25 @@
 "use client";
 
-import { CalendarView } from "../../../components/panel/calendar-view";
+import { Suspense } from "react";
+import { LoadingState } from "@drop/ui";
+import { CalendarPage } from "../../../components/panel/calendar-page";
 import { QueryBoundary } from "../../../components/panel/states";
 import { usePanelSnapshot } from "../../../lib/demo/queries";
 
-/** V2 02 §8 — a wide canvas plus the unscheduled tray. */
+/**
+ * `useSearchParams` needs a Suspense boundary at PAGE level in the app router.
+ * It must never be used at layout level: there it suspends and never resolves
+ * in dev, which once left the whole panel on its loading state.
+ */
 export default function Page() {
-  const query = usePanelSnapshot();
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">تقویم و برنامه</h1>
-      <QueryBoundary query={query}>{(world) => <CalendarView world={world} />}</QueryBoundary>
-    </div>
+    <Suspense fallback={<LoadingState />}>
+      <Surface />
+    </Suspense>
   );
+}
+
+function Surface() {
+  const query = usePanelSnapshot();
+  return <QueryBoundary query={query}>{(world) => <CalendarPage world={world} />}</QueryBoundary>;
 }

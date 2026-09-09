@@ -2,7 +2,7 @@
   "name": "@drop/web",
   "version": "0.0.1",
   "private": true,
-  "description": "DROP OS web app \u2014 Next.js App Router, standalone output (shell placeholder, ticket 0.1)",
+  "description": "DROP OS web app — Next.js App Router, standalone output (shell placeholder, ticket 0.1)",
   "scripts": {
     "dev": "DROP_DEMO=1 next dev -p ${PORT:-3110}",
     "typecheck": "tsc --noEmit",
@@ -16,6 +16,7 @@
     "@drop/ui": "workspace:*",
     "@drop/workflow-ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",
+    "date-fns-jalali": "4.4.0-0",
     "lucide-react": "1.33.0",
     "next": "16.3.1",
     "next-themes": "0.4.6",

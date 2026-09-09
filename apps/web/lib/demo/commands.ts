@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 import { GatewayError } from "@drop/machine-gateway";
-import type { RevisionRoute, Target } from "@drop/panel-domain";
+import type { PanelCalendarEntry, RevisionRoute, Target } from "@drop/panel-domain";
 import { useDemoSession } from "./providers";
 import { panelKeys } from "./queries";
 
@@ -140,6 +140,36 @@ export function useAddComment(): UseMutationResult<
           ...envelope(nextCommandId("comment")),
           target: input.target,
           bodyFa: input.bodyFa,
+        }),
+      ),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Moves a plan item to a date, or clears it back to the tray.
+ *
+ * The calendar's drag affordance and its date picker both route here, so a
+ * pointer is never the only way to reschedule (ADR-0020 D9, journey A20).
+ */
+export function useUpdateCalendarEntry(): UseMutationResult<
+  unknown,
+  Error,
+  { entry: PanelCalendarEntry; date: string | null }
+> {
+  const session = useDemoSession();
+  const envelope = useEnvelope();
+  const invalidate = useInvalidateWorld();
+
+  return useMutation({
+    mutationFn: (input: { entry: PanelCalendarEntry; date: string | null }) =>
+      Promise.resolve(
+        session.world.panelCommandGateway.updateCalendar({
+          ...envelope(nextCommandId("calendar"), input.entry.rowVersion),
+          // The entry is replaced wholesale rather than patched, so the schema
+          // validates the WHOLE record — a partial update could smuggle an
+          // inconsistent pair of date fields past it.
+          entry: { ...input.entry, date: input.date },
         }),
       ),
     onSuccess: invalidate,

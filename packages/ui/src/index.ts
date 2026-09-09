@@ -51,7 +51,6 @@ export { useIsMobile } from "./hooks/use-mobile";
 
 export * from "./components/drop/vocabulary";
 export * from "./components/drop/labels-fa";
-export * from "./components/drop/stage-strip";
 export * from "./components/drop/status";
 export * from "./components/drop/primitives";
 

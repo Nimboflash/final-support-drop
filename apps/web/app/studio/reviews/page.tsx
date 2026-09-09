@@ -1,16 +1,12 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { ReviewsQueue } from "../../../components/panel/reviews-queue";
-import { QueryBoundary } from "../../../components/panel/states";
-import { usePanelSnapshot } from "../../../lib/demo/queries";
-
-/** V2 02 §2 — the cross-project concept and content review queue. */
-export default function Page() {
-  const query = usePanelSnapshot();
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">بررسی‌ها</h1>
-      <QueryBoundary query={query}>{(world) => <ReviewsQueue world={world} />}</QueryBoundary>
-    </div>
-  );
+/**
+ * Retired by ADR-0020 D2. صف بررسی موازی حذف شد؛ تصمیم روی خود محتوا گرفته می‌شود.
+ *
+ * The folder is kept deliberately: `app/studio/[...rest]/page.tsx` sits at the
+ * same depth, so deleting it would render a bare empty state at HTTP 200 — a
+ * dead end that looks like a working page — rather than a 404.
+ */
+export default function Page(): never {
+  redirect("/studio/content");
 }

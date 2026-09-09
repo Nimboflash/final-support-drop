@@ -195,9 +195,14 @@ function Sidebar({
           }
           side={side}
         >
+          {/*
+            fa-IR is the only language this product ships (00 §4). The upstream
+            registry's English copy is screen-reader-only, which is exactly why
+            it survived every visual review.
+          */}
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>منوی کناری</SheetTitle>
+            <SheetDescription>نمایش منوی کناری در نمای موبایل.</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -277,7 +282,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon className="rtl:rotate-180" />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">نمایش یا پنهان‌کردن منو</span>
     </Button>
   )
 }

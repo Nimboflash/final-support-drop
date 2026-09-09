@@ -1,51 +1,110 @@
 import {
   CalendarDays,
-  FolderKanban,
+  Cpu,
+  FileText,
   LayoutDashboard,
+  Lightbulb,
   PackageCheck,
-  Settings,
-  SquareCheckBig,
   type LucideIcon,
 } from "lucide-react";
 
 /**
- * The V2 02 §2 global navigation: five primary destinations plus settings.
+ * The primary navigation, by WORK UNIT (ADR-0020 D2).
  *
- * This supersedes doc 04 §2's eleven destinations (ADR-0019 D13). The seven
- * removed paths are not deleted — each keeps its folder and redirects, because
- * `app/studio/[...rest]/page.tsx` sits at the same depth and would otherwise
- * catch the missing route and render an empty state at HTTP 200: a dead end
- * that looks like a working page.
+ * The simplification brief's governing sentence: the project is only context.
+ * So the destinations are the things a person makes — concepts, content,
+ * outputs, a schedule — plus one operational view (Engine) and the overview
+ * that points at whatever needs attention.
+ *
+ * Settings deliberately is NOT here. ADR-0019 D13 had it as a sixth
+ * destination; the brief moves it to a secondary menu so the primary bar
+ * carries only the path of the work.
  */
 export type StudioNavItem = {
   readonly label: string;
   readonly href: string;
   readonly icon: LucideIcon;
-  /** Settings is secondary (V2 02 §2) and renders in its own footer group. */
-  readonly secondary?: true;
+  /** The one question this destination answers (brief §5). */
+  readonly answersFa: string;
 };
 
 export const STUDIO_NAV: readonly StudioNavItem[] = [
-  { label: "نمای کلی", href: "/studio", icon: LayoutDashboard },
-  { label: "پروژه‌ها", href: "/studio/projects", icon: FolderKanban },
-  { label: "بررسی‌ها", href: "/studio/reviews", icon: SquareCheckBig },
-  { label: "خروجی‌ها", href: "/studio/outputs", icon: PackageCheck },
-  { label: "تقویم و برنامه", href: "/studio/calendar", icon: CalendarDays },
-  { label: "تنظیمات", href: "/studio/settings", icon: Settings, secondary: true },
+  {
+    label: "نمای کلی",
+    href: "/studio",
+    icon: LayoutDashboard,
+    answersFa: "الان چه چیزی به توجه من نیاز دارد؟",
+  },
+  {
+    label: "کانسپت‌ها",
+    href: "/studio/concepts",
+    icon: Lightbulb,
+    answersFa: "چه ایده‌هایی داریم و کدام را ادامه بدهم؟",
+  },
+  {
+    label: "محتوا",
+    href: "/studio/content",
+    icon: FileText,
+    answersFa: "برای کانسپت‌های انتخاب‌شده چه محتواهایی آماده یا ناقص‌اند؟",
+  },
+  {
+    label: "خروجی‌ها",
+    href: "/studio/outputs",
+    icon: PackageCheck,
+    answersFa: "چه چیزی آماده تأیید و انتشار است؟",
+  },
+  {
+    label: "تقویم",
+    href: "/studio/calendar",
+    icon: CalendarDays,
+    answersFa: "چه چیزی چه زمانی منتشر می‌شود؟",
+  },
+  {
+    label: "Engine",
+    href: "/studio/engine",
+    icon: Cpu,
+    answersFa: "هر پروژه اکنون در کدام بخش جریان کار قرار دارد؟",
+  },
 ] as const;
 
-/** Where each destination removed by ADR-0019 D13 sends the user instead. */
+/** Reachable from the profile menu, not the primary bar (ADR-0020 D2). */
+export const SECONDARY_NAV = [
+  { label: "تنظیمات", href: "/studio/settings" },
+  { label: "تاریخچه", href: "/studio/activity" },
+] as const;
+
+/**
+ * Where each retired path now goes.
+ *
+ * Redirects, never deletions: `app/studio/[...rest]/page.tsx` sits at the same
+ * depth, so removing a folder produces a silent HTTP 200 dead end rather than a
+ * 404 (recorded at ADR-0019 D13 and still true).
+ *
+ * The project routes carry their project id forward as `?project=`, so an old
+ * deep link lands on the same work, filtered — which is the whole point of
+ * demoting project from destination to context.
+ */
 export const STUDIO_REDIRECTS = {
-  "/studio/programs": "/studio/projects?type=program",
-  "/studio/lenses": "/studio/projects?type=lens",
-  // Owner ruling (ADR-0019 D13): requests live within project context now, and
-  // the overview's "Needs your attention" list is the work inbox that replaces
-  // a standalone requests queue.
+  "/studio/projects": "/studio/concepts",
+  "/studio/reviews": "/studio/content",
+  "/studio/programs": "/studio/concepts",
+  "/studio/lenses": "/studio/concepts",
   "/studio/requests": "/studio",
-  "/studio/runs": "/studio/projects",
-  "/studio/workflows": "/studio/projects",
+  "/studio/runs": "/studio/engine",
+  "/studio/workflows": "/studio/engine",
   "/studio/registries": "/studio/settings",
   "/studio/team": "/studio/settings",
+} as const satisfies Record<string, string>;
+
+/** Per-tab mapping for the retired project detail page (ADR-0020 D2). */
+export const PROJECT_TAB_REDIRECTS = {
+  overview: "/studio",
+  concepts: "/studio/concepts",
+  content: "/studio/content",
+  outputs: "/studio/outputs",
+  plan: "/studio/calendar",
+  workflow: "/studio/engine",
+  activity: "/studio/activity",
 } as const satisfies Record<string, string>;
 
 export function isNavItemActive(href: string, pathname: string): boolean {

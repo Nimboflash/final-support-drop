@@ -30,3 +30,4 @@ export * from "./schemas/panel-event";
 export * from "./projection/review-status";
 export * from "./projection/product-stage";
 export * from "./projection/wire-codec";
+export * from "./projection/output-type-label";

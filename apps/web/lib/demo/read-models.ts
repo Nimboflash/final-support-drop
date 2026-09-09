@@ -1,3 +1,4 @@
+import { toPersianDigits } from "@drop/ui";
 import type {
   Concept,
   ContentItem,
@@ -69,34 +70,6 @@ export function readinessFor(world: PanelSnapshot, project: PanelProject): Readi
   };
 }
 
-/**
- * The stage-strip states (ADR-0019 D12). The Review segment is DERIVED from open
- * review counts; `PanelProject.stage` has no `review` member and must not gain
- * one to make this easier.
- */
-export type SegmentState = "done" | "current" | "upcoming";
-
-export function stageSegments(
-  world: PanelSnapshot,
-  project: PanelProject,
-): Record<"concepts" | "research_content" | "review" | "package" | "calendar", SegmentState> {
-  const order = ["DRAFT", "CONCEPTS", "RESEARCH_CONTENT", "PACKAGE", "CALENDAR"] as const;
-  const at = order.indexOf(project.stage);
-  const openReviews = openReviewCount(world, project.id);
-
-  const positional = (index: number): SegmentState =>
-    at > index ? "done" : at === index ? "current" : "upcoming";
-
-  return {
-    concepts: positional(1),
-    research_content: positional(2),
-    // Derived, not positional: review is "current" whenever anything is waiting.
-    review: openReviews > 0 ? "current" : at > 2 ? "done" : "upcoming",
-    package: positional(3),
-    calendar: positional(4),
-  };
-}
-
 export function openReviewCount(world: PanelSnapshot, projectId: string): number {
   const concepts = world.concepts.filter(
     (c) => c.projectId === projectId && c.reviewStatus === "IN_REVIEW",
@@ -105,35 +78,6 @@ export function openReviewCount(world: PanelSnapshot, projectId: string): number
     (c) => c.projectId === projectId && c.reviewStatus === "IN_REVIEW",
   ).length;
   return concepts + content;
-}
-
-export function blockedCount(world: PanelSnapshot, projectId?: string): number {
-  return world.content.filter(
-    (c) => (projectId === undefined || c.projectId === projectId) && c.generationState === "BLOCKED",
-  ).length;
-}
-
-/** V2 02 §3 — the four overview counters. */
-export interface OverviewCounters {
-  readonly activeProjects: number;
-  readonly pendingReviews: number;
-  readonly blockedItems: number;
-  readonly packagesReadyOrUnscheduled: number;
-}
-
-export function overviewCounters(world: PanelSnapshot): OverviewCounters {
-  const unscheduled = world.calendar.filter((entry) => entry.date === null).length;
-  const readyWithoutEntry = world.projects.filter((project) => {
-    if (!readinessFor(world, project).ready) return false;
-    return !world.calendar.some((entry) => entry.projectId === project.id);
-  }).length;
-
-  return {
-    activeProjects: world.projects.filter((p) => p.stage !== "DRAFT").length,
-    pendingReviews: world.projects.reduce((sum, p) => sum + openReviewCount(world, p.id), 0),
-    blockedItems: blockedCount(world),
-    packagesReadyOrUnscheduled: unscheduled + readyWithoutEntry,
-  };
 }
 
 /**
@@ -170,9 +114,14 @@ export function attentionRows(world: PanelSnapshot): readonly AttentionRow[] {
         kind: "BLOCKED_REQUIRED",
         projectId: project.id,
         projectTitleFa: project.titleFa,
-        detailFa: `${String(blocked.length)} مورد الزامی به دلیل نبود مدرک متوقف شده است.`,
-        href: `/studio/projects/${project.id}/content`,
-        actionLabelFa: "بررسی وابستگی",
+        // "بررسی وابستگی" is named as technical in the brief (§10); this says
+        // what is needed and offers the action that supplies it.
+        detailFa:
+          blocked.length === 1
+            ? "یک محتوا منتظر منبع است."
+            : `${toPersianDigits(String(blocked.length))} محتوا منتظر منبع‌اند.`,
+        href: `/studio/content?project=${project.id}`,
+        actionLabelFa: "افزودن منبع",
       });
     }
 
@@ -182,9 +131,12 @@ export function attentionRows(world: PanelSnapshot): readonly AttentionRow[] {
         kind: "AWAITING_REVIEW",
         projectId: project.id,
         projectTitleFa: project.titleFa,
-        detailFa: `${String(open)} مورد در انتظار بررسی شماست.`,
-        href: `/studio/projects/${project.id}/concepts`,
-        actionLabelFa: "شروع بررسی",
+        detailFa:
+          open === 1
+            ? "یک مورد به تأیید شما نیاز دارد."
+            : `${toPersianDigits(String(open))} مورد به تأیید شما نیاز دارند.`,
+        href: `/studio/concepts?project=${project.id}`,
+        actionLabelFa: "بررسی",
       });
     }
 
@@ -196,7 +148,8 @@ export function attentionRows(world: PanelSnapshot): readonly AttentionRow[] {
         kind: "MISSING_SCHEDULE",
         projectId: project.id,
         projectTitleFa: project.titleFa,
-        detailFa: "بسته آماده است اما تاریخی برایش تعیین نشده.",
+        // "بسته" leaves the interface entirely (ADR-0020 D5).
+        detailFa: "خروجی آماده است اما تاریخی برایش تعیین نشده.",
         href: "/studio/calendar",
         actionLabelFa: "تعیین تاریخ",
       });

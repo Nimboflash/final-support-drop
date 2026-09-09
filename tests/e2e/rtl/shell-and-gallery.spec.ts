@@ -6,6 +6,10 @@ import AxeBuilder from "@axe-core/playwright";
  * local-fonts/no-external-requests (AC-P1.5), state primitives on scaffolds
  * (AC-P1.10), themes + axe WCAG 2.2 AA + reduced motion (AC-P1.11), and the
  * committed visual baselines at the three 09 §14 breakpoints.
+ *
+ * Retargeted by ticket P9 to the work-unit navigation (ADR-0020 D2). The shell
+ * contract itself is unchanged — direction, fonts, focus, axe and the baselines
+ * are all still asserted here; only the destinations moved.
  */
 
 const BREAKPOINTS = [
@@ -16,29 +20,41 @@ const BREAKPOINTS = [
 
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 
-// V2 02 §2 — five primary destinations plus a secondary Settings. This
-// supersedes doc 04 §2's eleven entries (ADR-0019 D13).
-const NAV_LABELS = [
-  "نمای کلی", "پروژه‌ها", "بررسی‌ها", "خروجی‌ها", "تقویم و برنامه", "تنظیمات",
-];
+// The six primary destinations are the work units plus Engine (ADR-0020 D2).
+// This supersedes ADR-0019 D13's five, which were named after stages of a
+// process rather than after the things a person works on.
+const NAV_LABELS = ["نمای کلی", "کانسپت‌ها", "محتوا", "خروجی‌ها", "تقویم", "Engine"];
 
-// The seven destinations ADR-0019 D13 removed, with where each now lands.
+// Settings and history left the sidebar; they are not work.
+const SECONDARY_LABELS = ["تنظیمات", "تاریخچه"];
+
+// Every destination retired by either restructure, with where it now lands.
 // They REDIRECT rather than 404: `app/studio/[...rest]/page.tsx` sits at the
 // same depth, so deleting a folder would silently render an empty state at
 // HTTP 200 instead.
 const REDIRECTS: readonly (readonly [string, string])[] = [
-  ["/studio/programs", "/studio/projects?type=program"],
-  ["/studio/lenses", "/studio/projects?type=lens"],
+  ["/studio/projects", "/studio/concepts"],
+  ["/studio/reviews", "/studio/content"],
+  ["/studio/programs", "/studio/concepts"],
+  ["/studio/lenses", "/studio/concepts"],
   ["/studio/requests", "/studio"],
-  ["/studio/runs", "/studio/projects"],
-  ["/studio/workflows", "/studio/projects"],
+  ["/studio/runs", "/studio/engine"],
+  ["/studio/workflows", "/studio/engine"],
   ["/studio/registries", "/studio/settings"],
   ["/studio/team", "/studio/settings"],
 ];
 
-// V2 02 §5 — the seven always-visible project tabs.
-const PROJECT_TAB_LABELS = [
-  "خلاصه", "کانسپت‌ها", "محتوا و تحقیق", "خروجی نهایی", "برنامه", "گردش کار", "تاریخچه",
+// The seven project tabs ADR-0020 D2 dissolved, with the destination each
+// folds into. A project is now a filter, so every tab had a work unit to
+// land on.
+const PROJECT_TAB_REDIRECTS: readonly (readonly [string, string])[] = [
+  ["overview", "/studio"],
+  ["concepts", "/studio/concepts"],
+  ["content", "/studio/content"],
+  ["outputs", "/studio/outputs"],
+  ["plan", "/studio/calendar"],
+  ["workflow", "/studio/engine"],
+  ["activity", "/studio/activity"],
 ];
 
 test.describe("root direction (AC-P1.1)", () => {
@@ -78,14 +94,39 @@ test.describe("no request leaves the app origin (AC-P1.5; 00 §4)", () => {
 });
 
 test.describe("/studio shell (AC-P1.9)", () => {
-  test("renders exactly the six V2 02 §2 navigation entries", async ({ page }) => {
+  test("renders exactly the six work-unit destinations (ADR-0020 D2)", async ({ page }) => {
     await page.goto("/studio");
+    const nav = page.getByRole("navigation");
     for (const label of NAV_LABELS) {
-      await expect(page.getByRole("link", { name: label })).toBeVisible();
+      await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
-    // and none of the eleven that ADR-0019 D13 removed
-    for (const gone of ["برنامه‌ها", "لنزهای هفته", "درخواست‌ها", "اجراها", "جریان‌های کاری", "رجیسترها", "تیم و دسترسی"]) {
-      await expect(page.getByRole("link", { name: gone, exact: true })).toHaveCount(0);
+    // No stage of a process, and no project, is a destination any more.
+    for (const gone of [
+      "پروژه‌ها", "بررسی‌ها", "برنامه‌ها", "لنزهای هفته", "درخواست‌ها",
+      "اجراها", "جریان‌های کاری", "رجیسترها", "تیم و دسترسی", "تقویم و برنامه",
+    ]) {
+      await expect(nav.getByRole("link", { name: gone, exact: true })).toHaveCount(0);
+    }
+  });
+
+  test("settings and history are reachable but are not destinations", async ({ page }) => {
+    await page.goto("/studio");
+    for (const label of SECONDARY_LABELS) {
+      await expect(page.getByRole("navigation").getByRole("link", { name: label, exact: true })).toHaveCount(0);
+    }
+    await page.getByTestId("secondary-menu-trigger").click();
+    for (const label of SECONDARY_LABELS) {
+      await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
+    }
+  });
+
+  test("every destination states the one question it answers (brief §5)", async ({ page }) => {
+    await page.goto("/studio");
+    // The sidebar's own justification for each entry, available to a screen
+    // reader rather than only to the person who read the brief.
+    for (const label of NAV_LABELS) {
+      const link = page.getByRole("navigation").getByRole("link", { name: label, exact: true });
+      await expect(link).toHaveAttribute("title", /؟$/);
     }
   });
 
@@ -102,7 +143,7 @@ test.describe("/studio shell (AC-P1.9)", () => {
 
   test("navigation is keyboard-operable with visible focus", async ({ page }) => {
     await page.goto("/studio");
-    const link = page.getByRole("link", { name: "پروژه‌ها" });
+    const link = page.getByRole("navigation").getByRole("link", { name: "کانسپت‌ها", exact: true });
     await link.focus();
     await expect(link).toBeFocused();
     const outline = await link.evaluate((el) => {
@@ -111,7 +152,7 @@ test.describe("/studio shell (AC-P1.9)", () => {
     });
     expect(outline, "focused nav link must have a visible focus indicator").not.toBe("none|none");
     await page.keyboard.press("Enter");
-    await page.waitForURL("**/studio/projects");
+    await page.waitForURL("**/studio/concepts");
   });
 
   test("an unknown route resolves to the EmptyState primitive, never a 404", async ({ page }) => {
@@ -122,18 +163,22 @@ test.describe("/studio shell (AC-P1.9)", () => {
     await expect(page.getByTestId("empty-state")).toBeVisible();
   });
 
-  test("a project opens its first tab and keeps all seven visible (AC-P1R.3)", async ({ page }) => {
+  test("a project link becomes a filter, not a place (ADR-0020 D2)", async ({ page }) => {
     await page.goto("/studio/projects/p1");
-    await page.waitForURL("**/studio/projects/p1/overview");
-    for (const label of PROJECT_TAB_LABELS) {
-      await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
-    }
-    await expect(page.getByTestId("stage-strip")).toBeVisible();
-    // Every tab stays visible after navigating between them (V2 02 §5).
-    await page.getByRole("link", { name: "کانسپت‌ها", exact: true }).click();
-    await page.waitForURL("**/studio/projects/p1/concepts");
-    for (const label of PROJECT_TAB_LABELS) {
-      await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
+    await page.waitForURL("**/studio/concepts?project=p1");
+    await expect(page.getByTestId("studio-catch-all")).toHaveCount(0);
+    // The project is now carried by the selector on a work-unit page.
+    await expect(page.getByTestId("project-selector")).toBeVisible();
+  });
+
+  test("each retired project tab folds into a work unit", async ({ page }) => {
+    for (const [tab, to] of PROJECT_TAB_REDIRECTS) {
+      await page.goto(`/studio/projects/p1/${tab}`);
+      await page.waitForURL(`**${to}**`);
+      await expect(
+        page.getByTestId("studio-catch-all"),
+        `${tab} must not fall through to the catch-all`,
+      ).toHaveCount(0);
     }
   });
 
@@ -142,8 +187,8 @@ test.describe("/studio shell (AC-P1.9)", () => {
       await page.setViewportSize({ width: bp.width, height: bp.height });
       await page.goto("/studio");
       await expect(page.getByText("دراپ او اس — ماژول استودیو")).toBeVisible();
-      // P4 filled this surface; wait for its content so the baseline is stable.
-      await expect(page.getByTestId("overview-counter").first()).toBeVisible();
+      // Wait for the surface's own content so the baseline is stable.
+      await expect(page.getByTestId("project-card").first()).toBeVisible();
       await expect(page).toHaveScreenshot(`studio-shell-${bp.name}.png`, { fullPage: false });
     });
   }
@@ -247,6 +292,7 @@ test.describe("gallery themes, snapshots and axe (AC-P1.10, AC-P1.11)", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/studio");
     await expect(page.locator("html")).toHaveClass(/dark/);
+    await expect(page.getByTestId("project-card").first()).toBeVisible();
     await expect(page).toHaveScreenshot("studio-shell-dark-desktop.png");
   });
 

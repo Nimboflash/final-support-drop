@@ -1,4 +1,12 @@
-import type { PanelProject, PanelSnapshot, ReviewStatus } from "@drop/panel-domain";
+import {
+  outputTypeLabelFa,
+  type PanelProject,
+  type PanelSnapshot,
+  type ReviewStatus,
+} from "@drop/panel-domain";
+
+/** A concept whose active version has no title still gets a name, not an id. */
+const UNTITLED_CONCEPT_FA = "کانسپت بی‌عنوان";
 
 /**
  * The execution graph, derived from domain DTOs (ADR-0019 D18).
@@ -146,7 +154,7 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
     push({
       id: reviewId,
       nodeClass: "CONCEPT_REVIEW",
-      labelFa: `بررسی کانسپت — ${version?.titleFa ?? concept.id}`,
+      labelFa: `بررسی کانسپت — ${version?.titleFa ?? UNTITLED_CONCEPT_FA}`,
       state: reviewState(concept.reviewStatus, false),
       groupId: null,
       subject: { kind: "CONCEPT", id: concept.id },
@@ -171,7 +179,7 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
     const isSelected = selected.has(concept.activeVersionId);
     if (!isSelected && branchContent.length === 0) continue;
 
-    groups.push({ id: concept.id, labelFa: version?.titleFa ?? concept.id });
+    groups.push({ id: concept.id, labelFa: version?.titleFa ?? UNTITLED_CONCEPT_FA });
 
     const researchId = `n:research:${concept.id}`;
     push({
@@ -197,7 +205,7 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
       push({
         id: itemGenId,
         nodeClass: "CONTENT_GENERATION",
-        labelFa: `تولید محتوا — ${item.type}`,
+        labelFa: `تولید محتوا — ${outputTypeLabelFa(item.type)}`,
         state: blocked
           ? "BLOCKED"
           : item.generationState === "RUNNING"
@@ -218,7 +226,7 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
       push({
         id: itemReviewId,
         nodeClass: "CONTENT_REVIEW",
-        labelFa: `بررسی محتوا — ${item.type}`,
+        labelFa: `بررسی محتوا — ${outputTypeLabelFa(item.type)}`,
         state: reviewState(item.reviewStatus, blocked),
         groupId: concept.id,
         subject: { kind: "CONTENT", id: item.id },
@@ -248,7 +256,9 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
   push({
     id: packageId,
     nodeClass: "PACKAGE",
-    labelFa: "بسته",
+    // «خروجی», never «بسته» — ADR-0020 D5 removed that noun from the interface,
+    // and a graph node is as much interface as a card is.
+    labelFa: "خروجی",
     state: packageSnapshot === undefined ? "PENDING" : "DONE",
     groupId: null,
     subject: packageSnapshot === undefined ? null : { kind: "PACKAGE", id: packageSnapshot.id },

@@ -2,11 +2,8 @@ import { describe, expect, it } from "vitest";
 import { loadScenario } from "@drop/mock-data";
 import {
   attentionRows,
-  blockedCount,
   openReviewCount,
-  overviewCounters,
   readinessFor,
-  stageSegments,
   unscheduledEntries,
 } from "./read-models";
 
@@ -14,9 +11,10 @@ import {
  * Ticket P4, component seam — the read models, exercised against real scenario
  * worlds rather than hand-built objects.
  *
- * These numbers appear on the overview counters, the project card, the outputs
- * checklist and the review queue at once; journey A14 requires them to agree, so
- * they are computed once here and asserted here.
+ * Narrowed by ticket P9: ADR-0020 removed the four overview counters and the
+ * five-stage strip, so `overviewCounters`, `blockedCount` and `stageSegments`
+ * went with them. What survives is what a surface still reads — readiness, the
+ * attention inbox, and the unscheduled tray.
  */
 describe("readiness is counted against the frozen plan (AC-P4.8)", () => {
   it("reports approved-of-required rather than a global percentage", () => {
@@ -51,12 +49,10 @@ describe("readiness is counted against the frozen plan (AC-P4.8)", () => {
   });
 });
 
-describe("the Review segment is derived, not stored (ADR-0019 D12)", () => {
-  it("is current whenever anything is awaiting review", () => {
+describe("review is derived, not stored (ADR-0019 D12)", () => {
+  it("counts what is open per project", () => {
     const world = loadScenario("S05").snapshot;
-    const p1 = world.projects.find((p) => p.id === "p1")!;
     expect(openReviewCount(world, "p1")).toBeGreaterThan(0);
-    expect(stageSegments(world, p1).review).toBe("current");
   });
 
   it("no project carries a stored review stage", () => {
@@ -83,19 +79,21 @@ describe("the overview inbox (AC-P4.3)", () => {
     }
   });
 
-  it("counts blocked items and pending reviews consistently", () => {
+  it("raises a row for every project with something open", () => {
     const world = loadScenario("S08").snapshot;
-    const counters = overviewCounters(world);
-    expect(counters.blockedItems).toBe(blockedCount(world));
-    expect(counters.pendingReviews).toBe(
-      world.projects.reduce((sum, p) => sum + openReviewCount(world, p.id), 0),
-    );
+    const rows = attentionRows(world);
+    for (const project of world.projects) {
+      if (openReviewCount(world, project.id) === 0) continue;
+      expect(
+        rows.some((r) => r.projectId === project.id),
+        `${project.id} has open reviews but raises no row`,
+      ).toBe(true);
+    }
   });
 
   it("an empty world produces an empty inbox, not a crash", () => {
     const world = loadScenario("S01").snapshot;
     expect(attentionRows(world)).toEqual([]);
-    expect(overviewCounters(world).activeProjects).toBe(0);
   });
 });
 
