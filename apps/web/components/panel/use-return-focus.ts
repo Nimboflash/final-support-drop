@@ -30,43 +30,105 @@ export function useReturnFocus(): {
    */
   onCloseAutoFocus: (event: Event) => void;
 } {
-  const opener = useRef<HTMLElement | null>(null);
+  /*
+    The opener is remembered as a node AND as a way to find that node again.
+    Opening the overlay re-renders the list behind it, and a card whose data
+    changed can come back as a NEW element — at which point the remembered node
+    is detached and focusing it does nothing, so focus stays on `<body>`. That
+    is not hypothetical: it is what a slower machine reproduced reliably where a
+    fast one did not.
+  */
+  const opener = useRef<{ node: HTMLElement; testId: string; index: number } | null>(null);
 
   const remember = useCallback(() => {
-    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const node = document.activeElement;
+    if (!(node instanceof HTMLElement)) {
+      opener.current = null;
+      return;
+    }
+    const testId = node.dataset.testid ?? "";
+    const peers =
+      testId === "" ? [] : [...document.querySelectorAll<HTMLElement>(`[data-testid="${testId}"]`)];
+    opener.current = { node, testId, index: peers.indexOf(node) };
   }, []);
 
-  const onOpenChange = useCallback((next: boolean, set: (value: boolean) => void) => {
-    set(next);
-    if (next) return;
-    const target = opener.current;
-    opener.current = null;
-    if (target === null || !target.isConnected) return;
-    /*
-      Radix moves focus itself as the overlay closes, and how long that takes
-      depends on the exit animation — which is not a fixed number of frames.
-      So this keeps asking until the focus sticks, for a bounded window, rather
-      than guessing at a frame count that happens to work on an idle machine.
-    */
-    const deadline = 600;
-    const start = performance.now();
-    const restore = () => {
-      if (document.activeElement === target) return;
-      target.focus();
-      if (document.activeElement === target) return;
-      if (performance.now() - start > deadline) return;
+  /** The remembered node, or its replacement after a re-render. */
+  const resolve = useCallback((): HTMLElement | null => {
+    const remembered = opener.current;
+    if (remembered === null) return null;
+    if (remembered.node.isConnected) return remembered.node;
+    if (remembered.testId === "" || remembered.index < 0) return null;
+    const peers = [
+      ...document.querySelectorAll<HTMLElement>(`[data-testid="${remembered.testId}"]`),
+    ];
+    return peers[remembered.index] ?? peers[0] ?? null;
+  }, []);
+
+  const onOpenChange = useCallback(
+    (next: boolean, set: (value: boolean) => void) => {
+      set(next);
+      if (next) return;
+      /*
+        This is the mechanism for THESE overlays, and the reason is worth
+        recording because it is not what one would expect.
+
+        `onCloseAutoFocus` below is Radix's own hook and would be synchronous
+        and exact — but it never fires here. Every detail overlay on these
+        surfaces is CONTROLLED by the id of the open item, so closing sets that
+        id to null, the component returns null on the next render, and the
+        whole subtree unmounts before Radix reaches its close-focus phase. A
+        DOM trace confirms the order: focus lands on `<body>` first, and comes
+        back afterwards.
+
+        Focus return here is therefore asynchronous by a frame or two. That is
+        invisible to a person and correct for a keyboard user, but it does mean
+        a test that samples `document.activeElement` the instant the overlay
+        hides is sampling too early — which is what it looked like when a busy
+        machine reproduced a "dropped focus" that a fast one never showed.
+      */
+      const target = resolve();
+      if (target === null) return;
+
+      const deadline = 800;
+      const start = performance.now();
+      const restore = () => {
+        if (opener.current === null) return; // the authority already handled it
+        if (document.activeElement === target) {
+          opener.current = null;
+          return;
+        }
+        target.focus();
+        if (document.activeElement === target) {
+          opener.current = null;
+          return;
+        }
+        if (performance.now() - start > deadline) {
+          opener.current = null;
+          return;
+        }
+        requestAnimationFrame(restore);
+      };
       requestAnimationFrame(restore);
-    };
-    requestAnimationFrame(restore);
-  }, []);
+    },
+    [resolve],
+  );
 
-  const onCloseAutoFocus = useCallback((event: Event) => {
-    const target = opener.current;
-    if (target === null || !target.isConnected) return;
-    event.preventDefault();
-    opener.current = null;
-    target.focus();
-  }, []);
+  /**
+   * Kept for correctness rather than for effect: an overlay that stays mounted
+   * through its exit animation WOULD fire this, and then focus returns exactly
+   * when Radix would have moved it. Today's overlays unmount first, so the
+   * fallback above is what actually runs.
+   */
+  const onCloseAutoFocus = useCallback(
+    (event: Event) => {
+      const target = resolve();
+      if (target === null) return;
+      event.preventDefault();
+      opener.current = null;
+      target.focus();
+    },
+    [resolve],
+  );
 
   return { remember, onOpenChange, onCloseAutoFocus };
 }

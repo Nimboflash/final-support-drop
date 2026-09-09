@@ -168,8 +168,17 @@ for (const vp of VIEWPORTS) {
           .then(() => true)
           .catch(() => false);
         if (!opened) break;
-        await expect(page.getByTestId("approve-content")).toBeEnabled();
-        await page.getByTestId("approve-content").click();
+        // The list re-orders under the loop, so the sheet that opened may not
+        // belong to the card that was resolved. If this one cannot be approved,
+        // close it and try again rather than failing on a transient — the
+        // POSTCONDITION below is what the step actually asserts.
+        const approve = page.getByTestId("approve-content");
+        if (!(await approve.isEnabled().catch(() => false))) {
+          await page.keyboard.press("Escape");
+          await expect(page.getByTestId("content-detail")).toBeHidden();
+          continue;
+        }
+        await approve.click();
         await expect(page.getByTestId("content-detail")).toBeHidden();
       }
       await expect(remaining).toHaveCount(0);

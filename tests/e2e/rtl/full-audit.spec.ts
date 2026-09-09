@@ -478,8 +478,21 @@ test.describe("WCAG 2.2 AA on every destination and every overlay", () => {
       await expect(page.getByTestId(overlay.slot)).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.getByTestId(overlay.slot)).toBeHidden();
-      const active = await page.evaluate(() => document.activeElement?.tagName ?? "NONE");
-      expect(active, `${overlay.name} dropped focus on ${active}`).not.toBe("BODY");
+
+      // Polled, not sampled. These overlays are controlled by the id of the
+      // open item, so closing unmounts the subtree before Radix reaches its
+      // close-focus phase: focus lands on `<body>` first and is restored a
+      // frame or two later. That is correct for a keyboard user and invisible
+      // to a person — but a single sample the instant the overlay hides reads
+      // the intermediate state, which is a flaky assertion about a working
+      // feature. What must hold is that focus COMES BACK, and to the control
+      // that opened it.
+      await expect
+        .poll(
+          () => page.evaluate(() => document.activeElement?.getAttribute("data-testid") ?? "BODY"),
+          { message: `${overlay.name} never returned focus to its opener`, timeout: 3_000 },
+        )
+        .toBe(overlay.open);
     });
   }
 });
