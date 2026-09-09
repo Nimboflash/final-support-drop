@@ -2,8 +2,9 @@
   "name": "@drop/web",
   "version": "0.0.1",
   "private": true,
-  "description": "DROP OS web app — Next.js App Router, standalone output (shell placeholder, ticket 0.1)",
+  "description": "DROP OS web app \u2014 Next.js App Router, standalone output (shell placeholder, ticket 0.1)",
   "scripts": {
+    "dev": "DROP_DEMO=1 next dev -p 3110",
     "typecheck": "tsc --noEmit",
     "build": "next build"
   },
