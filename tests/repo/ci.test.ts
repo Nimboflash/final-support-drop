@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
@@ -90,6 +91,37 @@ describe("CI uses the same toolchain a developer does", () => {
     for (const step of nodeSteps) {
       expect(step.with?.["node-version-file"], "CI must read .nvmrc").toBe(".nvmrc");
       expect(step.with?.["node-version"], "a second pinned Node version will drift").toBeUndefined();
+    }
+  });
+
+  it("the file the workflow points at actually exists, and is a version", () => {
+    /*
+      The first version of this guard checked only that the workflow NAMED
+      `.nvmrc`. The file did not exist, the guard was green, and CI failed on
+      its first run with "the specified node version file does not exist" —
+      a guard asserting a reference without asserting the referent.
+    */
+    const nvmrc = readFileSync(join(ROOT, ".nvmrc"), "utf8").trim();
+    expect(nvmrc, ".nvmrc must hold a version").toMatch(/^v?\d+\.\d+\.\d+$/);
+
+    // And it must satisfy what the manifest demands, or a developer following
+    // `.nvmrc` installs a Node the repository refuses to run on.
+    const floor = Number(/>=\s*(\d+)/.exec(manifest.engines.node)?.[1] ?? "0");
+    const major = Number(nvmrc.replace(/^v/, "").split(".")[0]);
+    expect(major, `.nvmrc pins Node ${String(major)}; engines requires >=${String(floor)}`)
+      .toBeGreaterThanOrEqual(floor);
+  });
+
+  it("every file the workflow reads is committed", () => {
+    // The same failure shape, generalised: a workflow that points at an
+    // untracked file is green locally and red on a clean checkout.
+    const referenced = [".nvmrc", "package.json", "pnpm-lock.yaml"];
+    const tracked = execFileSync("git", ["ls-files", ...referenced], { cwd: ROOT })
+      .toString()
+      .split("\n")
+      .filter(Boolean);
+    for (const file of referenced) {
+      expect(tracked, `${file} is referenced by CI but not committed`).toContain(file);
     }
   });
 
