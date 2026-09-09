@@ -62,7 +62,11 @@ export function hydrate(payload: string | null): HydrationResult {
 
   const result = panelSnapshotSchema.safeParse(envelope.snapshot);
   if (!result.success) return { outcome: "UNUSABLE", reasonCode: "SCHEMA_INVALID" };
-  return { outcome: "HYDRATED", snapshot: result.data };
+  return {
+    outcome: "HYDRATED",
+    snapshot: result.data,
+    scenarioId: typeof envelope.scenarioId === "string" ? envelope.scenarioId : "",
+  };
 }
 
 export interface DemoPersistence {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   PROJECT_TAB_REDIRECTS,
@@ -61,6 +61,18 @@ describe("retired routes redirect rather than dead-end", () => {
       const dir = join(STUDIO_DIR, path.replace("/studio/", ""));
       expect(statSync(dir).isDirectory(), `${path} must keep its folder`).toBe(true);
       expect(readdirSync(dir), `${path} needs a page`).toContain("page.tsx");
+    }
+  });
+
+  it("each redirect page reads the table rather than hard-coding a target", () => {
+    // Otherwise this table is decoration: a page could redirect somewhere the
+    // table does not name, and every assertion here would still pass.
+    for (const path of Object.keys(STUDIO_REDIRECTS)) {
+      const page = readFileSync(join(STUDIO_DIR, path.replace("/studio/", ""), "page.tsx"), "utf8");
+      expect(page, `${path} must redirect via STUDIO_REDIRECTS`).toContain("STUDIO_REDIRECTS");
+      expect(page, `${path} hard-codes its destination`).toMatch(
+        new RegExp(`STUDIO_REDIRECTS\\["${path.replace(/\//g, "\\/")}"\\]`),
+      );
     }
   });
 

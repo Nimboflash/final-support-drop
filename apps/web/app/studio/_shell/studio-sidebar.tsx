@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
@@ -34,6 +34,15 @@ import { SECONDARY_NAV, STUDIO_NAV, isNavItemActive } from "./studio-nav";
  */
 export function StudioSidebar() {
   const pathname = usePathname();
+  /*
+    The project filter has to survive a move between destinations. It is the
+    whole mechanism D2 replaced the project page with — and a bare `href` threw
+    it away on every click: choose a project on «کانسپت‌ها», press «محتوا», and
+    the filter silently vanished. The person then sees every project's content
+    and has no way to know why.
+  */
+  const project = useSearchParams().get("project");
+  const carry = (href: string) => (project === null ? href : `${href}?project=${project}`);
 
   return (
     <Sidebar side="right" collapsible="icon">

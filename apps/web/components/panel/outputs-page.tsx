@@ -18,8 +18,10 @@ import {
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { ProjectSelector, filterByProject, useSelectedProject } from "./project-selector";
-import { commandErrorFa, useDownloadPackage } from "../../lib/demo/commands";
+import { useReturnFocus } from "./use-return-focus";
+import { commandErrorFa, useDownloadPackage, useSendToCalendar } from "../../lib/demo/commands";
 import {
+  CONTENT_STATE_LABEL_FA,
   DIRECTION_LABEL_FA,
   OUTPUT_STATE_LABEL_FA,
   contentStateOf,
@@ -49,6 +51,15 @@ const STATE_TONE: Record<OutputState, string> = {
 export function OutputsPage({ world }: { world: PanelSnapshot }) {
   const selectedProject = useSelectedProject();
   const [openConceptId, setOpenConceptId] = useState<string | null>(null);
+  const detailFocus = useReturnFocus();
+  /*
+    The overlay is keyed on the LAST item opened, not the currently open one.
+    Keying on the current id unmounts the sheet the instant it closes — which
+    is exactly when Radix would hand focus back to the card, so the remount
+    silently cancelled the focus return. This still resets the sheet's state
+    between two different items, which is what the key is for.
+  */
+  const [lastOpened, setLastOpened] = useState<string>("none");
 
   const outputs = filterByProject(outputsFor(world), selectedProject);
   const open = outputs.find((o) => o.conceptId === openConceptId) ?? null;
@@ -72,19 +83,27 @@ export function OutputsPage({ world }: { world: PanelSnapshot }) {
         >
           {outputs.map((output) => (
             <li key={output.conceptId}>
-              <OutputCard output={output} onOpen={() => setOpenConceptId(output.conceptId)} />
+              <OutputCard output={output} onOpen={() => {
+                  detailFocus.remember();
+                  setLastOpened(output.conceptId);
+                  setOpenConceptId(output.conceptId);
+                }} />
             </li>
           ))}
         </ul>
       )}
 
       <OutputDetail
+        key={lastOpened}
         world={world}
         output={open}
         open={open !== null}
-        onOpenChange={(next) => {
-          if (!next) setOpenConceptId(null);
-        }}
+        onOpenChange={(next) =>
+          detailFocus.onOpenChange(next, (value) => {
+            if (!value) setOpenConceptId(null);
+          })
+        }
+        onCloseAutoFocus={detailFocus.onCloseAutoFocus}
       />
     </div>
   );
@@ -132,14 +151,18 @@ function OutputDetail({
   output,
   open,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   world: PanelSnapshot;
   output: OutputView | null;
   open: boolean;
   onOpenChange: (next: boolean) => void;
+  /** Returns focus to the control that opened this overlay. */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const isMobile = useIsMobile();
   const download = useDownloadPackage();
+  const send = useSendToCalendar();
 
   if (output === null) return null;
 
@@ -148,6 +171,7 @@ function OutputDetail({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        onCloseAutoFocus={onCloseAutoFocus}
         data-testid="output-detail"
         className={isMobile ? "w-full sm:max-w-none" : "w-[42rem] sm:max-w-[50rem]"}
       >
@@ -172,7 +196,9 @@ function OutputDetail({
                       <Badge variant="secondary">
                         {DIRECTION_LABEL_FA[item.type] ?? item.type}
                       </Badge>
-                      <Badge variant="outline">{state === "approved" ? "تأییدشده" : "ناتمام"}</Badge>
+                      {/* The central mapping, not a word invented here: /studio/content and
+                            /studio/outputs must call the same item the same thing (D7). */}
+                        <Badge variant="outline">{CONTENT_STATE_LABEL_FA[state]}</Badge>
                     </div>
                   </div>
                   <p className="line-clamp-2 pt-1 text-muted-foreground">{version?.bodyFa}</p>
@@ -187,29 +213,62 @@ function OutputDetail({
             </p>
           )}
 
-          {download.isError ? (
+          {download.isError || send.isError ? (
             <p role="alert" className="text-sm text-destructive">
-              {commandErrorFa(download.error)}
+              {commandErrorFa(download.error ?? send.error)}
             </p>
           ) : null}
         </div>
 
         <div className="mt-auto flex flex-wrap gap-2 border-t p-4">
+          {/*
+            A disabled control has to say why. «ارسال به تقویم» greys out until
+            the output is actually assembled, and without this line the reader
+            is left guessing at a button that simply refuses.
+          */}
+          {output.state !== "scheduled" && output.packageVersionId === null ? (
+            <p className="w-full text-sm text-muted-foreground" data-testid="send-blocked-reason">
+              تا وقتی همهٔ محتواهای لازم تأیید نشده‌اند، خروجی ساخته نمی‌شود.
+            </p>
+          ) : null}
+
           {output.state === "scheduled" ? (
             <Button asChild variant="outline" data-testid="open-in-calendar">
               <a href={`/studio/calendar?project=${output.projectId}`}>دیدن در تقویم</a>
             </Button>
           ) : (
+            /*
+              This used to be a link to the calendar and nothing else — it moved
+              the person to a page where their output was not, because nothing
+              had created an entry. It now creates one, undated, which is what
+              the tray IS (brief §14.11), and only then navigates.
+            */
             <Button
               data-testid="send-to-calendar"
-              disabled={output.state === "assembling"}
-              asChild={output.state !== "assembling"}
+              disabled={
+                output.state === "assembling" ||
+                output.packageFamilyId === null ||
+                output.packageVersionId === null ||
+                send.isPending
+              }
+              onClick={() => {
+                if (output.packageFamilyId === null || output.packageVersionId === null) return;
+                send.mutate(
+                  {
+                    projectId: output.projectId,
+                    titleFa: output.titleFa,
+                    packageFamilyId: output.packageFamilyId,
+                    packageVersionId: output.packageVersionId,
+                  },
+                  {
+                    onSuccess: () => {
+                      window.location.href = `/studio/calendar?project=${output.projectId}`;
+                    },
+                  },
+                );
+              }}
             >
-              {output.state === "assembling" ? (
-                <span>ارسال به تقویم</span>
-              ) : (
-                <a href={`/studio/calendar?project=${output.projectId}`}>ارسال به تقویم</a>
-              )}
+              {send.isPending ? "در حال ارسال…" : "ارسال به تقویم"}
             </Button>
           )}
           {output.packageVersionId === null ? null : (

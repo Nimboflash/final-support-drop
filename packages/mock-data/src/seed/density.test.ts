@@ -26,8 +26,15 @@ describe("base-world density (AC-P3.4)", () => {
     expect(byId.get("p6")?.targetDate).toBe("2026-09-15");
     // Weekly Lens
     expect(byId.get("p3")?.type).toBe("WEEKLY_LENS");
-    // blocked assembly
-    expect(world.content.some((c) => c.projectId === "p7" && c.generationState === "BLOCKED")).toBe(true);
+    // p1 covers BLOCKED (a missing source, which a person can supply); p7
+    // covers FAILED (a build that did not finish, which no source fixes). The
+    // two must both exist in the base world, because the surfaces say different
+    // things about them and only a world carrying both exercises that.
+    expect(world.content.some((c) => c.projectId === "p7" && c.generationState === "FAILED")).toBe(true);
+
+    // The unscheduled tray needs something in it. ADR-0019 D7's «PLANNED with
+    // a null date» was unreachable in every world until p5 carried one.
+    expect(world.calendar.some((entry) => entry.date === null)).toBe(true);
   });
 
   it("carries at least three concept cards and four content items in the main journey", () => {

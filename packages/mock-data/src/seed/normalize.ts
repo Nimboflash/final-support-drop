@@ -265,6 +265,23 @@ export function normalizePackage(wire: Record<string, unknown>): PackageSnapshot
   });
 }
 
+/**
+ * The interface noun, applied to seeded titles (ADR-0020 D5).
+ *
+ * `wire-seed.ts` is a VERBATIM transcription of the owner's pack and must not be
+ * edited — a fixture that can drift from what the tests validated is not a
+ * fixture. But the pack predates the simplification brief, and its calendar
+ * title reads «پکیج هفتگی», which a person sees. ADR-0020 D1 makes the brief the
+ * later word on presentation, and the loader boundary is where this repository
+ * already reconciles V2's vocabulary with the recorded one (ADR-0019 D6).
+ *
+ * Narrow on purpose: only the product noun, only as a whole word. It does not
+ * touch prose, and the transcription stays byte-identical.
+ */
+function interfaceNounFa(title: string): string {
+  return title.replace(/(?<![\u0600-\u06FF])(پکیج|بسته)(?![\u0600-\u06FF])/g, "خروجی");
+}
+
 export function normalizeCalendarEntry(wire: Record<string, unknown>): PanelCalendarEntry {
   // ADR-0019 D7 — V2's "unscheduled" and "planned" are both PLANNED; the date
   // is what distinguishes them. ADR-0015 D5's set is not amended.
@@ -274,7 +291,7 @@ export function normalizeCalendarEntry(wire: Record<string, unknown>): PanelCale
     projectId: String(wire.projectId),
     packageFamilyId: String(wire.packageFamilyId),
     packageVersionId: String(wire.packageVersionId),
-    titleFa: String(wire.titleFa),
+    titleFa: interfaceNounFa(String(wire.titleFa)),
     status: "PLANNED",
     date,
     endDate: (wire.endDate ?? null) as string | null,

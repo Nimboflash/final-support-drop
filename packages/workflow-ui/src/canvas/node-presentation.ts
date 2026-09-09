@@ -12,13 +12,23 @@ import type { NodeState, ProductNodeClass } from "../model/product-graph";
  * render the same vocabulary from one place; a divergence between them would be
  * invisible to a sighted reviewer.
  */
+/**
+ * The ONE Persian name per node state (ADR-0020 D7).
+ *
+ * Both renderers read it: the canvas node badge and the accessible stage list.
+ * Engine briefly kept a second, differently-worded copy of its own, so the same
+ * node read «در انتظار بررسی» on the canvas and «منتظر اقدام شما» in the list
+ * beside it — one screen, two names for one state. The wording below is the
+ * panel's, because D5 says the interface speaks to the person: "waiting for
+ * your action" tells them what to do, "awaiting review" describes a queue.
+ */
 export const NODE_STATE_LABEL_FA: Readonly<Record<NodeState, string>> = {
   PENDING: "هنوز شروع نشده",
   RUNNING: "در حال اجرا",
-  AWAITING_REVIEW: "در انتظار بررسی",
+  AWAITING_REVIEW: "منتظر اقدام شما",
   DONE: "کامل",
   BLOCKED: "متوقف",
-  REJECTED: "ردشده",
+  REJECTED: "کنار گذاشته‌شده",
 };
 
 /** Lucide icon names; the components are resolved at the render site. */

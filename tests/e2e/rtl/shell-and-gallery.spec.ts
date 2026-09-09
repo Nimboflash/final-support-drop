@@ -48,7 +48,7 @@ const REDIRECTS: readonly (readonly [string, string])[] = [
 // folds into. A project is now a filter, so every tab had a work unit to
 // land on.
 const PROJECT_TAB_REDIRECTS: readonly (readonly [string, string])[] = [
-  ["overview", "/studio"],
+  ["overview", "/studio?project=p1"],
   ["concepts", "/studio/concepts"],
   ["content", "/studio/content"],
   ["outputs", "/studio/outputs"],

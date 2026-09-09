@@ -14,6 +14,13 @@ import {
 } from "@drop/ui";
 import type { PanelProject, PanelSnapshot } from "@drop/panel-domain";
 import { NewConceptComposer } from "./new-concept-composer";
+import { useReturnFocus } from "./use-return-focus";
+import {
+  ALL_PROJECTS,
+  ProjectSelector,
+  filterByProject,
+  useSelectedProject,
+} from "./project-selector";
 import { projectMessageFa } from "../../lib/demo/presentation";
 import { attentionRows, type AttentionRow } from "../../lib/demo/read-models";
 
@@ -28,25 +35,54 @@ import { attentionRows, type AttentionRow } from "../../lib/demo/read-models";
  * What remains answers one question — what needs me now — and offers one way
  * to start. If a real blocker exists it appears in «نیازمند اقدام شما», said in
  * human language.
+ *
+ * It honours `?project=` like every other work-unit surface. The brief's §8
+ * routes `/studio/projects/:id/overview` to "the overview filtered on that
+ * project", and consistency demands it anyway: a filter that silently vanishes
+ * on one destination out of six is a filter the person stops trusting.
  */
 export function Overview({ world }: { world: PanelSnapshot }) {
   const [composerOpen, setComposerOpen] = useState(false);
-  const rows = attentionRows(world);
+  const composerFocus = useReturnFocus();
+  const selected = useSelectedProject();
+  const rows = filterByProject(attentionRows(world), selected);
+  const projects =
+    selected === ALL_PROJECTS
+      ? world.projects
+      : world.projects.filter((project) => project.id === selected);
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">نمای کلی</h1>
-        <Button data-testid="start-concept" onClick={() => setComposerOpen(true)}>
-          شروع کانسپت جدید
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ProjectSelector world={world} />
+          <Button
+            data-testid="start-concept"
+            onClick={() => {
+              composerFocus.remember();
+              setComposerOpen(true);
+            }}
+          >
+            شروع کانسپت جدید
+          </Button>
+        </div>
       </header>
 
       {world.projects.length === 0 ? (
         <EmptyState
           title="هنوز کاری شروع نشده"
           detail="با یک درخواست، یک رفرنس، یا بدون هیچ ورودی شروع کنید."
-          action={<Button onClick={() => setComposerOpen(true)}>شروع کانسپت جدید</Button>}
+          action={
+            <Button
+              onClick={() => {
+                composerFocus.remember();
+                setComposerOpen(true);
+              }}
+            >
+              شروع کانسپت جدید
+            </Button>
+          }
         />
       ) : (
         <>
@@ -72,13 +108,13 @@ export function Overview({ world }: { world: PanelSnapshot }) {
 
           <section aria-labelledby="projects-heading" className="space-y-3">
             <h2 id="projects-heading" className="text-lg font-semibold">
-              پروژه‌های باز
+              {selected === ALL_PROJECTS ? "پروژه‌های باز" : "پروژهٔ انتخاب‌شده"}
             </h2>
             <ul
               className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]"
               data-testid="project-list"
             >
-              {world.projects.map((project) => (
+              {projects.map((project) => (
                 <li key={project.id}>
                   <ProjectCard world={world} project={project} />
                 </li>
@@ -88,7 +124,12 @@ export function Overview({ world }: { world: PanelSnapshot }) {
         </>
       )}
 
-      <NewConceptComposer world={world} open={composerOpen} onOpenChange={setComposerOpen} />
+      <NewConceptComposer
+        world={world}
+        open={composerOpen}
+        onOpenChange={(next) => composerFocus.onOpenChange(next, setComposerOpen)}
+        onCloseAutoFocus={composerFocus.onCloseAutoFocus}
+      />
     </div>
   );
 }
@@ -147,7 +188,11 @@ function ProjectCard({ world, project }: { world: PanelSnapshot; project: PanelP
           آخرین فعالیت: <PersianCalendarDate value={project.updatedAt.slice(0, 10)} />
         </p>
         <Button asChild size="sm" variant="outline">
-          <Link href={`/studio/concepts?project=${project.id}`}>ادامه</Link>
+          {/*
+            The brief names «ادامه» as the ambiguous case (§10): a button label
+            must say the RESULT of pressing it, not that something continues.
+          */}
+          <Link href={`/studio/concepts?project=${project.id}`}>دیدن کانسپت‌ها</Link>
         </Button>
       </CardContent>
     </Card>

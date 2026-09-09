@@ -10,6 +10,7 @@ import {
   useSelectedProject,
 } from "./project-selector";
 import { ConceptDetail } from "./concept-detail";
+import { useReturnFocus } from "./use-return-focus";
 import { NewConceptComposer } from "./new-concept-composer";
 import { conceptStateOf, CONCEPT_STATE_LABEL_FA, type ConceptState } from "../../lib/demo/presentation";
 
@@ -25,6 +26,17 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
   const selectedProject = useSelectedProject();
   const [openConceptId, setOpenConceptId] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
+  // Controlled overlays have no trigger to hand focus back to (see the hook).
+  const detailFocus = useReturnFocus();
+  /*
+    The overlay is keyed on the LAST item opened, not the currently open one.
+    Keying on the current id unmounts the sheet the instant it closes — which
+    is exactly when Radix would hand focus back to the card, so the remount
+    silently cancelled the focus return. This still resets the sheet's state
+    between two different items, which is what the key is for.
+  */
+  const [lastOpened, setLastOpened] = useState<string>("none");
+  const composerFocus = useReturnFocus();
 
   const concepts = filterByProject(world.concepts, selectedProject);
   const openConcept = concepts.find((c) => c.id === openConceptId) ?? null;
@@ -38,7 +50,13 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
         <h1 className="text-2xl font-bold">کانسپت‌ها</h1>
         <div className="flex flex-wrap items-center gap-2">
           <ProjectSelector world={world} />
-          <Button data-testid="start-concept" onClick={() => setComposerOpen(true)}>
+          <Button
+            data-testid="start-concept"
+            onClick={() => {
+              composerFocus.remember();
+              setComposerOpen(true);
+            }}
+          >
             شروع کانسپت جدید
           </Button>
         </div>
@@ -49,7 +67,14 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
           title="هنوز کانسپتی ساخته نشده"
           detail="اولین مسیر را شروع کنید."
           action={
-            <Button onClick={() => setComposerOpen(true)}>شروع کانسپت جدید</Button>
+            <Button
+              onClick={() => {
+                composerFocus.remember();
+                setComposerOpen(true);
+              }}
+            >
+              شروع کانسپت جدید
+            </Button>
           }
         />
       ) : (
@@ -65,7 +90,11 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
                 // Group by project through a visible label rather than a
                 // separate navigation layer (brief §7.2).
                 projectTitleFa={selectedProject === ALL_PROJECTS ? projectTitle(concept.projectId) : null}
-                onOpen={() => setOpenConceptId(concept.id)}
+                onOpen={() => {
+                  detailFocus.remember();
+                  setLastOpened(concept.id);
+                  setOpenConceptId(concept.id);
+                }}
               />
             </li>
           ))}
@@ -75,16 +104,21 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
       <NewConceptComposer
         world={world}
         open={composerOpen}
-        onOpenChange={setComposerOpen}
+        onOpenChange={(next) => composerFocus.onOpenChange(next, setComposerOpen)}
+        onCloseAutoFocus={composerFocus.onCloseAutoFocus}
       />
 
       <ConceptDetail
+        key={lastOpened}
         world={world}
         concept={openConcept}
         open={openConcept !== null}
-        onOpenChange={(next) => {
-          if (!next) setOpenConceptId(null);
-        }}
+        onOpenChange={(next) =>
+          detailFocus.onOpenChange(next, (value) => {
+            if (!value) setOpenConceptId(null);
+          })
+        }
+        onCloseAutoFocus={detailFocus.onCloseAutoFocus}
       />
     </div>
   );
@@ -93,8 +127,12 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
 const STATE_TONE: Record<ConceptState, string> = {
   generating: "border-border",
   new: "border-selected/50",
+  improving: "border-warning",
   selected: "border-success/60",
-  set_aside: "border-border opacity-70",
+  // NOT `opacity-70`. Dimming the whole card drags every piece of text inside
+  // it below the AA contrast minimum — the description measured 3.16:1 — and
+  // "faded" is a colour-only cue anyway. The state badge says the word.
+  set_aside: "border-border",
 };
 
 function ConceptCard({

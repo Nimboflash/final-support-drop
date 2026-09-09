@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
   Tabs,
+  TabsContent,
   TabsList,
   TabsTrigger,
   toPersianDigits,
@@ -19,10 +20,12 @@ import {
 } from "@drop/ui";
 import type { PanelCalendarEntry, PanelSnapshot } from "@drop/panel-domain";
 import { ProjectSelector, filterByProject, useSelectedProject } from "./project-selector";
+import { useReturnFocus } from "./use-return-focus";
 import { useDemoSession } from "../../lib/demo/providers";
 import { commandErrorFa, useUpdateCalendarEntry } from "../../lib/demo/commands";
 import {
   WEEKDAY_LABELS_FA,
+  WEEKDAY_SHORT_FA,
   formatDayFa,
   monthGrid,
   monthTitleFa,
@@ -42,7 +45,10 @@ import { DIRECTION_LABEL_FA } from "../../lib/demo/presentation";
  * day selection, month and week navigation, events inside their day cell, and
  * a date change that persists.
  *
- * Drag is an ASSIST, never the mechanism: every move is also reachable from the
+ * There is NO drag-to-reschedule. Earlier comments here described one as an
+ * assist beside the picker; none was ever implemented, and a comment claiming a
+ * feature is worse than a missing feature — the next person trusts it. Every
+ * move goes through the picker, which is reachable from the
  * day picker in the event sheet, so the flow does not depend on a pointer
  * (brief §7.6, and journey A20's keyboard-only walk).
  */
@@ -58,6 +64,20 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
   const [view, setView] = useState<View>("month");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [openEntryId, setOpenEntryId] = useState<string | null>(null);
+  const detailFocus = useReturnFocus();
+  /*
+    Keyed on the LAST entry opened, not the currently open one. Keying on the
+    current id unmounts the sheet the instant it closes — exactly when Radix
+    would hand focus back to the event button — so the remount silently
+    cancelled the focus return. This still resets the draft date between two
+    different entries, which is what the key is for.
+  */
+  const [lastOpened, setLastOpened] = useState<string>("none");
+  const openEntryFocused = (id: string) => {
+    detailFocus.remember();
+    setLastOpened(id);
+    setOpenEntryId(id);
+  };
 
   const entries = filterByProject(world.calendar, selectedProject);
   const scheduled = entries.filter((e) => e.date !== null);
@@ -83,6 +103,11 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+        <Tabs
+          asChild
+          value={view}
+          onValueChange={(next) => setView(next as View)}
+        >
         <section className="space-y-3">
           <CalendarToolbar
             view={view}
@@ -93,16 +118,27 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
             onToday={() => setAnchor(today)}
           />
 
-          {view === "agenda" ? (
-            <AgendaView entries={scheduled} onOpen={setOpenEntryId} />
-          ) : (
+          <TabsContent value="agenda">
+            <AgendaView entries={scheduled} onOpen={openEntryFocused} />
+          </TabsContent>
+          <TabsContent value={view === "week" ? "week" : "month"}>
             <div
               data-testid={view === "week" ? "week-grid" : "month-grid"}
               className="space-y-1"
             >
               <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-                {WEEKDAY_LABELS_FA.map((day) => (
-                  <span key={day}>{isMobile ? day.slice(0, 3) : day}</span>
+                {WEEKDAY_LABELS_FA.map((day, index) => (
+                  <span key={day}>
+                    {isMobile ? (
+                      // The full name stays available to a screen reader; only
+                      // the visible glyph shortens.
+                      <abbr title={day} className="no-underline">
+                        {WEEKDAY_SHORT_FA[index]}
+                      </abbr>
+                    ) : (
+                      day
+                    )}
+                  </span>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
@@ -114,12 +150,12 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
                     selected={selectedDay === cell.iso}
                     compact={view === "month"}
                     onSelectDay={() => setSelectedDay(cell.iso)}
-                    onOpenEntry={setOpenEntryId}
+                    onOpenEntry={openEntryFocused}
                   />
                 ))}
               </div>
             </div>
-          )}
+          </TabsContent>
 
           {selectedDay === null ? null : (
             <p className="text-sm text-muted-foreground" data-testid="selected-day">
@@ -127,6 +163,7 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
             </p>
           )}
         </section>
+        </Tabs>
 
         <aside className="space-y-3">
           <h2 className="text-lg font-semibold">بدون تاریخ</h2>
@@ -147,7 +184,9 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
                     size="sm"
                     variant="outline"
                     data-testid="set-date"
-                    onClick={() => setOpenEntryId(entry.id)}
+                    onClick={() => {
+                      openEntryFocused(entry.id);
+                    }}
                   >
                     تعیین تاریخ
                   </Button>
@@ -159,13 +198,20 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
       </div>
 
       <EventSheet
+        // Keyed by the entry, so a date typed for one event cannot be saved
+        // onto the next one opened. Every detail overlay on these surfaces is
+        // a permanently-mounted sibling and needs this.
+        key={lastOpened}
         world={world}
         entry={openEntry}
         open={openEntry !== null}
         anchorIso={selectedDay ?? anchor}
-        onOpenChange={(next) => {
-          if (!next) setOpenEntryId(null);
-        }}
+        onOpenChange={(next) =>
+          detailFocus.onOpenChange(next, (value) => {
+            if (!value) setOpenEntryId(null);
+          })
+        }
+        onCloseAutoFocus={detailFocus.onCloseAutoFocus}
       />
     </div>
   );
@@ -204,13 +250,17 @@ function CalendarToolbar({
         </span>
       </div>
 
-      <Tabs value={view} onValueChange={(next) => onViewChange(next as View)}>
-        <TabsList>
-          <TabsTrigger value="month">ماه</TabsTrigger>
-          <TabsTrigger value="week">هفته</TabsTrigger>
-          <TabsTrigger value="agenda">فهرست</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/*
+        The `TabsList` sits inside the page's `Tabs` root rather than a local
+        one, so each trigger's `aria-controls` points at a panel that actually
+        exists. A standalone `Tabs` here left every trigger referencing a
+        missing id — a WCAG 4.1.2 failure that renders perfectly.
+      */}
+      <TabsList>
+        <TabsTrigger value="month">ماه</TabsTrigger>
+        <TabsTrigger value="week">هفته</TabsTrigger>
+        <TabsTrigger value="agenda">فهرست</TabsTrigger>
+      </TabsList>
     </div>
   );
 }
@@ -251,9 +301,23 @@ function DayCellView({
         type="button"
         onClick={onSelectDay}
         className="w-full text-start text-xs"
-        aria-label={`انتخاب ${formatDayFa(cell.iso)}`}
+        // Selection and "today" were carried by CSS classes alone, so every day
+        // announced the same thing and choosing one produced no feedback at all
+        // for a screen-reader user.
+        aria-pressed={selected}
+        aria-current={cell.isToday ? "date" : undefined}
+        aria-label={`${formatDayFa(cell.iso)}${cell.isToday ? "، امروز" : ""}${
+          cell.inCurrentMonth ? "" : "، خارج از این ماه"
+        }`}
       >
-        <span className={cell.isToday ? "font-bold text-selected" : ""}>{cell.labelFa}</span>
+        {/*
+          `text-selected` on the day number measured 4.31:1 against the dark
+          surface — below the 4.5:1 minimum. The bold weight and the border
+          carry "today" instead, and the accessible name says the word.
+        */}
+        <span className={cell.isToday ? "font-bold underline underline-offset-4" : ""}>
+          {cell.labelFa}
+        </span>
       </button>
       <ul className="space-y-1 pt-1">
         {shown.map((entry) => (
@@ -313,7 +377,7 @@ function AgendaView({
 /**
  * The event sheet — and the accessible route for changing a date.
  *
- * Drag is offered on the grid as an assist; this picker is the route that
+ * The picker is the only route to a new date, and it is the route that
  * always works, including by keyboard alone at mobile width (journey A20).
  */
 function EventSheet({
@@ -322,12 +386,15 @@ function EventSheet({
   open,
   anchorIso,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   world: PanelSnapshot;
   entry: PanelCalendarEntry | null;
   open: boolean;
   anchorIso: string;
   onOpenChange: (next: boolean) => void;
+  /** Returns focus to the control that opened this overlay. */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const isMobile = useIsMobile();
   const update = useUpdateCalendarEntry();
@@ -340,6 +407,7 @@ function EventSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        onCloseAutoFocus={onCloseAutoFocus}
         data-testid="event-sheet"
         className={isMobile ? "w-full sm:max-w-none" : "w-[34rem] sm:max-w-[40rem]"}
       >

@@ -9,10 +9,17 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
+  formatPersianDateTime,
   toPersianDigits,
   useIsMobile,
 } from "@drop/ui";
-import { GraphCanvas, StageList, buildProductGraph, type ProductNode } from "@drop/workflow-ui";
+import {
+  GraphCanvas,
+  NODE_STATE_LABEL_FA,
+  StageList,
+  buildProductGraph,
+  type ProductNode,
+} from "@drop/workflow-ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { ProjectSelector, useSelectedProject, ALL_PROJECTS } from "./project-selector";
 import { useDemoSession } from "../../lib/demo/providers";
@@ -27,15 +34,12 @@ import { useDemoSession } from "../../lib/demo/providers";
  * Read-first by decision. No destructive operations, no forced skip, no manual
  * state editing — a node that needs a person links to the page where the work
  * actually happens, and the work happens there.
+ *
+ * The state names come from `@drop/workflow-ui`, which is also what the canvas
+ * nodes read. This page once declared its own copy, and the two disagreed: the
+ * canvas said «در انتظار بررسی» while the list beside it said «منتظر اقدام شما»
+ * for the same node. One mapping, one name (ADR-0020 D7).
  */
-const NODE_STATE_LABEL_FA: Record<string, string> = {
-  PENDING: "هنوز شروع نشده",
-  RUNNING: "در حال اجرا",
-  AWAITING_REVIEW: "منتظر اقدام شما",
-  DONE: "کامل",
-  BLOCKED: "متوقف",
-  REJECTED: "کنار گذاشته‌شده",
-};
 
 export function EnginePage({ world }: { world: PanelSnapshot }) {
   const session = useDemoSession();
@@ -43,6 +47,10 @@ export function EnginePage({ world }: { world: PanelSnapshot }) {
   const selectedProject = useSelectedProject();
   const [selected, setSelected] = useState<ProductNode | null>(null);
 
+  // A graph can only ever be ONE project's, so "all projects" is not a state
+  // this surface has. Falling back to the first one is fine; doing it while the
+  // selector still read «همه پروژه‌ها» was not — the page described a project it
+  // never named. The selector below resolves the same fallback and shows it.
   const project =
     selectedProject === ALL_PROJECTS
       ? world.projects[0]
@@ -59,7 +67,7 @@ export function EnginePage({ world }: { world: PanelSnapshot }) {
         <EngineHeader world={world} />
         <EmptyState
           title="جریانی برای نمایش نیست"
-          detail="یک پروژه را انتخاب کنید تا جریان اجرای آن را ببینید."
+          detail="هنوز پروژه‌ای برای نمایش جریان اجرا وجود ندارد."
         />
       </div>
     );
@@ -91,7 +99,7 @@ export function EnginePage({ world }: { world: PanelSnapshot }) {
         {Object.entries(counts).map(([state, count]) => (
           <li key={state}>
             <Badge variant="outline">
-              {NODE_STATE_LABEL_FA[state] ?? state} — {toPersianDigits(String(count))}
+              {NODE_STATE_LABEL_FA[state as keyof typeof NODE_STATE_LABEL_FA] ?? state} — {toPersianDigits(String(count))}
             </Badge>
           </li>
         ))}
@@ -128,11 +136,16 @@ function EngineHeader({
         <h1 className="text-2xl font-bold">Engine</h1>
         {lastSyncedAt === undefined ? null : (
           <p className="text-xs text-muted-foreground">
-            آخرین به‌روزرسانی: {toPersianDigits(lastSyncedAt.slice(11, 16))}
+            {/*
+              Formatted in Asia/Tehran, not sliced out of the UTC instant.
+              Slicing showed a time three and a half hours from the truth on
+              the one surface whose whole job is saying where things stand.
+            */}
+            آخرین به‌روزرسانی: {formatPersianDateTime(lastSyncedAt).time}
           </p>
         )}
       </div>
-      <ProjectSelector world={world} />
+      <ProjectSelector world={world} allowAll={false} />
     </header>
   );
 }
@@ -158,7 +171,7 @@ function NodeDetails({ node, projectId }: { node: ProductNode; projectId: string
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           {node.labelFa}
-          <Badge variant="secondary">{NODE_STATE_LABEL_FA[node.state] ?? node.state}</Badge>
+          <Badge variant="secondary">{NODE_STATE_LABEL_FA[node.state]}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">

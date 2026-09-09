@@ -38,21 +38,57 @@ export default function Page() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">
+            نام و شرح هر سناریو، عیناً از فهرست ثبت‌شدهٔ سند مرجع است و ترجمه نمی‌شود تا
+            پیوندش با آن سند حفظ بماند.
+          </p>
+          <p className="text-muted-foreground">
             پنل روی «جهان پایه» باز می‌شود؛ هر سناریو آن را برای نمایش یک وضعیت خاص محدود
             می‌کند. انتخاب سناریو در نشانی صفحه ذخیره می‌شود، پس می‌توانید یک وضعیت مشخص را
             هم‌رسانی کنید یا صفحه را تازه کنید بدون از دست رفتن آن.
           </p>
 
+          {/*
+            V2 03 §6 — "Corrupt/old data offers Reset Demo with confirmation
+            instead of crashing." The panel now RESUMES stored state, so this is
+            the way out when what was stored cannot be read, and the way to
+            return to a clean world after a demo.
+          */}
+          {session.hydration === "UNUSABLE" ? (
+            <p
+              role="alert"
+              data-testid="hydration-warning"
+              className="rounded-md border border-warning bg-warning/10 p-2 text-sm"
+            >
+              وضعیت ذخیره‌شدهٔ قبلی خوانده نشد، پس پنل از جهان تازه شروع کرد. می‌توانید آن را
+              پاک کنید تا این پیام دیگر دیده نشود.
+            </p>
+          ) : null}
+
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground">سناریوی جاری:</span>
             <Badge data-testid="active-scenario">
-              <bdi dir="ltr">{active}</bdi>
+              <bdi lang="en" dir="ltr">
+                {active}
+              </bdi>
             </Badge>
             {active === "BASE" ? null : (
               <Button asChild size="sm" variant="outline">
                 <a href="/studio/settings">بازگشت به جهان پایه</a>
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              data-testid="reset-demo"
+              onClick={() => {
+                session.persistence.reset();
+                // A full navigation, so the world is rebuilt from the seed
+                // rather than patched in place.
+                window.location.reload();
+              }}
+            >
+              پاک‌کردن وضعیت ذخیره‌شده
+            </Button>
           </div>
 
           <ul className="grid gap-2 sm:grid-cols-2" data-testid="scenario-list">
@@ -68,7 +104,7 @@ export default function Page() {
               <li key={scenario.id}>
                 <ScenarioRow
                   id={scenario.id}
-                  nameFa={scenario.name}
+                  nameEn={scenario.name}
                   setup={scenario.setup}
                   acceptanceId={scenario.acceptanceId}
                   active={active === scenario.id}
@@ -97,15 +133,27 @@ export default function Page() {
   );
 }
 
+/**
+ * A scenario row.
+ *
+ * `nameEn` and its setup line are the RECORDED names of the (18 §7.2) scenario
+ * list, pinned 1:1 by `scenarios.test.ts` against a committed copy — translating
+ * them would break that guard and lose the link to the specification. They are
+ * therefore marked as reference text rather than passed off as interface
+ * language: `lang="en" dir="ltr"` so a screen reader pronounces them correctly
+ * instead of reading English letters as Persian.
+ */
 function ScenarioRow({
   id,
   nameFa,
+  nameEn,
   setup,
   acceptanceId,
   active,
 }: {
   id: string;
-  nameFa: string;
+  nameFa?: string;
+  nameEn?: string;
   setup: string;
   acceptanceId?: string;
   active: boolean;
@@ -123,9 +171,17 @@ function ScenarioRow({
     >
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline">
-          <bdi dir="ltr">{id}</bdi>
+          {/* The recorded scenario id, quoted verbatim like the names above. */}
+          <bdi lang="en" dir="ltr">
+            {id}
+          </bdi>
         </Badge>
-        <span className="font-medium">{nameFa}</span>
+        {nameFa === undefined ? null : <span className="font-medium">{nameFa}</span>}
+        {nameEn === undefined ? null : (
+          <span className="font-medium" lang="en" dir="ltr">
+            {nameEn}
+          </span>
+        )}
         {acceptanceId === undefined || acceptanceId === "-" ? null : (
           <Badge variant="secondary">
             <bdi dir="ltr">{acceptanceId}</bdi>
@@ -133,7 +189,13 @@ function ScenarioRow({
         )}
         {active ? <Badge>فعال</Badge> : null}
       </div>
-      <p className="pt-1 text-xs text-muted-foreground">{setup}</p>
+      <p
+        className="pt-1 text-xs text-muted-foreground"
+        lang={nameEn === undefined ? undefined : "en"}
+        dir={nameEn === undefined ? undefined : "ltr"}
+      >
+        {setup}
+      </p>
     </a>
   );
 }

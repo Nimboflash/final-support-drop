@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+
+const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 
 /**
  * A full interaction and responsive audit across every surface.
@@ -194,7 +197,32 @@ test.describe("primary actions actually change state", () => {
     await blocked.getByTestId("open-content").click();
     // Not every control disabled — one clear message and the action (brief §7.4).
     await expect(page.getByTestId("needs-source")).toBeVisible();
-    await expect(page.getByTestId("add-source")).toBeEnabled();
+    // The action must CHANGE something. Asserting only that it is enabled is
+    // how an inert button shipped: the button was visible, enabled, and had no
+    // handler at all, and the assertion certified it.
+    await page.getByTestId("add-source").click();
+    await page.getByLabel("نشانی یا توضیح منبع").fill("https://example.invalid/ref");
+    await page.getByTestId("save-source").click();
+    await expect(page.getByTestId("needs-source")).toHaveCount(0);
+    await expect(page.getByTestId("approve-content")).toBeEnabled();
+  });
+
+  test("the overview honours the same project filter (brief §8)", async ({ page }) => {
+    await page.goto("/studio", { waitUntil: "networkidle" });
+    const all = await page.getByTestId("project-card").count();
+    expect(all).toBeGreaterThan(1);
+
+    await page.goto("/studio?project=p1", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("project-card")).toHaveCount(1);
+    // A filter that vanishes on one destination out of six is a filter the
+    // person stops trusting, so the selector is present here too.
+    await expect(page.getByTestId("project-selector")).toBeVisible();
+  });
+
+  test("a retired project tab keeps its project as context", async ({ page }) => {
+    await page.goto("/studio/projects/p1/overview", { waitUntil: "networkidle" });
+    await page.waitForURL("**/studio?project=p1");
+    await expect(page.getByTestId("project-card")).toHaveCount(1);
   });
 
   test("the project selector filters and lives in the URL", async ({ page }) => {
@@ -274,6 +302,10 @@ test.describe("the calendar behaves like a calendar (ADR-0020 D9)", () => {
     await page.getByTestId("save-event-date").click();
     await expect(page.getByTestId("event-sheet")).toBeHidden();
 
+    // The reload is the assertion. Without it this only proved that a tab
+    // switch in the same page session shows the value already in memory —
+    // which is true of state that was never persisted at all.
+    await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("tab", { name: "فهرست" }).click();
     await expect(page.getByTestId("agenda-list")).toContainText("۲۸ شهریور");
   });
@@ -312,9 +344,20 @@ test.describe("Engine is the one home for execution detail (ADR-0020 D4)", () =>
 
 test.describe("the interface speaks the user's language (ADR-0020 D5)", () => {
   test("no surface shows an internal identifier or ticket name", async ({ page }) => {
-    for (const path of ["/studio", "/studio/concepts", "/studio/content", "/studio/outputs", "/studio/calendar"]) {
+    for (const path of SURFACES) {
       await page.goto(path, { waitUntil: "networkidle" });
-      const body = await page.locator("main").innerText();
+      // Reference text marked `lang="en"` is quoted from the specification —
+      // the recorded scenario list names the ids it names, on purpose.
+      const body = await page.evaluate(() => {
+        const marked = [...document.querySelectorAll<HTMLElement>('[lang="en"]')];
+        const prior = marked.map((el) => el.style.display);
+        for (const el of marked) el.style.display = "none";
+        const text = (document.querySelector("main") as HTMLElement).innerText;
+        marked.forEach((el, i) => {
+          el.style.display = prior[i] ?? "";
+        });
+        return text;
+      });
       // Identifiers like c1-v1 / o2 / p1 and ticket names like P4.
       expect(body, `${path} shows a version identifier`).not.toMatch(/\b[a-z]\d+-v\d+\b/);
       expect(body, `${path} names a ticket`).not.toMatch(/تیکت\s*P\d/);
@@ -327,21 +370,52 @@ test.describe("the interface speaks the user's language (ADR-0020 D5)", () => {
     await expect(page.getByRole("main")).toHaveCount(1);
   });
 
-  test("no untranslated English reaches a reader, screen reader included", async ({ page }) => {
-    // `sr-only` text is in the accessibility tree and in innerText, but never on
-    // screen — so English shipped by an upstream component survives every visual
-    // review. This product ships fa-IR only (00 §4).
-    // "React Flow" is the library's own attribution mark. Removing it needs the
-    // Pro licence, which is an open client gate (doc 15 §12), so it stays.
-    const ALLOWED = /^(DROP OS|Engine|DROP|OS|React Flow)$/;
-    for (const path of ["/studio", "/studio/concepts", "/studio/calendar", "/studio/engine"]) {
+  // `sr-only` text is in the accessibility tree and in innerText but never on
+  // screen, so English shipped by an upstream component survives every visual
+  // review. This product ships fa-IR only (00 §4).
+  //
+  // "React Flow" is the library's own attribution mark; removing it needs the
+  // Pro licence, an open client gate (doc 15 §12), so it stays.
+  // "API" is a loanword inside a Persian sentence, not untranslated copy.
+  const ALLOWED_LATIN = /^(DROP OS|Engine|DROP|OS|React Flow|API)$/;
+
+  for (const path of SURFACES) {
+    test(`${path} shows no untranslated English`, async ({ page }) => {
       await page.goto(path, { waitUntil: "networkidle" });
-      const text = await page.locator("body").innerText();
-      const latin = [...new Set(text.match(/[A-Za-z][A-Za-z ]{2,}/g) ?? [])]
+      // Text explicitly marked `lang="en"` is quoted reference material — the
+      // recorded scenario names — not a failure to localize. It is hidden and
+      // restored rather than cloned away: `innerText` on a DETACHED node falls
+      // back to raw text content, which drags in every inline script on the
+      // page and drowns the signal.
+      const latin = await page.evaluate(() => {
+        const marked = [...document.querySelectorAll<HTMLElement>('[lang="en"]')];
+        const priorDisplay = marked.map((el) => el.style.display);
+        for (const el of marked) el.style.display = "none";
+        const text = document.body.innerText;
+        marked.forEach((el, i) => {
+          el.style.display = priorDisplay[i] ?? "";
+        });
+        return text;
+      });
+      const found = [...new Set(latin.match(/[A-Za-z][A-Za-z ]{2,}/g) ?? [])]
         .map((s) => s.trim())
-        .filter((s) => !ALLOWED.test(s));
-      expect(latin, `${path} shows untranslated English: ${latin.join(" | ")}`).toEqual([]);
-    }
+        .filter((s) => s !== "" && !ALLOWED_LATIN.test(s));
+      expect(found, `${path} shows untranslated English: ${found.join(" | ")}`).toEqual([]);
+    });
+  }
+
+  test("the graph's own controls speak Persian too", async ({ page }) => {
+    // React Flow's control labels are `aria-label` and `title`, never visible
+    // text, so the innerText sweep above cannot see them.
+    await page.goto("/studio/engine", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("graph-canvas")).toBeVisible();
+    const labels = await page.evaluate(() =>
+      [...document.querySelectorAll("[aria-label], [title]")]
+        .map((el) => `${el.getAttribute("aria-label") ?? ""}|${el.getAttribute("title") ?? ""}`)
+        .filter((v) => /[A-Za-z]{3,}/.test(v)),
+    );
+    const offenders = labels.filter((v) => !/React Flow|DROP|Engine/.test(v));
+    expect(offenders, `English accessible names: ${offenders.join(" ; ")}`).toEqual([]);
   });
 
   test("the one demo marker is present and honest", async ({ page }) => {
@@ -351,4 +425,61 @@ test.describe("the interface speaks the user's language (ADR-0020 D5)", () => {
     expect(body).not.toContain("منتشر شد");
     expect(body).not.toContain("شبیه‌سازی شده است");
   });
+});
+
+test.describe("WCAG 2.2 AA on every destination and every overlay", () => {
+  /**
+   * The gate this replaces only ever visited /studio and /dev/gallery. Six new
+   * destinations and five new overlays shipped without ever being scanned, and
+   * two real violations went with them: a tab set whose `aria-controls` pointed
+   * at panels that did not exist, and English close labels in the overlays.
+   * A gate that skips the surfaces under construction is not a gate.
+   */
+  for (const path of SURFACES) {
+    test(`${path} is axe-clean in both themes`, async ({ page }) => {
+      for (const theme of ["light", "dark"] as const) {
+        await page.addInitScript((t) => localStorage.setItem("theme", t), theme);
+        await page.goto(path, { waitUntil: "networkidle" });
+        const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+        expect(
+          results.violations.map((v) => `${theme} ${path} — ${v.id}: ${v.nodes.length} nodes`),
+        ).toEqual([]);
+      }
+    });
+  }
+
+  const OVERLAYS = [
+    { name: "concept detail", path: "/studio/concepts", open: "open-concept", slot: "concept-detail" },
+    { name: "concept composer", path: "/studio/concepts", open: "start-concept", slot: "concept-composer" },
+    { name: "content detail", path: "/studio/content", open: "open-content", slot: "content-detail" },
+    { name: "output detail", path: "/studio/outputs", open: "open-output", slot: "output-detail" },
+    { name: "calendar event", path: "/studio/calendar", open: "calendar-event", slot: "event-sheet" },
+  ] as const;
+
+  for (const overlay of OVERLAYS) {
+    test(`the ${overlay.name} overlay is axe-clean`, async ({ page }) => {
+      await page.goto(overlay.path, { waitUntil: "networkidle" });
+      await page.getByTestId(overlay.open).first().click();
+      await expect(page.getByTestId(overlay.slot)).toBeVisible();
+      // Wait for the entrance animation to finish. `toBeVisible` resolves while
+      // the overlay is still fading in, and axe measures contrast against a
+      // partially transparent surface — a colour pair that passes when opaque
+      // fails at 80%, so the gate would flake rather than report.
+      await expect(page.getByTestId(overlay.slot)).toHaveCSS("opacity", "1");
+      const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+      expect(results.violations.map((v) => `${v.id}: ${v.nodes.length} nodes`)).toEqual([]);
+    });
+
+    test(`the ${overlay.name} overlay returns focus when it closes`, async ({ page }) => {
+      // A controlled overlay with no Radix trigger drops focus on <body> when
+      // it closes, stranding a keyboard user at the top of the document.
+      await page.goto(overlay.path, { waitUntil: "networkidle" });
+      await page.getByTestId(overlay.open).first().click();
+      await expect(page.getByTestId(overlay.slot)).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId(overlay.slot)).toBeHidden();
+      const active = await page.evaluate(() => document.activeElement?.tagName ?? "NONE");
+      expect(active, `${overlay.name} dropped focus on ${active}`).not.toBe("BODY");
+    });
+  }
 });

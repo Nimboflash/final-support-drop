@@ -85,7 +85,12 @@ export function openReviewCount(world: PanelSnapshot, projectId: string): number
  * review, then missing schedule. The order is the product decision; encoding it
  * once here is what keeps every surface agreeing about what is most urgent.
  */
-export type AttentionKind = "BLOCKED_REQUIRED" | "AWAITING_REVIEW" | "MISSING_SCHEDULE";
+export type AttentionKind =
+  | "BLOCKED_REQUIRED"
+  | "AWAITING_REVIEW"
+  /** An output whose content is all approved and which is waiting to be sent. */
+  | "OUTPUT_READY"
+  | "MISSING_SCHEDULE";
 
 export interface AttentionRow {
   readonly kind: AttentionKind;
@@ -99,6 +104,7 @@ export interface AttentionRow {
 const ATTENTION_ORDER: readonly AttentionKind[] = [
   "BLOCKED_REQUIRED",
   "AWAITING_REVIEW",
+  "OUTPUT_READY",
   "MISSING_SCHEDULE",
 ];
 
@@ -125,18 +131,51 @@ export function attentionRows(world: PanelSnapshot): readonly AttentionRow[] {
       });
     }
 
-    const open = openReviewCount(world, project.id);
+    const openConcepts = world.concepts.filter(
+      (c) => c.projectId === project.id && c.reviewStatus === "IN_REVIEW",
+    ).length;
+    const openContent = world.content.filter(
+      (c) => c.projectId === project.id && c.reviewStatus === "IN_REVIEW",
+    ).length;
+    const open = openConcepts + openContent;
     if (open > 0) {
+      // The row has to land where the work IS. It used to always link to
+      // concepts, so a project whose pending work was content sent the person
+      // to a page with nothing on it to review.
+      const toConcepts = openConcepts > 0;
       rows.push({
         kind: "AWAITING_REVIEW",
         projectId: project.id,
         projectTitleFa: project.titleFa,
         detailFa:
           open === 1
-            ? "یک مورد به تأیید شما نیاز دارد."
+            ? toConcepts
+              ? "یک کانسپت به تأیید شما نیاز دارد."
+              : "یک محتوا به تأیید شما نیاز دارد."
             : `${toPersianDigits(String(open))} مورد به تأیید شما نیاز دارند.`,
-        href: `/studio/concepts?project=${project.id}`,
-        actionLabelFa: "بررسی",
+        href: toConcepts
+          ? `/studio/concepts?project=${project.id}`
+          : `/studio/content?project=${project.id}`,
+        actionLabelFa: toConcepts ? "بررسی کانسپت‌ها" : "بررسی محتوا",
+      });
+    }
+
+    /*
+      The brief's own primary action — approve the output and send it on — was
+      invisible on the one surface whose job is "what needs me now". A project
+      literally named «خروجی آماده بدون تاریخ» reported that nothing was
+      waiting.
+    */
+    // `readiness` above is the same computation; reuse it.
+    const hasEntry = world.calendar.some((entry) => entry.projectId === project.id);
+    if (readiness.ready && !hasEntry) {
+      rows.push({
+        kind: "OUTPUT_READY",
+        projectId: project.id,
+        projectTitleFa: project.titleFa,
+        detailFa: "خروجی این پروژه آماده است و هنوز فرستاده نشده.",
+        href: `/studio/outputs?project=${project.id}`,
+        actionLabelFa: "دیدن خروجی",
       });
     }
 

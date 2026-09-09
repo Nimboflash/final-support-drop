@@ -35,16 +35,36 @@ export interface DemoSession {
   readonly world: MockWorld;
   readonly persistence: DemoPersistence;
   readonly clock: DemoClock;
+  /** How the stored world was read, so Settings can offer Reset on corruption. */
+  readonly hydration: "HYDRATED" | "ABSENT" | "UNUSABLE";
 }
 
 export function createDemoSession(scenarioId: string = DEFAULT_SCENARIO_ID): DemoSession {
   const clock = createFixedClock();
-  const world = createMockWorld({ scenarioId, clock });
   const persistence = createDemoPersistence(
     createBrowserStoragePort(),
     () => loadScenario(scenarioId).snapshot,
   );
-  return { scenarioId, world, persistence, clock };
+
+  /*
+    ADR-0019 D2 requires demo state to live in one versioned browser key,
+    validated on hydration. The key, the validation and the reset were all
+    built — and never wired: the world was rebuilt from the seed on every
+    load, so every decision a person made was gone on refresh. The brief's own
+    QA scenario asks for a date change to survive a reload, and it could not.
+
+    A stored world is resumed only when it belongs to the SAME scenario.
+    Different scenarios are different worlds; resuming one into another would
+    show data the chosen scenario never contained.
+  */
+  const stored = persistence.load();
+  const resumable =
+    stored.outcome === "HYDRATED" && stored.scenarioId === scenarioId
+      ? stored.snapshot
+      : undefined;
+
+  const world = createMockWorld({ scenarioId, clock, snapshot: resumable });
+  return { scenarioId, world, persistence, clock, hydration: stored.outcome };
 }
 
 /**

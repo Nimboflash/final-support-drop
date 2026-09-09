@@ -39,6 +39,15 @@ export const WEEKDAY_LABELS_FA = [
   "جمعه",
 ] as const;
 
+/**
+ * The narrow-viewport header, written out rather than sliced.
+ *
+ * `slice(0, 3)` on these produces non-words — «یک‌شنبه» becomes «یک‌» with a
+ * dangling zero-width non-joiner, and «سه‌شنبه» becomes «سه‌». Persian
+ * abbreviates weekdays by their first letter, so that is what this is.
+ */
+export const WEEKDAY_SHORT_FA = ["ش", "ی", "د", "س", "چ", "پ", "ج"] as const;
+
 export interface DayCell {
   /** ISO calendar date — the key events are matched on. */
   readonly iso: string;

@@ -71,13 +71,18 @@ function DialogContent({
         {...props}
       >
         {children}
-        {showCloseButton && (
+        {/*
+        fa-IR is the only language this product ships (00 §4). The upstream
+        registry's English close label is screen-reader-only, which is exactly
+        why it survived every visual review.
+      */}
+      {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
             className="absolute top-4 end-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">بستن</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -115,7 +120,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
+          <Button variant="outline">بستن</Button>
         </DialogPrimitive.Close>
       )}
     </div>

@@ -60,7 +60,16 @@ export interface DemoStoragePort {
 
 /** The result of trying to hydrate stored demo state. */
 export type HydrationResult =
-  | { readonly outcome: "HYDRATED"; readonly snapshot: PanelSnapshot }
+  | {
+      readonly outcome: "HYDRATED";
+      readonly snapshot: PanelSnapshot;
+      /**
+       * Which world was stored. A snapshot saved under one scenario must not be
+       * resumed into another — the scenarios are different worlds, and mixing
+       * them would show data the chosen scenario never contained.
+       */
+      readonly scenarioId: string;
+    }
   | { readonly outcome: "ABSENT" }
   /**
    * Corrupt, truncated, or written by an incompatible schema. V2 03 §6:

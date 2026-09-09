@@ -62,6 +62,27 @@ function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
 
 const nodeTypes = { product: ProductNodeCard };
 
+/** Every string React Flow speaks, in Persian. */
+const ARIA_LABELS_FA = {
+  "node.a11yDescription.default": "برای انتخاب این مرحله Enter را بزنید.",
+  "node.a11yDescription.keyboardDisabled": "این مرحله با صفحه‌کلید جابه‌جا نمی‌شود.",
+  "node.a11yDescription.ariaLiveMessage": ({ direction }: { direction: string }) =>
+    `مرحله به سمت ${direction} جابه‌جا شد.`,
+  "edge.a11yDescription.default": "پیوند میان دو مرحله.",
+  "controls.ariaLabel": "کنترل‌های نمودار",
+  "controls.zoomIn.ariaLabel": "بزرگ‌نمایی",
+  "controls.zoomOut.ariaLabel": "کوچک‌نمایی",
+  "controls.fitView.ariaLabel": "جا دادن کل نمودار",
+  "controls.interactive.ariaLabel": "قفل یا باز کردن جابه‌جایی",
+  "minimap.ariaLabel": "نقشهٔ کوچک نمودار",
+  "handle.ariaLabel": "نقطهٔ اتصال",
+};
+
+const ATTRIBUTION_CONTRAST_CSS = `
+  .react-flow__attribution { background: var(--card); }
+  .react-flow__attribution a { color: var(--foreground); opacity: 1; }
+`;
+
 export function GraphCanvas({
   graph,
   onSelect,
@@ -119,6 +140,13 @@ export function GraphCanvas({
 
   return (
     <div className="h-[32rem] w-full rounded-md border" data-testid="graph-canvas">
+      {/*
+        React Flow's attribution mark ships at 1.13:1 against the canvas — a
+        WCAG AA failure. It must stay (removing it needs the Pro licence, an
+        open client gate), so it is made legible instead: the same link, at a
+        contrast a person can actually read.
+      */}
+      <style>{ATTRIBUTION_CONTRAST_CSS}</style>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -130,6 +158,13 @@ export function GraphCanvas({
         deleteKeyCode={null}
         onNodeClick={(_, node) => onSelect((node.data as ProductNodeData).product)}
         proOptions={{ hideAttribution: false }}
+        // React Flow ships English accessible names on its controls, its mini
+        // map, its handles and its keyboard announcements. They are `aria-label`
+        // and live-region text — never visible — so no visual review and no
+        // innerText assertion can see them. In a product that ships fa-IR only
+        // (00 §4) that is untranslated English reaching a screen reader, and
+        // this is the library's own mechanism for fixing it.
+        ariaLabelConfig={ARIA_LABELS_FA}
       >
         <Background />
         <Controls showInteractive={false} />

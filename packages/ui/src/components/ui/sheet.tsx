@@ -81,10 +81,15 @@ function SheetContent({
         {...props}
       >
         {children}
-        {showCloseButton && (
+        {/*
+        fa-IR is the only language this product ships (00 §4). The upstream
+        registry's English close label is screen-reader-only, which is exactly
+        why it survived every visual review.
+      */}
+      {showCloseButton && (
           <SheetPrimitive.Close className="absolute top-4 end-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary">
             <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">بستن</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Content>

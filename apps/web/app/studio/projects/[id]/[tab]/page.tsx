@@ -14,5 +14,7 @@ export default async function Page({
   const { id, tab } = await params;
   const target =
     PROJECT_TAB_REDIRECTS[tab as keyof typeof PROJECT_TAB_REDIRECTS] ?? "/studio/concepts";
-  redirect(target === "/studio" ? "/studio" : `${target}?project=${id}`);
+  // Including the overview: the brief's §8 routes it to "the overview filtered
+  // on that project", and every other destination honours the same parameter.
+  redirect(`${target}?project=${id}`);
 }

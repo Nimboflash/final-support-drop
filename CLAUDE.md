@@ -7,7 +7,7 @@ auditable creative operating system. Five governed AI machines (01 Concept → 0
 This file exists per `docs/implementation/16_CLAUDE_CODE_BUILD_PROTOCOL.md` §2. It is
 navigation and discipline, not authority. When it disagrees with the documents below, they win.
 
-## Current scope (ADR-0017, narrowed by ADR-0019 — read this first)
+## Current scope (ADR-0017, narrowed by ADR-0019, restructured by ADR-0020 — read this first)
 
 **Panel first, and now frontend only.** This delivery builds the operational dashboard/control
 panel and the workflow graph on deterministic typed mocks — nothing else. ADR-0019 D2 withdrew
@@ -19,23 +19,40 @@ Machines 01–05, their runtime, queues, DB infrastructure and AI providers are 
 build** connected later through the `MachineGateway` adapter
 (`docs/implementation/18_SCOPE_CORRECTION_PANEL_FIRST_AND_MOCK_MACHINES.md`; the owner's V2
 narrowing is `docs/frontend-v2/`). Active tickets are the P-series in `docs/tickets/`, run
-**strictly sequentially** (ADR-0018 D2, ADR-0019 D20: P1-R → P2 → … → P8); tickets 0.2–0.16 are
-deferred or superseded per ADR-0017 D2. `apps/worker` and the eleven machine-oriented packages
-are **implementation-frozen through P8** (ADR-0018 D3). Never add machine logic, provider calls,
-or machine infrastructure here.
+**strictly sequentially** (ADR-0018 D2, ADR-0019 D20, ADR-0020: P1-R → P2 → … → P8 → P9);
+tickets 0.2–0.16 are deferred or superseded per ADR-0017 D2. `apps/worker` and the eleven
+machine-oriented packages are **implementation-frozen** (ADR-0018 D3). Never add machine logic,
+provider calls, or machine infrastructure here. **P8's hard stop holds**: it stops machine work,
+and P9 is panel presentation only.
 
-The product journey the panel serves: start with `input=null` or a reference → concept cards →
+The product journey the panel serves is unchanged; **how the panel is organised around it is
+not** (ADR-0020). The journey: start with `input=null` or a reference → concept cards →
 approve/reject/comment and selectively regenerate → research and content per approved concept →
 review and regenerate each content item independently → an automatically assembled versioned
-package → a calendar entry, or the unscheduled tray when no date exists.
+output → a calendar entry, or the unscheduled tray when no date exists.
 
-## Authority order (ADR-0011, amended by ADR-0017 and ADR-0019)
+The panel is organised by **work unit, not by process stage** (ADR-0020 D2). Six destinations —
+نمای کلی, کانسپت‌ها, محتوا, خروجی‌ها, تقویم, Engine — each answering exactly one question. A
+project is a **filter carried in the URL**, never a destination; settings and history sit in a
+secondary menu. Execution detail has one home, Engine (D4), which is what let the content
+surfaces shed process furniture without losing it.
+
+The interface speaks the user's units (ADR-0020 D5), and this is enforced, not merely intended:
+`tests/repo/interface-language.test.ts` fails on a ticket name, a gateway or dependency word, a
+version label, a raw identifier or the noun «بسته» in any surface string. Recorded domain
+vocabulary is **not renamed** to satisfy it — the rule is that no panel surface renders that
+vocabulary directly.
+
+## Authority order (ADR-0011, amended by ADR-0017, ADR-0019 and ADR-0020)
 
 1. `docs/source-material/DROP_BRAND_DNA_v3.0.md` — permanent brand truth.
-2. `docs/frontend-v2/` — the owner's V2 pack, **build scope only** (ADR-0019 D1).
+2. `docs/frontend-v2/` — the owner's V2 pack, **build scope only** (ADR-0019 D1). Within it,
+   `06_SIMPLIFICATION_BRIEF.md` governs the panel's **presentation and information
+   architecture** and supersedes the earlier V2 documents wherever they disagree (ADR-0020 D1).
 3. `docs/implementation/18_...` — **build scope** (panel-first; ADR-0017 D1).
 4. Recorded decisions in `docs/implementation/03_SOURCE_RECONCILIATION_AND_DECISIONS.md`,
-   then repo ADRs in `docs/adr/` (0011–0016 repair the bundle's verified defects).
+   then repo ADRs in `docs/adr/` (0011–0016 repair the bundle's verified defects; 0019 seats
+   the V2 pack; 0020 adopts the simplification brief).
 5. `docs/implementation/02_ADR_0010_DASHBOARD_AND_WORKFLOW_UI.md`.
 6. The numbered implementation docs `docs/implementation/00–17` — the build contract
    (product language, domain concepts, states, RBAC/approval/audit semantics, and future

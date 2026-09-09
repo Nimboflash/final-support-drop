@@ -1,13 +1,26 @@
 # P8 — Frontend handoff to the machine build
 
-**Ticket:** P8 (final panel ticket; ADR-0019 D20)
+**Ticket:** P8 (ADR-0019 D20)
 **Status:** delivered
-**Hard stop:** machine work does not begin here and does not begin automatically. This document
-is where the panel scope ends.
+**Hard stop:** machine work does not begin here and does not begin automatically.
+
+> **Partially superseded by `docs/handoff/P9-studio-simplification.md` (ADR-0020).** Read that
+> document first for the navigation, the surface list and the composition root — §1 and §4 below
+> describe the pre-restructure panel. **Everything else here stands and is still authoritative
+> for the machine build**: the ten open decisions (§2), the provisional contract register (§3),
+> what was deliberately not built (§5), and the standing risks (§6) — §6.1's "there is no CI"
+> above all.
+>
+> The hard stop is unchanged. P9 reopened the panel's own presentation on the owner's
+> simplification brief, which is panel scope; it started no machine work.
 
 ---
 
 ## 1. What was built
+
+> Superseded by P9 §1 for the navigation and surface list: there are no longer seven project
+> tabs, and the destinations are the six work units. The delivery table below is still the
+> accurate record of what each P-series ticket produced.
 
 The DROP Studio OS support panel, frontend-only, on deterministic mocks. Six destinations, seven
 project tabs, the full start → concepts → content → package → calendar journey, a React Flow
@@ -192,6 +205,11 @@ character-for-character on every run.
 ---
 
 ## 4. Connection points for a RealMachineGateway
+
+> Item 2 below is superseded by P9 §4: `apps/web/lib/demo/session.ts` is still the composition
+> root, but `DemoProviders` now mounts in `apps/web/app/studio/layout.tsx` rather than the root
+> layout, deliberately without a Suspense boundary. Items 1 and 3, and the enforcement note, are
+> unchanged.
 
 These are **unimplemented seams, not stubs returning fake production success.**
 

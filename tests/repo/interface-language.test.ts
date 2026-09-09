@@ -110,6 +110,8 @@ describe("no technical vocabulary reaches the interface (ADR-0020 D5)", () => {
     // "بسته" as the product noun. Excludes «باز و بسته» ("open and close"),
     // where the same letters mean "closed" and carry no product meaning.
     { pattern: /(?<!باز و )بستهٔ?(?=\s|$)/, insteadFa: "«خروجی»" },
+    // The transliteration is the same noun wearing Latin clothes.
+    { pattern: /پکیج/, insteadFa: "«خروجی»" },
     { pattern: /مورد الزامی/, insteadFa: "a human sentence about what to do next" },
   ];
 
@@ -162,6 +164,39 @@ describe("the recorded vocabulary stays out of the interface (ADR-0020 D5)", () 
         `${file.slice(ROOT.length + 1)} renders a recorded domain label; say it in the user's words instead`,
       ).toBe(false);
     }
+  });
+});
+
+describe("a button label says the result of pressing it (brief §10)", () => {
+  /**
+   * The brief names its own bad examples: «ادامه» is ambiguous where
+   * «انتخاب برای تولید محتوا» is good, and «بررسی وابستگی» is technical where
+   * «افزودن منبع» is right. The second is already covered by the ban on
+   * «وابستگی»; this is the first.
+   *
+   * The match is EXACT and only against a control's own text. «ادامه» inside a
+   * sentence is ordinary Persian — the sidebar asks "کدام را ادامه بدهم؟" and
+   * that is fine. It is the bare label on a button that tells the person
+   * nothing about where they are going.
+   */
+  const VAGUE_LABELS = ["ادامه", "بیشتر بدانید", "کلیک کنید", "برو", "باز کن"];
+
+  it("no control is labelled with a word that says nothing", () => {
+    const offenders: string[] = [];
+    for (const file of SURFACE_DIRS.flatMap((d) => walk(d))) {
+      const source = readFileSync(file, "utf8");
+      const withoutComments = source
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/\/\/.*$/gm, " ");
+      // JSX text that is the entire content of its element.
+      for (const match of withoutComments.matchAll(/>\s*([^<>{}\n]+?)\s*</g)) {
+        const text = (match[1] ?? "").trim();
+        if (VAGUE_LABELS.includes(text)) {
+          offenders.push(`${file.slice(ROOT.length + 1)}: «${text}» — say the result instead`);
+        }
+      }
+    }
+    expect(offenders, offenders.join("\n")).toEqual([]);
   });
 });
 

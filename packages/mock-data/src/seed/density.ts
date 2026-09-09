@@ -153,14 +153,50 @@ export function expandDensity(base: PanelSnapshot): PanelSnapshot {
     targetDate: null,
   });
 
-  // p7's assembly is blocked: its required content is approved, but the branch
-  // carries a blocked item so the readiness surface has a failure to explain.
-  const p7Blocked = world.content.find((c) => c.projectId === "p7");
-  if (p7Blocked !== undefined) {
-    p7Blocked.generationState = "BLOCKED";
-    p7Blocked.reviewStatus = "IN_REVIEW";
-    p7Blocked.blockedReasonCode = "ASSEMBLY_FAILED_RETRYABLE";
-    p7Blocked.blockedReasonFa = "ساخت خروجی با خطایی متوقف شد که می‌توان دوباره تلاش کرد.";
+  // p7 carries a FAILED item, not a blocked one. The two are different to a
+  // person: a blocked item is waiting for a source they can supply, a failed
+  // one is not, and the project's own name says a build failed. Seeding it as
+  // BLOCKED told the reader to «افزودن منبع» for a problem no source fixes.
+  const p7Failed = world.content.find((c) => c.projectId === "p7");
+  if (p7Failed !== undefined) {
+    p7Failed.generationState = "FAILED";
+    p7Failed.reviewStatus = "IN_REVIEW";
+    p7Failed.blockedReasonCode = "ASSEMBLY_FAILED_RETRYABLE";
+    p7Failed.blockedReasonFa = "ساخت خروجی با خطایی متوقف شد که می‌توان دوباره تلاش کرد.";
+  }
+
+  // p5 is «خروجی آماده بدون تاریخ» — so it must actually HAVE an undated
+  // calendar entry. Without one the unscheduled tray was permanently empty in
+  // every world, and ADR-0019 D7's «PLANNED with a null date» was unreachable.
+  const p2Package = world.packages.find((snapshot) => snapshot.projectId === "p2");
+  if (p2Package !== undefined) {
+    // The branch clone copies content and concepts but not the assembled
+    // output, and an entry cannot exist without a version to point at.
+    const p5Package = {
+      ...p2Package,
+      id: "pkg-p5-v1",
+      familyId: "pkg-p5",
+      projectId: "p5",
+      contentVersionIds: world.content
+        .filter((c) => c.projectId === "p5")
+        .map((c) => c.activeVersionId),
+    };
+    world.packages.push(p5Package);
+    world.calendar.push({
+      id: "cal-p5",
+      projectId: "p5",
+      packageFamilyId: p5Package.familyId,
+      packageVersionId: p5Package.id,
+      titleFa: "خروجی آمادهٔ بدون تاریخ",
+      status: "PLANNED",
+      date: null,
+      endDate: null,
+      startsAt: null,
+      timezone: "Asia/Tehran",
+      ownerId: "actor-planner",
+      noteFa: "",
+      rowVersion: 1,
+    });
   }
 
   return panelSnapshotSchema.parse(world);

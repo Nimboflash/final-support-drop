@@ -60,6 +60,51 @@ describe("A07 / S18 — a targeted revision touches only its own item", () => {
     ).toBe(siblingsBefore);
   });
 
+  it("RESEARCH_REFRESH lifts a block, because supplying the source is what unblocks", async () => {
+    // The panel offers «افزودن منبع» beside a blocked item. If this route left
+    // the item blocked, that action would change nothing on screen and the
+    // person would rightly conclude the panel is broken. Recording the
+    // reference is the whole effect: nothing is fetched or extracted
+    // (ADR-0019 D2).
+    const w = world("S08");
+    const before = await w.panelCommandGateway.getSnapshot();
+    const blocked = before.content.find((c) => c.generationState === "BLOCKED");
+    expect(blocked, "S08 is the blocked-content world").toBeDefined();
+
+    await w.revisionGateway.requestRevision({
+      ...ENV,
+      target: { type: "CONTENT", id: blocked!.id, versionId: blocked!.activeVersionId },
+      feedbackFa: "منبع افزوده شد: https://example.invalid/reference",
+      route: "RESEARCH_REFRESH",
+    });
+
+    const after = await w.panelCommandGateway.getSnapshot();
+    const item = after.content.find((c) => c.id === blocked!.id)!;
+    expect(item.generationState).not.toBe("BLOCKED");
+    expect(item.blockedReasonFa).toBeNull();
+    // The block lifting does not approve anything — it returns the item to
+    // review, where a person still decides.
+    expect(item.reviewStatus).toBe("REVISION_REQUESTED");
+  });
+
+  it("a different route leaves a blocked item blocked", async () => {
+    // The unblock is specific to the route that means "the source arrived".
+    // A rewrite request is not that, and must not smuggle a state change.
+    const w = world("S08");
+    const before = await w.panelCommandGateway.getSnapshot();
+    const blocked = before.content.find((c) => c.generationState === "BLOCKED")!;
+
+    await w.revisionGateway.requestRevision({
+      ...ENV,
+      target: { type: "CONTENT", id: blocked.id, versionId: blocked.activeVersionId },
+      feedbackFa: "لحن را عوض کن.",
+      route: "CONTENT_REWRITE",
+    });
+
+    const after = await w.panelCommandGateway.getSnapshot();
+    expect(after.content.find((c) => c.id === blocked.id)!.generationState).toBe("BLOCKED");
+  });
+
   it("prior versions stay byte-identical — a revision appends, never overwrites", async () => {
     const w = world("S18");
     const target: Target = { type: "CONTENT", id: "o4", versionId: "o4-v1" };

@@ -174,6 +174,36 @@ in the interface layer. All 24 scenarios and their fixtures stay, because they a
 simplified surfaces are proven against real states. RTL, Persian, mobile behaviour and
 accessibility are preserved. Nothing outside `/studio` changes.
 
+### D11 — An affordance must act, and «افزودن منبع» is the case that proved it
+
+The brief's §7.4 says a blocked item states what it needs in one human sentence *with the action
+beside it*, rather than disabling every control. The first implementation of that rule shipped the
+sentence and a button with **no handler at all** — visibly enabled, and inert.
+
+Every check was green. Typecheck cannot see a missing `onClick`; a `<Button>` without one is
+perfectly well typed. Lint cannot see it. The e2e that covered the surface asserted the button was
+visible and enabled, which it was — so the test certified the defect rather than catching it. The
+owner's report of the previous panel was "click is not working"; this was that same defect,
+reintroduced by the work meant to fix it.
+
+Two things follow.
+
+**A button on a panel surface must act, delegate through an `asChild` trigger, submit a form, or
+be explicitly disabled.** `tests/repo/no-inert-controls.test.ts` enforces it, and asserts both
+halves of its own discrimination so the guard cannot silently stop working: a bare button is
+caught, and one wrapped in a delegating trigger is not.
+
+**And the action needs a real effect.** Supplying a missing source lifts the block, through the
+existing `RESEARCH_REFRESH` revision route — whose recorded meaning is already exactly this. No
+gateway member and no route is added (ADR-0019 D3 is untouched), and nothing is fetched or
+extracted (ADR-0019 D2): recording the reference is the whole effect, and the item returns to
+review rather than being approved.
+
+That behaviour is **provisional and reported, never imposed**. It is deliberately not added to the
+conformance suite, because putting it there would bind the machine build to a panel-side choice,
+which 18 §9 forbids. It is written up beside P8 §2's open decisions, with the negative case pinned
+too: a `CONTENT_REWRITE` revision leaves a blocked item blocked.
+
 ## Reported conflicts
 
 | Existing instruction | Simplification ruling |
@@ -191,8 +221,18 @@ accessibility are preserved. Nothing outside `/studio` changes.
 
 - The e2e navigation and visual baselines regenerate again; the full-audit spec's surface list
   changes wholesale.
-- `packages/panel-domain` gains no new entity. This is a presentation restructure: the gateways,
-  the scenarios and the conformance suites are untouched, which is the test that D10 held.
+- `packages/panel-domain` gains no new entity, no schema and no gateway member. This is a
+  presentation restructure: the gateways, the scenarios and the conformance suites are untouched,
+  which is the test that D10 held. It does gain one **projection** export —
+  `OUTPUT_TYPE_LABEL_FA` / `outputTypeLabelFa` — because two renderers need the same Persian
+  names and only one of them is the app: `@drop/workflow-ui` draws the Engine graph and cannot
+  import from `apps/web`. The projection layer is where ADR-0019 D5 already put translations of
+  this kind, and typing it `Record<OutputType, string>` makes a missing name a compile error
+  rather than a raw identifier on a node.
 - A language guard is added to the repo checks, asserting the banned strings of D5 do not appear
   in the surface tree — the rule is otherwise unenforceable and would rot on the first new page.
 - Ticket P9 records this work; the P-series handoff in `docs/handoff/` is updated at its end.
+- The brief's own §15 QA scenario becomes a test rather than a click-through
+  (`tests/e2e/rtl/qa-scenario.spec.ts`), run at desktop and mobile as §15 instructs. A
+  click-through is evidence exactly once; this is evidence on every run, and its steps are
+  sequential on purpose — step 12 is unreachable unless step 11 actually changed state.

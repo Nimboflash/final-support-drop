@@ -36,11 +36,24 @@ export function filterByProject<T extends { projectId: string }>(
   return selected === ALL_PROJECTS ? items : items.filter((item) => item.projectId === selected);
 }
 
-export function ProjectSelector({ world }: { world: PanelSnapshot }) {
+/**
+ * `allowAll: false` is for a surface where "all projects" has no meaning — a
+ * workflow graph is one project's or it is nothing. There the selector shows
+ * the project actually being rendered rather than claiming «همه پروژه‌ها» over
+ * a graph that is silently the first one's.
+ */
+export function ProjectSelector({
+  world,
+  allowAll = true,
+}: {
+  world: PanelSnapshot;
+  allowAll?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const selected = params.get("project") ?? ALL_PROJECTS;
+  const fallback = allowAll ? ALL_PROJECTS : (world.projects[0]?.id ?? ALL_PROJECTS);
+  const selected = params.get("project") ?? fallback;
 
   function choose(value: string) {
     const next = new URLSearchParams(params.toString());
@@ -56,7 +69,7 @@ export function ProjectSelector({ world }: { world: PanelSnapshot }) {
         <SelectValue placeholder="همه پروژه‌ها" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ALL_PROJECTS}>همه پروژه‌ها</SelectItem>
+        {allowAll ? <SelectItem value={ALL_PROJECTS}>همه پروژه‌ها</SelectItem> : null}
         {world.projects.map((project) => (
           <SelectItem key={project.id} value={project.id}>
             {project.titleFa}

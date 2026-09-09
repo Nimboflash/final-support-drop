@@ -63,8 +63,17 @@ function useInvalidateWorld() {
   const session = useDemoSession();
   const client = useQueryClient();
   return async () => {
+    // Persist BEFORE invalidating. The write is what makes a decision survive a
+    // reload (ADR-0019 D2); without it every command was lost on refresh, and
+    // the brief's own QA scenario asks for exactly that to hold.
+    try {
+      session.persistence.save(session.scenarioId, await session.world.panelCommandGateway.getSnapshot());
+    } catch {
+      // A full or unavailable storage must never lose the command that just
+      // succeeded. The world stays correct in memory; only the resume is lost.
+    }
     // One invalidation, so every view of the same entity refreshes together:
-    // card, inbox, counters, graph, package readiness and activity (V2 01 §8).
+    // card, inbox, graph, output readiness and history (V2 01 §8).
     await client.invalidateQueries({ queryKey: panelKeys.snapshot(session.scenarioId) });
   };
 }
@@ -149,8 +158,9 @@ export function useAddComment(): UseMutationResult<
 /**
  * Moves a plan item to a date, or clears it back to the tray.
  *
- * The calendar's drag affordance and its date picker both route here, so a
- * pointer is never the only way to reschedule (ADR-0020 D9, journey A20).
+ * The calendar's date picker routes here. There is no drag affordance — the
+ * keyboard-reachable picker is the only way to move an item, which is also why
+ * a pointer is never required (ADR-0020 D9, journey A20).
  */
 export function useUpdateCalendarEntry(): UseMutationResult<
   unknown,
@@ -172,6 +182,65 @@ export function useUpdateCalendarEntry(): UseMutationResult<
           entry: { ...input.entry, date: input.date },
         }),
       ),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Puts an approved output into the calendar's undated tray (brief §14.11).
+ *
+ * `updateCalendar` upserts by package family — "a second create for the same
+ * family updates the entry rather than duplicating it" (ADR-0019 D7) — so no
+ * gateway member has to be added to create one, and pressing the button twice
+ * schedules nothing twice.
+ *
+ * The entry is created with `date: null` deliberately. That IS the tray: an
+ * output that is ready but has no date yet. Choosing the date is a separate,
+ * explicit act on the calendar.
+ */
+export function useSendToCalendar(): UseMutationResult<
+  unknown,
+  Error,
+  {
+    projectId: string;
+    titleFa: string;
+    packageFamilyId: string;
+    packageVersionId: string;
+  }
+> {
+  const session = useDemoSession();
+  const envelope = useEnvelope();
+  const invalidate = useInvalidateWorld();
+
+  return useMutation({
+    mutationFn: (input: {
+      projectId: string;
+      titleFa: string;
+      packageFamilyId: string;
+      packageVersionId: string;
+    }) => {
+      const env = envelope(nextCommandId("calendar"));
+      return Promise.resolve(
+        session.world.panelCommandGateway.updateCalendar({
+          ...env,
+          entry: {
+            id: `cal-${input.packageFamilyId}`,
+            projectId: input.projectId,
+            packageFamilyId: input.packageFamilyId,
+            packageVersionId: input.packageVersionId,
+            titleFa: input.titleFa,
+            status: "PLANNED",
+            date: null,
+            endDate: null,
+            startsAt: null,
+            timezone: "Asia/Tehran",
+            ownerId: env.actorId,
+            noteFa: "",
+            rowVersion: 0,
+          },
+        }),
+      );
+    },
     onSuccess: invalidate,
   });
 }

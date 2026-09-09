@@ -57,7 +57,7 @@ export type GenerationJobState = (typeof GENERATION_JOB_STATES)[number];
  *
  * There is deliberately no `review` member. The V2 stage strip shows a Review
  * segment, but that is a DISPLAY GROUPING derived from open review counts — see
- * `PROJECT_STAGE_SEGMENTS` in `@drop/ui`. Adding `review` here to make the strip
+ * the Engine graph's node classes in `@drop/workflow-ui`. Adding `review` here to make a view
  * easier would invent a stored state the pack never defines.
  */
 export const PRODUCT_STAGES = [

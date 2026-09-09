@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Badge, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
 import { StudioSidebar } from "./_shell/studio-sidebar";
 import { DemoProviders } from "../../lib/demo/providers";
@@ -21,7 +21,9 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
   return (
     <DemoProviders>
       <SidebarProvider>
-        <StudioSidebar />
+        <Suspense fallback={null}>
+          <StudioSidebar />
+        </Suspense>
         <SidebarInset>
           <header className="flex h-14 items-center gap-2 border-b border-border px-4">
             <SidebarTrigger aria-label="نمایش یا پنهان‌کردن منو" />

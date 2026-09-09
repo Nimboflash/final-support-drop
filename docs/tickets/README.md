@@ -47,15 +47,23 @@ project tabs and the approved brand tokens; Ticket 0.1 stays untouchable.
 | P6 | Functional commands, version conflicts, errors, stale dependencies, downloadable mock ZIP | P5 | **done** |
 | P7 | Behavior/contract checks plus responsive, RTL, keyboard and visual QA | P6 | **done** |
 | P8 | Future integration mapping, unresolved contracts and frontend handoff; stop before machine work | P7 | **done** |
+| P9 | Studio simplification: navigation by work unit, the Engine surface, the calendar, and the interface-language guard | P8 | **done** |
 
-All P-tickets are **delivered**; the frontend handoff is
-`docs/handoff/P8-frontend-to-machine-build.md`. Machine work does not begin
-automatically (ADR-0019 D20).
+All P-tickets are **delivered**. The frontend handoff is
+`docs/handoff/P8-frontend-to-machine-build.md`, whose navigation and surface sections are
+superseded by `docs/handoff/P9-studio-simplification.md`; its open decisions, provisional
+contracts and connection points stand unchanged. Machine work does not begin automatically
+(ADR-0019 D20).
+
+**P9 is not a reopening of the hard stop.** P8 stops **machine** work, and that stop holds:
+nothing in P9 starts a machine, a transport or a backend. ADR-0020 D1 reopens the panel's
+own presentation on the owner's simplification brief, which is panel scope, and P9 is that
+work.
 
 **Exactly one frontier** (ADR-0018 D2, ADR-0019 D20 — sequential execution). The order is
-**P1-R → P2 → P3 → P4 → P5 → P6 → P7 → P8**; each ticket starts only when its predecessor
-completes with green checks. P5's earlier `dependencies: ["P1","P2","P3"]` is corrected to
-include P4 (ADR-0019 D20).
+**P1-R → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P9**; each ticket starts only when its
+predecessor completes with green checks. P5's earlier `dependencies: ["P1","P2","P3"]` is
+corrected to include P4 (ADR-0019 D20).
 
 ## Dependency graph
 
@@ -73,7 +81,8 @@ graph TD
   P5["P5 Workflow graph"]
   P6["P6 Commands, conflicts, ZIP export"]
   P7["P7 Behavior, contract and visual QA"]
-  P8["P8 Integration handoff (hard stop)"]
+  P8["P8 Integration handoff (machine hard stop)"]
+  P9["P9 Studio simplification (ADR-0020)"]
 
   P1 --> P1R
   P1R --> P2
@@ -83,6 +92,7 @@ graph TD
   P5 --> P6
   P6 --> P7
   P7 --> P8
+  P8 --> P9
 ```
 
 ## Deferred / superseded 0-series tickets

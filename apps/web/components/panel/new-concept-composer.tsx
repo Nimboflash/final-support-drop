@@ -19,6 +19,7 @@ import {
   Textarea,
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
+import { ALL_PROJECTS, useSelectedProject } from "./project-selector";
 
 /**
  * The composer (ADR-0020, brief §6 step 1).
@@ -33,12 +34,6 @@ import type { PanelSnapshot } from "@drop/panel-domain";
  * is validated and never requested. The demo marker in the shell is what keeps
  * that honest, rather than a notice repeated on this dialog (ADR-0020 D6).
  */
-const LOADING_MESSAGES_FA = [
-  "در حال بررسی رفرنس‌ها…",
-  "در حال ساخت چند مسیر کانسپت…",
-  "کانسپت‌ها تا لحظاتی دیگر آماده‌اند.",
-];
-
 type Attachment =
   | { kind: "link"; value: string; error: string | null }
   | { kind: "note"; value: string };
@@ -47,12 +42,21 @@ export function NewConceptComposer({
   world,
   open,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   world: PanelSnapshot;
   open: boolean;
   onOpenChange: (next: boolean) => void;
+  /** Returns focus to the control that opened this overlay. */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
-  const [projectId, setProjectId] = useState<string>(world.projects[0]?.id ?? "");
+  // The project you are already looking at, not projects[0]. Opening the
+  // composer from an empty project used to offer to start work in a different
+  // one — the first thing that project said to you was about another project.
+  const selected = useSelectedProject();
+  const [projectId, setProjectId] = useState<string>(
+    selected === ALL_PROJECTS ? (world.projects[0]?.id ?? "") : selected,
+  );
   const [brief, setBrief] = useState("");
   const [link, setLink] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -87,7 +91,9 @@ export function NewConceptComposer({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent data-testid="concept-composer" className="max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        onCloseAutoFocus={onCloseAutoFocus}
+        data-testid="concept-composer" className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>شروع کانسپت جدید</DialogTitle>
           <DialogDescription>
@@ -96,18 +102,29 @@ export function NewConceptComposer({
         </DialogHeader>
 
         {phase === "WORKING" ? (
-          <div className="space-y-2 py-6 text-center" data-testid="composer-working">
-            {LOADING_MESSAGES_FA.map((line) => (
-              <p key={line} className="text-sm text-muted-foreground">
-                {line}
-              </p>
-            ))}
-            <p className="pt-3 text-sm">
-              در این نسخهٔ نمایشی، کانسپت‌های آماده در فهرست دیده می‌شوند.
+          /*
+            Three "working…" lines printed at once implied work that is not
+            happening. Concept generation belongs to the machine build, which is
+            not connected here, and the panel cannot invent cards it did not
+            receive (ADR-0019 D2). So this says so plainly and, rather than
+            leaving the person on a dead dialog, takes them to the concepts of
+            the project they chose.
+          */
+          <div className="space-y-3 py-6 text-center" data-testid="composer-working">
+            <p className="text-sm">
+              ساخت کانسپت در این نسخهٔ نمایشی انجام نمی‌شود.
             </p>
-            <Button variant="outline" size="sm" onClick={() => close(false)}>
-              بستن
-            </Button>
+            <p className="text-sm text-muted-foreground">
+              کانسپت‌های موجود این پروژه را ببینید.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button size="sm" asChild data-testid="composer-go-to-concepts">
+                <a href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</a>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => close(false)}>
+                بستن
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">

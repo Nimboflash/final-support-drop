@@ -66,12 +66,19 @@ export interface MockWorldOptions {
   readonly clock?: DemoClock;
   /** The acting demo actor; S14 sets a read-only one. */
   readonly actorId?: string;
+  /**
+   * A previously persisted world to resume from (ADR-0019 D2). The SCENARIO
+   * still decides the policy — whether the demo is disconnected, forbidden or
+   * latent — because that is a property of the scenario, not of the stored
+   * state. Only the data is resumed.
+   */
+  readonly snapshot?: PanelSnapshot;
 }
 
 export function createMockWorld(options: MockWorldOptions): MockWorld {
   const loaded = loadScenario(options.scenarioId);
   const clock = options.clock ?? createFixedClock();
-  const repository = new DemoRepository(loaded.snapshot, clock);
+  const repository = new DemoRepository(options.snapshot ?? loaded.snapshot, clock);
   const policy = loaded.policy;
 
   /** Applied before every command; scenario-controlled, never random. */
@@ -358,6 +365,17 @@ export function createMockWorld(options: MockWorldOptions): MockWorld {
               if (card !== undefined) {
                 card.pendingRevisionId = `${command.target.id}-v${String(next)}`;
                 card.reviewStatus = "REVISION_REQUESTED";
+                // RESEARCH_REFRESH is the route a person takes when the item was
+                // waiting on a source and they have now supplied one. The thing
+                // it was blocked on has arrived, so the block lifts — otherwise
+                // the interface would offer an action that changes nothing,
+                // which is the defect this behaviour exists to prevent. No
+                // fetching or extraction happens (ADR-0019 D2): the reference is
+                // recorded, and recording it is what unblocks.
+                if (command.route === "RESEARCH_REFRESH" && card.generationState === "BLOCKED") {
+                  card.generationState = "SUCCEEDED";
+                  card.blockedReasonFa = null;
+                }
                 card.rowVersion += 1;
               }
             }

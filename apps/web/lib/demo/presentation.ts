@@ -1,3 +1,4 @@
+import { toPersianDigits } from "@drop/ui";
 import {
   OUTPUT_TYPE_LABEL_FA,
   type Concept,
@@ -31,11 +32,17 @@ export const DIRECTION_LABEL_FA = OUTPUT_TYPE_LABEL_FA;
 
 /* ------------------------------------------------------------- concept -- */
 
-export type ConceptState = "generating" | "new" | "selected" | "set_aside";
+export type ConceptState =
+  | "generating"
+  | "new"
+  | "improving"
+  | "selected"
+  | "set_aside";
 
 export const CONCEPT_STATE_LABEL_FA: Readonly<Record<ConceptState, string>> = {
   generating: "در حال ساخت",
   new: "جدید",
+  improving: "در حال بازنگری",
   selected: "انتخاب‌شده",
   set_aside: "کنار گذاشته‌شده",
 };
@@ -53,16 +60,26 @@ export function conceptStateOf(concept: Concept): ConceptState {
   if (concept.reviewStatus === "REJECTED") return "set_aside";
   if (concept.reviewStatus === "APPROVED") return "selected";
   if (concept.reviewStatus === "DRAFT") return "generating";
+  // Asking for a change USED to leave the card reading «جدید», identical to
+  // before — so D8's central promise, that a person asks in their own words and
+  // that produces a revision, left no trace a person could see.
+  if (concept.reviewStatus === "REVISION_REQUESTED") return "improving";
   return "new";
 }
 
 /* ------------------------------------------------------------- content -- */
 
-export type ContentState = "draft" | "needs_input" | "ready_for_review" | "approved";
+export type ContentState =
+  | "draft"
+  | "needs_input"
+  | "failed"
+  | "ready_for_review"
+  | "approved";
 
 export const CONTENT_STATE_LABEL_FA: Readonly<Record<ContentState, string>> = {
   draft: "در حال آماده‌سازی",
   needs_input: "نیازمند منبع",
+  failed: "ساخت آن ناتمام ماند",
   ready_for_review: "آماده بررسی",
   approved: "تأییدشده",
 };
@@ -77,12 +94,20 @@ export const CONTENT_STATE_LABEL_FA: Readonly<Record<ContentState, string>> = {
 export const CONTENT_STATE_ACTION_FA: Readonly<Record<ContentState, string | null>> = {
   draft: null,
   needs_input: "برای نهایی‌کردن این محتوا یک منبع معتبر لازم است.",
+  // No instruction to add a source: adding one would not help. What this state
+  // needs is the item's own reason, shown beside it.
+  failed: "ساخت این محتوا به نتیجه نرسید.",
   ready_for_review: "این محتوا منتظر تأیید شماست.",
   approved: null,
 };
 
 export function contentStateOf(item: ContentItem): ContentState {
-  if (item.generationState === "BLOCKED" || item.generationState === "FAILED") return "needs_input";
+  // BLOCKED and FAILED are NOT the same thing to a person. A blocked item is
+  // waiting for a source they can supply; a failed one is not, and telling them
+  // to «افزودن منبع» sends them to do work that will not help. The item's own
+  // recorded reason is what the failed state shows instead.
+  if (item.generationState === "FAILED") return "failed";
+  if (item.generationState === "BLOCKED") return "needs_input";
   if (item.generationState === "RUNNING" || item.generationState === "QUEUED") return "draft";
   if (item.reviewStatus === "APPROVED" && item.freshness === "CURRENT") return "approved";
   if (item.reviewStatus === "DRAFT") return "draft";
@@ -120,6 +145,8 @@ export interface OutputView {
   readonly blockerFa: string | null;
   readonly scheduledDate: string | null;
   readonly packageVersionId: string | null;
+  /** The family an entry is keyed on, so scheduling is idempotent per output. */
+  readonly packageFamilyId: string | null;
   readonly updatedAt: string;
 }
 
@@ -164,6 +191,7 @@ export function outputsFor(world: PanelSnapshot): readonly OutputView[] {
       blockerFa: blockerFor(states),
       scheduledDate: entry?.date ?? null,
       packageVersionId: snapshot?.id ?? null,
+      packageFamilyId: snapshot?.familyId ?? null,
       updatedAt: items.reduce((latest, i) => (i.updatedAt > latest ? i.updatedAt : latest), ""),
     });
   }
@@ -182,22 +210,17 @@ function blockerFor(states: readonly ContentState[]): string | null {
   if (needsInput > 0) {
     return needsInput === 1
       ? "یک محتوا هنوز منبع لازم را ندارد."
-      : `${toFa(needsInput)} محتوا هنوز منبع لازم را ندارند.`;
+      : `${toPersianDigits(String(needsInput))} محتوا هنوز منبع لازم را ندارند.`;
   }
   const waiting = states.filter((s) => s === "ready_for_review").length;
   if (waiting > 0) {
     return waiting === 1
       ? "یک محتوا به تأیید شما نیاز دارد."
-      : `${toFa(waiting)} محتوا به تأیید شما نیاز دارند.`;
+      : `${toPersianDigits(String(waiting))} محتوا به تأیید شما نیاز دارند.`;
   }
   const drafting = states.filter((s) => s === "draft").length;
   if (drafting > 0) return "چند محتوا هنوز در حال آماده‌سازی‌اند.";
   return null;
-}
-
-const FA_DIGITS = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-function toFa(value: number): string {
-  return String(value).replace(/[0-9]/g, (d) => FA_DIGITS[Number(d)]!);
 }
 
 /* ------------------------------------------------------------ overview -- */
@@ -217,21 +240,21 @@ export function projectMessageFa(world: PanelSnapshot, project: PanelProject): s
   if (needsSource > 0) {
     return needsSource === 1
       ? "یک محتوا منتظر منبع است."
-      : `${toFa(needsSource)} محتوا منتظر منبع‌اند.`;
+      : `${toPersianDigits(String(needsSource))} محتوا منتظر منبع‌اند.`;
   }
 
   const waitingContent = content.filter((c) => contentStateOf(c) === "ready_for_review").length;
   if (waitingContent > 0) {
     return waitingContent === 1
       ? "یک محتوا به تأیید شما نیاز دارد."
-      : `${toFa(waitingContent)} محتوا به تأیید شما نیاز دارند.`;
+      : `${toPersianDigits(String(waitingContent))} محتوا به تأیید شما نیاز دارند.`;
   }
 
   const newConcepts = concepts.filter((c) => conceptStateOf(c) === "new").length;
   if (newConcepts > 0) {
     return newConcepts === 1
       ? "یک کانسپت جدید آماده بررسی است."
-      : `${toFa(newConcepts)} کانسپت جدید آماده بررسی است.`;
+      : `${toPersianDigits(String(newConcepts))} کانسپت جدید آماده بررسی است.`;
   }
 
   const unscheduled = world.calendar.some(
