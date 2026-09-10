@@ -11,6 +11,7 @@ import {
   CardTitle,
   EmptyState,
   PersianCalendarDate,
+  toPersianDigits,
 } from "@drop/ui";
 import type { PanelProject, PanelSnapshot } from "@drop/panel-domain";
 import { NewConceptComposer } from "./new-concept-composer";
@@ -53,8 +54,15 @@ export function Overview({ world }: { world: PanelSnapshot }) {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">نمای کلی</h1>
+      {/*
+        The masthead rule (ADR-0022). The Brand DNA rules every block it sets —
+        under the page number, under each row of the colour table — and that
+        hairline is most of what makes the deck read as considered rather than
+        merely dark. Structure, not ornament: without it these headings float
+        on the ground with nothing telling you where a section starts.
+      */}
+      <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
+        <h1 className="text-3xl font-bold tracking-tight">نمای کلی</h1>
         <div className="flex flex-wrap items-center gap-2">
           <ProjectSelector world={world} />
           <Button
@@ -87,9 +95,15 @@ export function Overview({ world }: { world: PanelSnapshot }) {
       ) : (
         <>
           <section aria-labelledby="attention-heading" className="space-y-3">
-            <h2 id="attention-heading" className="text-lg font-semibold">
-              نیازمند اقدام شما
-            </h2>
+            <div className="drop-rule flex items-baseline justify-between gap-3 pb-2">
+              <h2 id="attention-heading" className="text-lg font-semibold">
+                نیازمند اقدام شما
+              </h2>
+              {/* Label and value, in Aluminium — the deck's own pairing. */}
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {toPersianDigits(String(rows.length))}
+              </span>
+            </div>
             {rows.length === 0 ? (
               <EmptyState
                 title="چیزی در انتظار شما نیست"
@@ -107,9 +121,14 @@ export function Overview({ world }: { world: PanelSnapshot }) {
           </section>
 
           <section aria-labelledby="projects-heading" className="space-y-3">
-            <h2 id="projects-heading" className="text-lg font-semibold">
-              {selected === ALL_PROJECTS ? "پروژه‌های باز" : "پروژهٔ انتخاب‌شده"}
-            </h2>
+            <div className="drop-rule flex items-baseline justify-between gap-3 pb-2">
+              <h2 id="projects-heading" className="text-lg font-semibold">
+                {selected === ALL_PROJECTS ? "پروژه‌های باز" : "پروژهٔ انتخاب‌شده"}
+              </h2>
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {toPersianDigits(String(projects.length))}
+              </span>
+            </div>
             <ul
               className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]"
               data-testid="project-list"
@@ -147,7 +166,7 @@ function AttentionRowView({ row }: { row: AttentionRow }) {
         the row without competing with the sentence inside it, and it is
         logical rather than physical so it stays on the correct side in RTL.
       */
-      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-s-4 border-s-attention bg-card p-3"
+      className="drop-material flex flex-wrap items-center justify-between gap-3 rounded-md border border-s-4 border-s-attention bg-card p-3"
     >
       <div className="min-w-0 space-y-1">
         <p className="font-medium">{row.projectTitleFa}</p>

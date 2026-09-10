@@ -106,6 +106,40 @@
   --edge-stroke: var(--drop-steel);
   --table-header-bg: var(--secondary);
   --radius: 0.375rem;
+
+  /* ---------- material (ADR-0022) ---------- */
+  /*
+    Aluminium as MATERIAL, not as a fill.
+
+    The Brand DNA's own usage note asks for it "as material (foil, metal,
+    metallic ink) where possible", and the deck draws its swatch as brushed
+    metal rather than flat grey. On a screen that becomes two things and only
+    two: a raking sheen down a raised surface, and a lit hairline at its top
+    edge. Together they read as anodised metal. Neither is decoration — the
+    sheen is what separates a raised surface from the ground when both are
+    nearly black, which is the exact problem a Charcoal-on-Charcoal workspace
+    has.
+
+    Every value is Aluminium `#b3b6b9` at low alpha. Nothing new is introduced.
+  */
+  --hairline: rgba(18, 18, 18, 0.1);
+  --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%);
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+/*
+  The material classes. Plain CSS rather than Tailwind utilities so the
+  treatment lives beside the tokens it is made of, and so a surface opts in by
+  name instead of by remembering three arbitrary values.
+*/
+.drop-material {
+  background-image: var(--sheen);
+  box-shadow: var(--edge-highlight);
+}
+
+/* A single aluminium hairline — the deck rules its tables with exactly this. */
+.drop-rule {
+  border-block-end: 1px solid var(--hairline);
 }
 
 /* dark theme — Charcoal is the main workspace (V2 02 §1); the default. */
@@ -142,4 +176,21 @@
   --attention: var(--drop-acid);
   --attention-foreground: var(--drop-charcoal);
   --edge-stroke: var(--drop-aluminium);
+
+  /*
+    Dark is the primary workspace, so this is where the material does its real
+    work: Charcoal `#121212` against Logo Charcoal `#1e1e1e` is six points of
+    grey and reads as one flat plane. The sheen and the lit edge are what make
+    a card a card.
+  */
+  --hairline: rgba(179, 182, 185, 0.16);
+  --sheen: linear-gradient(
+    180deg,
+    rgba(179, 182, 185, 0.105) 0%,
+    rgba(179, 182, 185, 0.032) 44%,
+    rgba(179, 182, 185, 0) 100%
+  );
+  --edge-highlight: inset 0 1px 0 rgba(179, 182, 185, 0.22);
+  /* Dividers become aluminium hairlines rather than an untinted grey. */
+  --border: var(--hairline);
 }

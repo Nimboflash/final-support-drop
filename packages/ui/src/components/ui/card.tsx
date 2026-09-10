@@ -13,7 +13,12 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col gap-6 rounded-lg border bg-card py-6 text-card-foreground shadow-sm",
+        // `drop-material` (ADR-0022): the aluminium sheen and lit top edge that
+        // make a raised surface legible on a Charcoal ground. Six points of
+        // grey between `--background` and `--card` is not enough on its own,
+        // and pushing the card lighter instead would have flattened the whole
+        // dark workspace toward mid-grey.
+        "drop-material flex flex-col gap-6 rounded-lg border bg-card py-6 text-card-foreground shadow-sm",
         className
       )}
       {...props}

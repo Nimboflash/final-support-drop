@@ -77,6 +77,28 @@ Acid is always a **filled mark with Charcoal on it**, never coloured text. That 
 that works in both themes — 15.9:1 either direction — and it is the only way to use it in the
 light theme at all.
 
+### D4 — Aluminium is used as MATERIAL, not as a fill
+
+The Brand DNA's colour-usage note asks for Aluminium "as material (foil, metal, metallic ink)
+where possible", and the deck draws its swatch as brushed metal rather than as flat grey. Colour
+tokens alone cannot honour that, and a first pass that only added accents did not: the workspace
+was still Charcoal boxes on a Charcoal ground with two coloured edges on it.
+
+On a screen the material is two things and only two, both of them Aluminium `#b3b6b9` at low
+alpha, and both defined beside the palette rather than sprinkled through components:
+
+- `--sheen` — a raking gradient down a raised surface.
+- `--edge-highlight` — a one-pixel lit top edge.
+
+They are applied by one class, `.drop-material`, and they are structural rather than decorative:
+`--background` `#121212` against `--card` `#1e1e1e` is six points of grey and reads as a single
+flat plane. The sheen is what makes a card a card. Pushing the card lighter instead would have
+dragged the whole dark workspace toward mid-grey and lost Charcoal as the ground.
+
+`--border` in the dark theme becomes that same Aluminium hairline rather than an untinted grey,
+and `.drop-rule` gives the deck's hairline to section headings — the rule under a title is most
+of what makes the deck read as considered rather than merely dark.
+
 ### D4 — Colour still never carries state alone
 
 ADR-0010 D11 is not amended and this ADR does not lean on it being relaxed. Every mark that

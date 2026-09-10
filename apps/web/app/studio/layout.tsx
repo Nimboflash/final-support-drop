@@ -52,7 +52,7 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
           <StudioSidebar />
         </Suspense>
         <SidebarInset>
-          <header className="flex h-14 items-center gap-2 border-b border-border px-4">
+          <header className="drop-material flex h-14 items-center gap-2 border-b border-border px-4">
             <SidebarTrigger aria-label="نمایش یا پنهان‌کردن منو" />
             <p className="text-sm text-muted-foreground">دراپ او اس — ماژول استودیو</p>
             {/*
