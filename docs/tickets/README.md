@@ -52,6 +52,7 @@ project tabs and the approved brand tokens; Ticket 0.1 stays untouchable.
 | P7 | Behavior/contract checks plus responsive, RTL, keyboard and visual QA | P6 | **done** |
 | P8 | Future integration mapping, unresolved contracts and frontend handoff; stop before machine work | P7 | **done** |
 | P9 | Studio simplification: navigation by work unit, the Engine surface, the calendar, and the interface-language guard | P8 | **done** |
+| P10 | Wire the machine to the panel: same-origin proxy, HTTP client, a read-only real world, Engine over live data, then writes | P9 | **open** — `v2` only (ADR-0021) |
 
 All P-tickets are **delivered**. The frontend handoff is
 `docs/handoff/P8-frontend-to-machine-build.md`, whose navigation and surface sections are
@@ -65,8 +66,9 @@ own presentation on the owner's simplification brief, which is panel scope, and 
 work.
 
 **Exactly one frontier** (ADR-0018 D2, ADR-0019 D20 — sequential execution). The order is
-**P1-R → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P9**; each ticket starts only when its
-predecessor completes with green checks. P5's earlier `dependencies: ["P1","P2","P3"]` is
+**P1-R → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P9 → P10**; each ticket starts only when its
+predecessor completes with green checks. P10 exists on `v2` only: ADR-0021 opens the machine
+build there and nowhere else. P5's earlier `dependencies: ["P1","P2","P3"]` is
 corrected to include P4 (ADR-0019 D20).
 
 ## Dependency graph
@@ -87,6 +89,7 @@ graph TD
   P7["P7 Behavior, contract and visual QA"]
   P8["P8 Integration handoff (machine hard stop)"]
   P9["P9 Studio simplification (ADR-0020)"]
+  P10["P10 Machine wiring (ADR-0021, v2 only)"]
 
   P1 --> P1R
   P1R --> P2
@@ -97,6 +100,7 @@ graph TD
   P6 --> P7
   P7 --> P8
   P8 --> P9
+  P9 --> P10
 ```
 
 ## Deferred / superseded 0-series tickets
