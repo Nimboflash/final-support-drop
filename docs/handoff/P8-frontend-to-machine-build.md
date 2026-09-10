@@ -315,3 +315,22 @@ gate on a Pro licence is untouched.
 This is the end of panel scope. The machine build is a separate delivery and does not begin
 automatically (ADR-0019 D20). Anything in §2 needs a named decision before implementation, not an
 improvisation.
+
+### The stop was put to the owner, and it holds
+
+**2026-09-10.** Building the machine in this repository was raised and declined. The owner was
+shown what lifting the stop would require — a recorded ADR superseding ADR-0019 D20, a ruling on
+the ten open decisions in §2, and the provider gate in doc 15 §12 — and chose to build nothing
+machine-side. Three scopes were offered and the answer was the narrowest: **no machine work at
+all**, not even the infrastructure the machines would plug into.
+
+So the position below is not merely inherited from doc 18 §11; it is a current decision:
+
+- `apps/worker` and the eleven machine-oriented packages stay inert 0.1 placeholders. The
+  twelve frozen workspaces are frozen because someone chose that, twice.
+- The ten open decisions in §2 stay OPEN. They are not to be resolved here — resolving one
+  would impose a panel-side choice on a build that has not started, which 18 §9 forbids.
+- No compose stack, no schemas, no queues, no pipeline runtime, no AI gateway wiring, no
+  prompts, no provider calls.
+
+Anyone reopening this needs a new decision from the owner, not a reading of this document.

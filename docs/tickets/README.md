@@ -133,3 +133,8 @@ hand off the completed panel for review." After P8, the panel is handed to the h
 no machine work, no provider integration, no further tickets begin in this repository under
 this scope. Machine-side work resumes only in the separate machine build, connecting through
 `RealMachineGateway` (18 §9).
+
+P9 is not an exception to that stop — it is panel presentation on the owner's own brief
+(ADR-0020 D1). **The stop itself was put to the owner on 2026-09-10 and upheld**: no machine
+work, and not even the infrastructure beneath it. See `docs/handoff/P8-frontend-to-machine-build.md`
+§8.
