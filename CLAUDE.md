@@ -20,6 +20,11 @@ deliberately independent: a change on `v2` never reaches v1.
 CI watches pull requests into **both**, so a proposal against the frozen line is still measured
 if one is ever made. `tests/repo/ci.test.ts` fails if either integration branch loses its checks.
 
+The freeze is enforced locally, not on the server: GitHub branch protection needs Pro on a
+private repository, so `scripts/git-hooks/pre-push` refuses a push to `main` instead. Enable it
+once per clone with `git config core.hooksPath scripts/git-hooks`. A documented freeze is one a
+tired person walks straight through; override deliberately with `git push --no-verify`.
+
 ## Current scope (ADR-0017, narrowed by ADR-0019, restructured by ADR-0020 — read this first)
 
 **Panel first, and now frontend only.** This delivery builds the operational dashboard/control

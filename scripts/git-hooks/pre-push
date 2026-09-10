@@ -1,0 +1,28 @@
+#!/bin/sh
+# v1 is frozen. `main` holds the delivered panel at 646efd7 and takes no more
+# work; `v2` is the working line (CLAUDE.md, "Branches").
+#
+# This hook exists because the freeze cannot be enforced on the server: branch
+# protection needs GitHub Pro on a private repository. A documented freeze is
+# one a tired person walks straight through, so this stops the accident where
+# it happens.
+#
+# Deliberate override, when v1 genuinely must change:  git push --no-verify
+
+frozen="refs/heads/main"
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = "$frozen" ]; then
+    echo "" >&2
+    echo "  Refusing to push to main: v1 is frozen." >&2
+    echo "" >&2
+    echo "  main holds the delivered panel and takes no more work." >&2
+    echo "  Work happens on v2 — branch from it, and open the pull request into it." >&2
+    echo "" >&2
+    echo "  If v1 genuinely must change, this is deliberate:  git push --no-verify" >&2
+    echo "" >&2
+    exit 1
+  fi
+done
+
+exit 0
