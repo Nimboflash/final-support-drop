@@ -1,0 +1,10 @@
+{
+  "session_id": "c18c18e12aea",
+  "successful_calls": 3,
+  "totals": {
+    "prompt_tokens": 1500,
+    "completion_tokens": 2400,
+    "total_tokens": 3900,
+    "cost_usd": 0.03
+  }
+}

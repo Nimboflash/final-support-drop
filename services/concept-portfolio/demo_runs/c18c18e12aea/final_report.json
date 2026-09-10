@@ -1,0 +1,406 @@
+{
+  "session_id": "c18c18e12aea",
+  "approved_concept": {
+    "concept_id": "concept_02",
+    "title": "The second meaning refined",
+    "one_line": "A concept about returning with changed perception.",
+    "human_truth": "People often return to the same thing with a changed self.",
+    "central_idea": "Meaning changes because we change.",
+    "guest_takeaway": "Returning can reveal who we are now.",
+    "territory": "TEMPORAL",
+    "anchor_score": 5,
+    "portfolio_score": 4.45,
+    "why_it_fits": "It directly extends the brief about renewed meaning in return."
+  },
+  "portfolio": {
+    "concept_id": "concept_02",
+    "concept_title": "The second meaning refined",
+    "music": [
+      {
+        "rank": 1,
+        "title": "Music Track 1",
+        "creator": "Artist 1",
+        "why_related": "Track 1 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/1"
+        ],
+        "type": "music",
+        "origin": "IRANIAN",
+        "vocal_type": "VOCAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      },
+      {
+        "rank": 2,
+        "title": "Music Track 2",
+        "creator": "Artist 2",
+        "why_related": "Track 2 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/2"
+        ],
+        "type": "music",
+        "origin": "INTERNATIONAL",
+        "vocal_type": "INSTRUMENTAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      },
+      {
+        "rank": 3,
+        "title": "Music Track 3",
+        "creator": "Artist 3",
+        "why_related": "Track 3 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/3"
+        ],
+        "type": "music",
+        "origin": "IRANIAN",
+        "vocal_type": "VOCAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      },
+      {
+        "rank": 4,
+        "title": "Music Track 4",
+        "creator": "Artist 4",
+        "why_related": "Track 4 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/4"
+        ],
+        "type": "music",
+        "origin": "INTERNATIONAL",
+        "vocal_type": "INSTRUMENTAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      },
+      {
+        "rank": 5,
+        "title": "Music Track 5",
+        "creator": "Artist 5",
+        "why_related": "Track 5 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/5"
+        ],
+        "type": "music",
+        "origin": "IRANIAN",
+        "vocal_type": "VOCAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      },
+      {
+        "rank": 6,
+        "title": "Music Track 6",
+        "creator": "Artist 6",
+        "why_related": "Track 6 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/6"
+        ],
+        "type": "music",
+        "origin": "INTERNATIONAL",
+        "vocal_type": "INSTRUMENTAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      },
+      {
+        "rank": 7,
+        "title": "Music Track 7",
+        "creator": "Artist 7",
+        "why_related": "Track 7 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/7"
+        ],
+        "type": "music",
+        "origin": "IRANIAN",
+        "vocal_type": "VOCAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      },
+      {
+        "rank": 8,
+        "title": "Music Track 8",
+        "creator": "Artist 8",
+        "why_related": "Track 8 matches the concept through reflective return and layered meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/music/8"
+        ],
+        "type": "music",
+        "origin": "INTERNATIONAL",
+        "vocal_type": "INSTRUMENTAL",
+        "sonic_fit": "Quietly reflective, layered, with a feeling of return.",
+        "lyrical_fit": "The lyrics echo return and changed selfhood.",
+        "creator_context": "The artist describes revisiting memory and present feeling."
+      }
+    ],
+    "films_and_series": [
+      {
+        "rank": 1,
+        "title": "Film or Series 1",
+        "creator": "Director 1",
+        "why_related": "This work explores return, memory, and changing meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/screen/1"
+        ],
+        "type": "screen",
+        "format": "film",
+        "thematic_fit": "Return changes through time and relationships."
+      },
+      {
+        "rank": 2,
+        "title": "Film or Series 2",
+        "creator": "Director 2",
+        "why_related": "This work explores return, memory, and changing meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/screen/2"
+        ],
+        "type": "screen",
+        "format": "film",
+        "thematic_fit": "Return changes through time and relationships."
+      },
+      {
+        "rank": 3,
+        "title": "Film or Series 3",
+        "creator": "Director 3",
+        "why_related": "This work explores return, memory, and changing meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/screen/3"
+        ],
+        "type": "screen",
+        "format": "film",
+        "thematic_fit": "Return changes through time and relationships."
+      },
+      {
+        "rank": 4,
+        "title": "Film or Series 4",
+        "creator": "Director 4",
+        "why_related": "This work explores return, memory, and changing meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/screen/4"
+        ],
+        "type": "screen",
+        "format": "series",
+        "thematic_fit": "Return changes through time and relationships."
+      },
+      {
+        "rank": 5,
+        "title": "Film or Series 5",
+        "creator": "Director 5",
+        "why_related": "This work explores return, memory, and changing meaning.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/screen/5"
+        ],
+        "type": "screen",
+        "format": "series",
+        "thematic_fit": "Return changes through time and relationships."
+      }
+    ],
+    "artworks": [
+      {
+        "rank": 1,
+        "title": "Artwork 1",
+        "creator": "Artist 1",
+        "why_related": "The artwork shows how form and memory interact through re-reading.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/art/1"
+        ],
+        "type": "artwork",
+        "medium": "installation",
+        "observable_form": "Layered composition with repeated visual motifs.",
+        "material_or_form_relevance": "Its material structure rewards return and second reading.",
+        "artist_intent": "The artist explores time, memory, and re-encounter.",
+        "curator_or_scholar_view": "Scholars read it as a work about repetition and changed perspective.",
+        "historical_or_cultural_context": "It sits in a contemporary context of memory and identity.",
+        "drop_connection": "It mirrors the concept that return acquires a new layer of meaning."
+      },
+      {
+        "rank": 2,
+        "title": "Artwork 2",
+        "creator": "Artist 2",
+        "why_related": "The artwork shows how form and memory interact through re-reading.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/art/2"
+        ],
+        "type": "artwork",
+        "medium": "photography",
+        "observable_form": "Layered composition with repeated visual motifs.",
+        "material_or_form_relevance": "Its material structure rewards return and second reading.",
+        "artist_intent": "The artist explores time, memory, and re-encounter.",
+        "curator_or_scholar_view": "Scholars read it as a work about repetition and changed perspective.",
+        "historical_or_cultural_context": "It sits in a contemporary context of memory and identity.",
+        "drop_connection": "It mirrors the concept that return acquires a new layer of meaning."
+      },
+      {
+        "rank": 3,
+        "title": "Artwork 3",
+        "creator": "Artist 3",
+        "why_related": "The artwork shows how form and memory interact through re-reading.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/art/3"
+        ],
+        "type": "artwork",
+        "medium": "installation",
+        "observable_form": "Layered composition with repeated visual motifs.",
+        "material_or_form_relevance": "Its material structure rewards return and second reading.",
+        "artist_intent": "The artist explores time, memory, and re-encounter.",
+        "curator_or_scholar_view": "Scholars read it as a work about repetition and changed perspective.",
+        "historical_or_cultural_context": "It sits in a contemporary context of memory and identity.",
+        "drop_connection": "It mirrors the concept that return acquires a new layer of meaning."
+      },
+      {
+        "rank": 4,
+        "title": "Artwork 4",
+        "creator": "Artist 4",
+        "why_related": "The artwork shows how form and memory interact through re-reading.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/art/4"
+        ],
+        "type": "artwork",
+        "medium": "photography",
+        "observable_form": "Layered composition with repeated visual motifs.",
+        "material_or_form_relevance": "Its material structure rewards return and second reading.",
+        "artist_intent": "The artist explores time, memory, and re-encounter.",
+        "curator_or_scholar_view": "Scholars read it as a work about repetition and changed perspective.",
+        "historical_or_cultural_context": "It sits in a contemporary context of memory and identity.",
+        "drop_connection": "It mirrors the concept that return acquires a new layer of meaning."
+      },
+      {
+        "rank": 5,
+        "title": "Artwork 5",
+        "creator": "Artist 5",
+        "why_related": "The artwork shows how form and memory interact through re-reading.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/art/5"
+        ],
+        "type": "artwork",
+        "medium": "installation",
+        "observable_form": "Layered composition with repeated visual motifs.",
+        "material_or_form_relevance": "Its material structure rewards return and second reading.",
+        "artist_intent": "The artist explores time, memory, and re-encounter.",
+        "curator_or_scholar_view": "Scholars read it as a work about repetition and changed perspective.",
+        "historical_or_cultural_context": "It sits in a contemporary context of memory and identity.",
+        "drop_connection": "It mirrors the concept that return acquires a new layer of meaning."
+      }
+    ],
+    "scientific_readings": [
+      {
+        "rank": 1,
+        "title": "Scientific Reading 1",
+        "creator": "Author 1",
+        "why_related": "This reading supports the psychology of memory and renewed interpretation.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/science/1"
+        ],
+        "type": "reading",
+        "category": "scientific",
+        "summary": "A short explanation of memory, perception, or re-appraisal.",
+        "conceptual_link": "It explains how perception changes when we revisit the same thing."
+      },
+      {
+        "rank": 2,
+        "title": "Scientific Reading 2",
+        "creator": "Author 2",
+        "why_related": "This reading supports the psychology of memory and renewed interpretation.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/science/2"
+        ],
+        "type": "reading",
+        "category": "scientific",
+        "summary": "A short explanation of memory, perception, or re-appraisal.",
+        "conceptual_link": "It explains how perception changes when we revisit the same thing."
+      },
+      {
+        "rank": 3,
+        "title": "Scientific Reading 3",
+        "creator": "Author 3",
+        "why_related": "This reading supports the psychology of memory and renewed interpretation.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/science/3"
+        ],
+        "type": "reading",
+        "category": "scientific",
+        "summary": "A short explanation of memory, perception, or re-appraisal.",
+        "conceptual_link": "It explains how perception changes when we revisit the same thing."
+      }
+    ],
+    "artistic_readings": [
+      {
+        "rank": 1,
+        "title": "Artistic Reading 1",
+        "creator": "Critic 1",
+        "why_related": "This essay supports the concept through cultural and aesthetic interpretation.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/artistic/1"
+        ],
+        "type": "reading",
+        "category": "artistic",
+        "summary": "A short essay-level description about re-encounter and interpretation.",
+        "conceptual_link": "It frames return as a way of producing new meaning."
+      },
+      {
+        "rank": 2,
+        "title": "Artistic Reading 2",
+        "creator": "Critic 2",
+        "why_related": "This essay supports the concept through cultural and aesthetic interpretation.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/artistic/2"
+        ],
+        "type": "reading",
+        "category": "artistic",
+        "summary": "A short essay-level description about re-encounter and interpretation.",
+        "conceptual_link": "It frames return as a way of producing new meaning."
+      },
+      {
+        "rank": 3,
+        "title": "Artistic Reading 3",
+        "creator": "Critic 3",
+        "why_related": "This essay supports the concept through cultural and aesthetic interpretation.",
+        "source_notes": "Mock source note.",
+        "links": [
+          "https://example.com/artistic/3"
+        ],
+        "type": "reading",
+        "category": "artistic",
+        "summary": "A short essay-level description about re-encounter and interpretation.",
+        "conceptual_link": "It frames return as a way of producing new meaning."
+      }
+    ]
+  },
+  "usage_summary": {
+    "session_id": "c18c18e12aea",
+    "successful_calls": 3,
+    "totals": {
+      "prompt_tokens": 1500,
+      "completion_tokens": 2400,
+      "total_tokens": 3900,
+      "cost_usd": 0.03
+    }
+  }
+}

@@ -316,7 +316,18 @@ This is the end of panel scope. The machine build is a separate delivery and doe
 automatically (ADR-0019 D20). Anything in §2 needs a named decision before implementation, not an
 improvisation.
 
-### The stop was put to the owner, and it holds
+### The stop was put to the owner, upheld, and then lifted
+
+> **Superseded on `v2` by [ADR-0021](../adr/ADR-0021-machine-build-opens-on-v2.md).** Later the
+> same day the owner reversed this, supplying the concept-portfolio service and asking for it to
+> be wired in. Both were owner decisions — which is the form doc 18 §11 requires — and the second
+> supersedes the first. The note below is kept rather than rewritten: a decision that was made
+> and then changed tells the next reader more than one that was quietly overwritten.
+>
+> **`main` is unaffected.** The stop below is true of v1 and stays true of it. Machine work
+> happens only on `v2`.
+
+### What was decided, and then changed
 
 **2026-09-10.** Building the machine in this repository was raised and declined. The owner was
 shown what lifting the stop would require — a recorded ADR superseding ADR-0019 D20, a ruling on

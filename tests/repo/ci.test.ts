@@ -50,8 +50,21 @@ const CHECK_COMMANDS = [
   "pnpm test",
   "pnpm test:db",
   "pnpm test:e2e",
+  "pnpm test:machine",
   "pnpm build",
 ] as const;
+
+/**
+ * Scripts that are NOT checks, each with the reason it is exempt. The list is
+ * explicit rather than a pattern so that adding a check and forgetting to wire
+ * it into CI is a red test, not a quiet gap — which is the whole point of the
+ * assertion below.
+ */
+const NON_CHECK_SCRIPTS: Readonly<Record<string, string>> = {
+  dev: "starts the panel's dev server",
+  "machine:install": "creates the machine's virtualenv; setup, not verification",
+  "machine:up": "runs the machine service; setup, not verification",
+};
 
 function everyRunStep(): string[] {
   return Object.values(workflow.jobs).flatMap((job) =>
@@ -71,9 +84,8 @@ describe("CI runs every canonical check (P8 §6.1)", () => {
   it("the canonical list is the whole of package.json's check scripts", () => {
     // If a seventh check is added to the manifest, this fails until it is
     // added above AND to the workflow — the list cannot rot into a subset.
-    const NON_CHECK_SCRIPTS = new Set(["dev"]);
     const declared = Object.keys(manifest.scripts)
-      .filter((name) => !NON_CHECK_SCRIPTS.has(name))
+      .filter((name) => !(name in NON_CHECK_SCRIPTS))
       .map((name) => `pnpm ${name}`)
       .sort();
     expect(declared).toEqual([...CHECK_COMMANDS].sort());

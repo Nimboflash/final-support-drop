@@ -2,7 +2,7 @@
   "name": "drop-os",
   "private": true,
   "version": "0.0.1",
-  "description": "DROP Studio OS \u2014 versioned creative operating system (Release 0)",
+  "description": "DROP Studio OS — versioned creative operating system (Release 0)",
   "engines": {
     "node": ">=24"
   },
@@ -14,7 +14,10 @@
     "test": "vitest run",
     "test:db": "node scripts/inert-gate.mjs test:db 0.4",
     "test:e2e": "pnpm --filter @drop/web build && playwright test",
-    "build": "pnpm -r run build"
+    "test:machine": "node scripts/run-machine-tests.mjs",
+    "build": "pnpm -r run build",
+    "machine:install": "python3 -m venv services/concept-portfolio/.venv && services/concept-portfolio/.venv/bin/pip install -q -r services/concept-portfolio/requirements.txt",
+    "machine:up": "DROP_BACKEND=${DROP_BACKEND:-mock} PYTHONPATH=services/concept-portfolio/src services/concept-portfolio/.venv/bin/python -m uvicorn drop_portfolio.api:app --host 127.0.0.1 --port ${DROP_MACHINE_PORT:-8000}"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

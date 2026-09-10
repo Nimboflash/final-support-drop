@@ -60,6 +60,45 @@ jobs:
       - run: pnpm test:db
       - run: pnpm build
 
+  # The machine — a Python service (services/concept-portfolio), vendored on v2.
+  # Separate job because it shares no toolchain with the TypeScript side: a
+  # failure here should say "the machine broke", not hide inside a Node job.
+  machine:
+    name: machine · pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          # The service declares >=3.10 in its pyproject; CI honours the
+          # declaration rather than the 3.9 that happens to be on a laptop.
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: services/concept-portfolio/requirements.txt
+
+      - name: Install
+        run: pip install -r services/concept-portfolio/requirements.txt
+
+      - name: Run the machine's tests
+        # Its own suite runs against the deterministic mock backend, so this
+        # needs no API key and spends nothing.
+        run: pnpm test:machine
+
+      - name: Prove it starts and answers without a credential
+        # The service could not start at all without a paid key until this
+        # branch changed that. This step is what keeps that true.
+        run: |
+          DROP_BACKEND=mock PYTHONPATH=services/concept-portfolio/src \
+            python -m uvicorn drop_portfolio.api:app --host 127.0.0.1 --port 8000 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/health && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8000/health | tee /dev/stderr | grep -q '"backend":"mock"'
+
+
   # The browser suite, including the committed visual baselines.
   #
   # This runs on macOS because the baselines are platform-pinned — Playwright

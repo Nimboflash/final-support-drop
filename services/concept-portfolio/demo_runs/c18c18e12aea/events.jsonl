@@ -1,0 +1,5 @@
+{"ts": 1788985273.5648396, "session_id": "c18c18e12aea", "event_type": "session_created", "payload": {"project_brief": "A gathering about things that become meaningful when we return to them.", "initial_context": "small intimate cultural gathering", "desired_feeling": "reflective, warm, quietly curious", "seed": "returning changes us", "previous_ideas": []}}
+{"ts": 1788985273.5705652, "session_id": "c18c18e12aea", "event_type": "concepts_generated", "payload": {"round_index": 1}}
+{"ts": 1788985273.5765164, "session_id": "c18c18e12aea", "event_type": "concepts_refined", "payload": {"round_index": 2, "action": "refine"}}
+{"ts": 1788985273.5815363, "session_id": "c18c18e12aea", "event_type": "concept_approved", "payload": {"concept_id": "concept_02", "title": "The second meaning refined"}}
+{"ts": 1788985273.5860918, "session_id": "c18c18e12aea", "event_type": "portfolio_built", "payload": {"concept_id": "concept_02"}}

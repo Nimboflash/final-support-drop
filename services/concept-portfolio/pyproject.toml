@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drop-concept-portfolio"
+version = "0.1.0"
+description = "DROP concept generation and research portfolio service"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "OpenAI"}]
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn>=0.35.0",
+  "pydantic>=2.11.0",
+  "python-dotenv>=1.0.1",
+  "requests>=2.32.0",
+  "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.4.0", "nbformat>=5.10.0"]
+
+[project.scripts]
+drop-portfolio = "drop_portfolio.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

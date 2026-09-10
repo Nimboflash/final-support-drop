@@ -17,6 +17,12 @@ do not open pull requests against it, and do not "just fix" something on it.
 history, and it is where every new branch starts and every pull request lands. The two lines are
 deliberately independent: a change on `v2` never reaches v1.
 
+**The machine build is open on `v2` only** (ADR-0021). `services/concept-portfolio/` is the
+owner's concept-and-research service, vendored — Machines 01 and 02 of the recorded model, and
+nothing downstream. Doc 18 §11's hard stop still holds on `main`, still holds for Machines 03–05,
+and still holds for the infrastructure doc 18 §5 defers. `apps/worker` and the eleven
+machine-oriented packages remain inert placeholders.
+
 CI watches pull requests into **both**, so a proposal against the frozen line is still measured
 if one is ever made. `tests/repo/ci.test.ts` fails if either integration branch loses its checks.
 
@@ -70,7 +76,7 @@ vocabulary directly.
 3. `docs/implementation/18_...` — **build scope** (panel-first; ADR-0017 D1).
 4. Recorded decisions in `docs/implementation/03_SOURCE_RECONCILIATION_AND_DECISIONS.md`,
    then repo ADRs in `docs/adr/` (0011–0016 repair the bundle's verified defects; 0019 seats
-   the V2 pack; 0020 adopts the simplification brief).
+   the V2 pack; 0020 adopts the simplification brief; 0021 opens the machine build on `v2`).
 5. `docs/implementation/02_ADR_0010_DASHBOARD_AND_WORKFLOW_UI.md`.
 6. The numbered implementation docs `docs/implementation/00–17` — the build contract
    (product language, domain concepts, states, RBAC/approval/audit semantics, and future

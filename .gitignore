@@ -26,3 +26,13 @@ next-env.d.ts.bak
 # --- Playwright (ticket P1) ---
 test-results/
 playwright-report/
+
+# --- Python machine service (services/concept-portfolio) ---
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# Session runs are machine OUTPUT, written per run. `demo_runs/` is a committed
+# sample; `drop_runs/` is whatever this machine has produced locally.
+drop_runs/
+services/concept-portfolio/.env
