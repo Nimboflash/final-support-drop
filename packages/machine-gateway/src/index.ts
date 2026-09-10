@@ -20,3 +20,6 @@ export * from "./conformance/review-path";
 
 // The P3 mock world: all four adapters over ONE shared demo repository.
 export * from "./mock/mock-world";
+
+// ADR-0021 D4 — the real adapter, alongside the mock and behind the same seam.
+export * from "./real/index";

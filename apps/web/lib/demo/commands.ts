@@ -67,6 +67,8 @@ function useInvalidateWorld() {
     // reload (ADR-0019 D2); without it every command was lost on refresh, and
     // the brief's own QA scenario asks for exactly that to hold.
     try {
+      // REAL mode's persistence refuses rather than writing a machine snapshot
+      // under the mock discriminator; the catch below is what makes that safe.
       session.persistence.save(session.scenarioId, await session.world.panelCommandGateway.getSnapshot());
     } catch {
       // A full or unavailable storage must never lose the command that just
@@ -74,7 +76,9 @@ function useInvalidateWorld() {
     }
     // One invalidation, so every view of the same entity refreshes together:
     // card, inbox, graph, output readiness and history (V2 01 §8).
-    await client.invalidateQueries({ queryKey: panelKeys.snapshot(session.scenarioId) });
+    await client.invalidateQueries({
+      queryKey: panelKeys.snapshot(session.scenarioId, session.machineSessionId),
+    });
   };
 }
 

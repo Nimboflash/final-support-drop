@@ -7,7 +7,14 @@ import {
   type DemoClock,
   type DemoPersistence,
 } from "@drop/mock-data";
-import { createMockWorld, type MockWorld } from "@drop/machine-gateway";
+import {
+  createMockWorld,
+  createRealWorld,
+  isMachineSessionId,
+  type PanelWorld,
+} from "@drop/machine-gateway";
+import type { PanelSnapshot } from "@drop/panel-domain";
+import { createBrowserMachinePort } from "../machine/browser-machine-port";
 import { createBrowserStoragePort } from "./browser-ports";
 
 /**
@@ -30,16 +37,115 @@ import { createBrowserStoragePort } from "./browser-ports";
  */
 export const DEFAULT_SCENARIO_ID = BASE_WORLD_ID;
 
+/**
+ * Which world the panel is showing (ADR-0021 D5).
+ *
+ * `MOCK` is the deterministic demo world and the default; absent explicit
+ * configuration the panel behaves exactly as it does on `main`. `REAL` reads a
+ * live concept-portfolio session over the same-origin proxy.
+ */
+export type PanelMode = "MOCK" | "REAL";
+
 export interface DemoSession {
+  readonly mode: PanelMode;
   readonly scenarioId: string;
-  readonly world: MockWorld;
+  readonly world: PanelWorld;
   readonly persistence: DemoPersistence;
   readonly clock: DemoClock;
   /** How the stored world was read, so Settings can offer Reset on corruption. */
   readonly hydration: "HYDRATED" | "ABSENT" | "UNUSABLE";
+  /** In REAL mode, the machine session on screen. Null in MOCK mode. */
+  readonly machineSessionId: string | null;
 }
 
-export function createDemoSession(scenarioId: string = DEFAULT_SCENARIO_ID): DemoSession {
+export interface DemoSessionOptions {
+  readonly scenarioId?: string;
+  /**
+   * The machine session to show, from server configuration.
+   *
+   * REAL mode is entered by CONFIGURATION and nothing else (ADR-0021 D5). It
+   * was tempting to trigger it from a `?session=` query parameter, and that is
+   * broken three ways: the sidebar's links carry no query, so the mode would
+   * vanish on the first click; `DemoProviders` is mounted in the studio LAYOUT
+   * and a layout does not remount on client navigation, so the URL and the
+   * world would disagree; and the server pass has no `window`, so SSR would
+   * build the mock world while the client built the real one — a hydration
+   * mismatch on every load.
+   */
+  readonly machineSessionId?: string | null;
+}
+
+/**
+ * Persistence for REAL mode: refuses, rather than writing.
+ *
+ * A machine snapshot must never reach the demo browser key, and the danger is
+ * not theoretical. `demo-persistence.ts` stamps `snapshotKind` as the MOCK
+ * discriminator on whatever it is handed, and validates only that field on the
+ * way back in — so one `save()` of machine data would make the *demo* world
+ * silently resume from it forever after, with Reset the only way out.
+ *
+ * An object, never `null`: the settings surface calls `persistence.reset()`
+ * without checking, and a null here would be a crash instead of a refusal.
+ */
+function createRefusingPersistence(): DemoPersistence {
+  const refuse = (): never => {
+    throw new Error("REAL mode does not persist machine state to the demo key");
+  };
+  return {
+    load: () => ({ outcome: "ABSENT" }),
+    save: (_scenarioId: string, _snapshot: PanelSnapshot) => refuse(),
+    reset: () => refuse(),
+    watchExternal: () => () => {},
+  };
+}
+
+export function createDemoSession(options: DemoSessionOptions = {}): DemoSession {
+  const scenarioId = options.scenarioId ?? DEFAULT_SCENARIO_ID;
+  const machineSessionId = options.machineSessionId ?? null;
+
+  if (machineSessionId !== null && isMachineSessionId(machineSessionId)) {
+    /*
+      A real machine has real time. ADR-0019 D16 fixes the demo clock and
+      `determinism.test.ts` keeps `Date.now` out of the contract packages —
+      both remain true, because determinism is a property of the MOCK world and
+      the clock is injected from here, which is the one place allowed to have
+      one.
+    */
+    const clock: DemoClock = { now: () => new Date().toISOString() };
+    const world = createRealWorld({
+      sessionId: machineSessionId,
+      port: createBrowserMachinePort(),
+      now: () => clock.now(),
+      workspaceId: "drop-demo",
+      ownerId: "actor-guardian",
+      /*
+        The identity renderer: the machine's words, unchanged.
+
+        ADR-0021 D7 is an OPEN decision — the service answers in English and
+        this panel is fa-IR only — and this is the only option that does not
+        pre-empt it. Translating here would bury a ruling the owner has not
+        made; asking the machine for Persian means editing a vendored service.
+        So the collision is left VISIBLE on screen, which is where a person can
+        actually judge it. See docs/handoff/P10-machine-wiring.md.
+      */
+      text: { toFa: (value: string) => value, toEn: (value: string) => value },
+    });
+
+    return {
+      mode: "REAL",
+      scenarioId,
+      world,
+      persistence: createRefusingPersistence(),
+      clock,
+      hydration: "ABSENT",
+      machineSessionId,
+    };
+  }
+
+  return createMockSession(scenarioId);
+}
+
+function createMockSession(scenarioId: string): DemoSession {
   const clock = createFixedClock();
   const persistence = createDemoPersistence(
     createBrowserStoragePort(),
@@ -64,7 +170,15 @@ export function createDemoSession(scenarioId: string = DEFAULT_SCENARIO_ID): Dem
       : undefined;
 
   const world = createMockWorld({ scenarioId, clock, snapshot: resumable });
-  return { scenarioId, world, persistence, clock, hydration: stored.outcome };
+  return {
+    mode: "MOCK",
+    scenarioId,
+    world,
+    persistence,
+    clock,
+    hydration: stored.outcome,
+    machineSessionId: null,
+  };
 }
 
 /**

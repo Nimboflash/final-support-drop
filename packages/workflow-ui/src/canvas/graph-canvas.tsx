@@ -8,7 +8,9 @@ import "@xyflow/react/dist/style.css";
 import {
   Background,
   Controls,
+  Handle,
   MiniMap,
+  Position,
   ReactFlow,
   type Edge,
   type Node,
@@ -38,6 +40,25 @@ export interface ProductNodeData extends Record<string, unknown> {
   readonly product: ProductNode;
 }
 
+/**
+ * The anchor points every edge is drawn between.
+ *
+ * A custom node type gets NO handles unless it renders them, and React Flow
+ * silently draws nothing for an edge whose endpoints it cannot find. That is
+ * what was happening here: `buildProductGraph` produced sixty-seven edges for a
+ * real session and the canvas rendered forty-six unconnected cards, with no
+ * error anywhere — a workflow graph showing no workflow.
+ *
+ * Invisible rather than styled, because the panel has no connect affordance to
+ * offer (`nodesConnectable={false}`, ADR-0019 D18): these exist to give the
+ * edges somewhere to land, not to invite a drag. `opacity` rather than
+ * `display`, so the anchor keeps its position.
+ *
+ * Top and bottom, because ELK lays this graph out with `elk.direction: DOWN` —
+ * which is also why the canvas needed no RTL mirroring: the flow is vertical.
+ */
+const HANDLE_STYLE = { opacity: 0 } as const;
+
 function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
   const node = data.product;
   return (
@@ -47,6 +68,7 @@ function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
       data-state={node.state}
       className={`h-full w-full overflow-hidden rounded-md border-2 bg-card p-3 text-start ${NODE_STATE_TONE[node.state]}`}
     >
+      <Handle type="target" position={Position.Top} isConnectable={false} style={HANDLE_STYLE} />
       <p className="truncate text-sm font-medium">{node.labelFa}</p>
       <p className="truncate text-xs text-muted-foreground">
         {NODE_CLASS_LABEL_FA[node.nodeClass]}
@@ -56,6 +78,7 @@ function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
         <span className="rounded-full border px-2 py-0.5">{NODE_STATE_LABEL_FA[node.state]}</span>
         {node.terminal ? <span className="ps-2">پایان شاخه</span> : null}
       </p>
+      <Handle type="source" position={Position.Bottom} isConnectable={false} style={HANDLE_STYLE} />
     </div>
   );
 }
@@ -116,6 +139,43 @@ export function GraphCanvas({
         // off-screen.
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
+        /*
+          `measured` as well as `width`/`height`, and this is load-bearing
+          rather than belt-and-braces.
+
+          React Flow keeps each node's HANDLE positions in internal state that
+          it fills in by measuring the DOM once. When a fresh node object
+          arrives it re-derives them:
+
+              if (!userNode.handles)
+                return !userNode.measured ? undefined : internalNode?.internals.handleBounds;
+
+          This memo rebuilds every node the moment ELK resolves `positions`. So
+          without `measured`, that returns `undefined` and the measured handle
+          bounds are DISCARDED — and they are never rebuilt, because the node's
+          dimensions did not change and nothing else triggers a re-measure.
+          React Flow then reports every edge as "Couldn't create edge for
+          source handle id: null" (its error 008) and draws none of them.
+
+          The panel showed that for its whole life: forty-six cards and not one
+          connecting line, a warning in the console and no failing test, because
+          the graph has never had a visual baseline.
+
+          Declaring the handles is what fixes it, and it is the first branch of
+          that same function — `userNode.handles`, used verbatim when present.
+          Supplying only `measured` is a trap: it makes React Flow treat the
+          node as already measured, so it never queries the DOM for handles at
+          all and the bounds are never computed in the first place.
+
+          These coordinates are node-relative and exact, because the card fills
+          the node box: top-centre in, bottom-centre out, matching the `Handle`
+          elements below and ELK's `elk.direction: DOWN`.
+        */
+        measured: { width: NODE_WIDTH, height: NODE_HEIGHT },
+        handles: [
+          { type: "target", position: Position.Top, x: NODE_WIDTH / 2, y: 0 },
+          { type: "source", position: Position.Bottom, x: NODE_WIDTH / 2, y: NODE_HEIGHT },
+        ],
         // `data` carries the DTO-derived node, never a copy of its status that
         // could be written to and read back.
         data: { product },
@@ -123,20 +183,36 @@ export function GraphCanvas({
     [graph, positions],
   );
 
-  const edges = useMemo<Edge[]>(
-    () =>
-      graph.edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        label: edge.labelFa ?? undefined,
-        animated: edge.kind === "REVISION",
-        // A revision edge is visually distinct AND labelled, so the distinction
-        // survives for a reader who cannot see the dashes.
-        style: edge.kind === "REVISION" ? { strokeDasharray: "6 4" } : undefined,
-      })),
-    [graph],
-  );
+  const edges = useMemo<Edge[]>(() => {
+    /*
+      React Flow names an edge `Edge from ${source} to ${target}` when it is not
+      told otherwise — English, in a product that ships fa-IR only, and built
+      out of raw internal ids, so a screen reader would read out
+      "n:concept-review:c1". It is an `aria-label`, so no visual review and no
+      innerText sweep can see it.
+
+      It went unnoticed because no edge had ever rendered. The moment they did,
+      `full-audit.spec.ts` caught it — which is the guard working exactly as
+      intended. Named here from the same Persian labels the node cards show.
+    */
+    const labelById = new Map(graph.nodes.map((node) => [node.id, node.labelFa]));
+    const name = (id: string) => labelById.get(id) ?? id;
+
+    return graph.edges.map((edge) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      label: edge.labelFa ?? undefined,
+      ariaLabel:
+        edge.kind === "REVISION"
+          ? `بازنگری، از ${name(edge.source)} به ${name(edge.target)}`
+          : `پیوند از ${name(edge.source)} به ${name(edge.target)}`,
+      animated: edge.kind === "REVISION",
+      // A revision edge is visually distinct AND labelled, so the distinction
+      // survives for a reader who cannot see the dashes.
+      style: edge.kind === "REVISION" ? { strokeDasharray: "6 4" } : undefined,
+    }));
+  }, [graph]);
 
   return (
     <div className="h-[32rem] w-full rounded-md border" data-testid="graph-canvas">

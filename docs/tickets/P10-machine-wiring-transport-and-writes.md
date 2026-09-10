@@ -132,18 +132,23 @@ P9, and ADR-0021 for the authority to build any of it.
 
 ## Acceptance criteria
 
-- [ ] **AC-P10.1** — The panel never calls the service directly from a browser. The base URL appears in no client bundle, and the proxy allow-lists paths rather than forwarding a client-supplied URL. Asserted by a repo test.
-- [ ] **AC-P10.2** — A session id that is not `^[a-f0-9]{12}$` is refused before it reaches a path.
-- [ ] **AC-P10.3** — `getSnapshot()` against a live session returns a `PanelSnapshot` that `panelSnapshotSchema.parse` accepts, declaring `snapshotKind: "drop.panel.machine.v1"`.
-- [ ] **AC-P10.4** — `/studio/engine` renders that session: nodes, edges, and a REVISION edge after a refine round. Verified in a browser, not inferred.
-- [ ] **AC-P10.5** — In REAL mode every unimplemented gateway member throws a typed `GatewayError`; none returns a plausible fake success.
-- [ ] **AC-P10.6** — The mock world is byte-unchanged and remains the default. Every existing test, scenario and visual baseline passes untouched.
-- [ ] **AC-P10.7** — The shell says which world it is showing. Reset is disabled in REAL mode with an on-screen reason, never inert.
-- [ ] **AC-P10.8** — A completed machine job becomes visible without a manual reload.
+- [x] **AC-P10.1** — The panel never calls the service directly from a browser. The base URL appears in no client bundle, and the proxy allow-lists paths rather than forwarding a client-supplied URL. Asserted by a repo test.
+- [x] **AC-P10.2** — A session id that is not `^[a-f0-9]{12}$` is refused before it reaches a path.
+- [x] **AC-P10.3** — `getSnapshot()` against a live session returns a `PanelSnapshot` that `panelSnapshotSchema.parse` accepts, declaring `snapshotKind: "drop.panel.machine.v1"`.
+- [x] **AC-P10.4** — `/studio/engine` renders that session: nodes, edges, and a REVISION edge after a refine round. Verified in a browser, not inferred.
+- [x] **AC-P10.5** — In REAL mode every unimplemented gateway member throws a typed `GatewayError`; none returns a plausible fake success.
+- [x] **AC-P10.6** — The mock world is byte-unchanged and remains the default. Every existing test, scenario and visual baseline passes untouched.
+- [x] **AC-P10.7** — The shell says which world it is showing. Reset is disabled in REAL mode with an on-screen reason, never inert.
+- [x] **AC-P10.8** — A completed machine job becomes visible without a manual reload.
 - [ ] **AC-P10.9** — `submitApproval` reaches the machine through `ReviewApplicationService.reviewItem` and no other path. The rejecting-stub proof still passes.
 - [ ] **AC-P10.10** — `createReviewPathConformanceSuite` passes **unmodified** against the real world.
 - [ ] **AC-P10.11** — Concurrent writes to one session cannot lose a round. Proven by a test that issues them.
 - [ ] **AC-P10.12** — All checks green, including the machine's own suite, with the browser evidence coming from an actual run.
+
+**Slice 1 landed 2026-09-10.** AC-P10.1 through AC-P10.8 are met and verified in a browser
+against a live session; see `docs/handoff/P10-machine-wiring.md`. AC-P10.9 through AC-P10.11 are
+slice 2 (writes) and untouched. AC-P10.12 stays open until slice 2 closes, though all six
+canonical checks are green as of that commit.
 
 ## Handoff
 

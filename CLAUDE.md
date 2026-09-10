@@ -23,6 +23,15 @@ nothing downstream. Doc 18 §11's hard stop still holds on `main`, still holds f
 and still holds for the infrastructure doc 18 §5 defers. `apps/worker` and the eleven
 machine-oriented packages remain inert placeholders.
 
+**The machine is wired on `v2`, read-only** (ticket P10 slice 1). The panel reads a live session
+through a same-origin proxy at `apps/web/app/api/machine/[...path]/route.ts` and renders it
+through the one projection in `packages/panel-domain/src/projection/`. It is off unless BOTH
+`DROP_MACHINE_BASE_URL` and `DROP_MACHINE_SESSION_ID` are set on the server; absent those the
+panel behaves exactly as it does on `main` (ADR-0021 D5). That route is a security boundary, not
+plumbing — the service has no CORS and no authentication — so it exports `GET` only, allow-lists
+two literal paths, and never builds a URL from user input. Writes are slice 2 and refuse with
+`UNAUTHORIZED` until then.
+
 CI watches pull requests into **both**, so a proposal against the frozen line is still measured
 if one is ever made. `tests/repo/ci.test.ts` fails if either integration branch loses its checks.
 

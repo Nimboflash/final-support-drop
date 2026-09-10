@@ -1,0 +1,11 @@
+// Ticket P10 slice 1 — the real adapter, alongside the mock (ADR-0021 D4).
+export type { MachineHttpPort, MachineHttpResult } from "./machine-http-port";
+export {
+  createMachineClient,
+  isMachineSessionId,
+  MACHINE_SESSION_ID,
+  type MachineClient,
+  type MachineHealth,
+} from "./machine-client";
+export type { PanelWorld, PanelWorldPolicy } from "./panel-world";
+export { createRealWorld, type RealWorld, type RealWorldOptions } from "./real-world";

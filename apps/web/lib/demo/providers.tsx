@@ -50,7 +50,22 @@ function createQueryClient(): QueryClient {
   });
 }
 
-export function DemoProviders({ children }: { children: ReactNode }) {
+export interface DemoProvidersProps {
+  readonly children: ReactNode;
+  /**
+   * The machine session to show, resolved on the SERVER by `/studio/layout.tsx`
+   * and handed down as a prop.
+   *
+   * A prop rather than something read here, so the value is identical on the
+   * server pass and the client pass. Reading it from `window.location` would
+   * make SSR build the mock world and the client build the real one, which is a
+   * hydration mismatch the moment anything renders differently per mode — and
+   * the demo marker now does.
+   */
+  readonly machineSessionId?: string | null;
+}
+
+export function DemoProviders({ children, machineSessionId = null }: DemoProvidersProps) {
   // useState, not useMemo: the client must survive re-renders, and useMemo is a
   // caching hint React may discard.
   const [queryClient] = useState(createQueryClient);
@@ -69,7 +84,10 @@ export function DemoProviders({ children }: { children: ReactNode }) {
   // which is also the honest semantics: a different scenario is a different
   // demo world, and reseeding it from scratch is exactly what should happen.
   const [scenarioId] = useState(() => readScenarioFromLocation());
-  const session = useMemo(() => createDemoSession(scenarioId), [scenarioId]);
+  const session = useMemo(
+    () => createDemoSession({ scenarioId, machineSessionId }),
+    [scenarioId, machineSessionId],
+  );
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -27,6 +27,8 @@ export default function Page() {
   const session = useDemoSession();
   const scenarios = scenarioCatalogue();
   const active = session.scenarioId;
+  /** Whether this page is describing a live machine session rather than the demo world. */
+  const live = session.mode === "REAL";
 
   return (
     <div className="space-y-4">
@@ -76,10 +78,18 @@ export default function Page() {
                 <a href="/studio/settings">بازگشت به جهان پایه</a>
               </Button>
             )}
+            {/*
+              Disabled rather than removed when the panel is reading a live
+              machine session: there is no stored world to clear, because REAL
+              mode deliberately writes nothing. `no-inert-controls.test.ts`
+              wants the `disabled` in the tag itself, and V2 03 §6 wants the
+              reason on screen rather than in a tooltip.
+            */}
             <Button
               size="sm"
               variant="outline"
               data-testid="reset-demo"
+              disabled={live}
               onClick={() => {
                 session.persistence.reset();
                 // A full navigation, so the world is rebuilt from the seed
@@ -90,6 +100,13 @@ export default function Page() {
               پاک‌کردن وضعیت ذخیره‌شده
             </Button>
           </div>
+
+          {live ? (
+            <p className="text-sm text-muted-foreground" data-testid="reset-disabled-reason">
+              چون این صفحه دادهٔ زندهٔ ماشین را نشان می‌دهد، چیزی روی این دستگاه ذخیره نمی‌شود و
+              پاک‌کردنی هم در کار نیست.
+            </p>
+          ) : null}
 
           <ul className="grid gap-2 sm:grid-cols-2" data-testid="scenario-list">
             <li>
@@ -120,13 +137,38 @@ export default function Page() {
           <CardTitle className="text-base">وضعیت اتصال</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p>
-            <Badge variant="outline">متصل نیست</Badge> ماشین‌های ۰۱ تا ۰۵ در این نسخه ساخته
-            نشده‌اند و از طریق آداپتور بعداً وصل می‌شوند.
-          </p>
-          <p className="text-muted-foreground">
-            این پنل هیچ کلید API‌ای نگه نمی‌دارد و به هیچ ارائه‌دهنده‌ای وصل نمی‌شود.
-          </p>
+          {/*
+            This card's entire job is to state what is and is not connected, so
+            it is the first thing that becomes a lie when something is. Every
+            sentence here inverts with the mode; none of them is a constant.
+          */}
+          {live ? (
+            <>
+              <p>
+                <Badge variant="outline" data-testid="connection-state">
+                  متصل
+                </Badge>{" "}
+                این صفحه یک جلسهٔ زندهٔ ساخت کانسپت و پژوهش را می‌خواند. تصمیم‌ها هنوز از اینجا
+                ثبت نمی‌شوند.
+              </p>
+              <p className="text-muted-foreground">
+                نشانی سرویس فقط روی سرور نگهداری می‌شود و هرگز به مرورگر نمی‌رسد.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                <Badge variant="outline" data-testid="connection-state">
+                  متصل نیست
+                </Badge>{" "}
+                ماشین‌های ۰۱ تا ۰۵ در این نسخه ساخته نشده‌اند و از طریق آداپتور بعداً وصل
+                می‌شوند.
+              </p>
+              <p className="text-muted-foreground">
+                این پنل هیچ کلید API‌ای نگه نمی‌دارد و به هیچ ارائه‌دهنده‌ای وصل نمی‌شود.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

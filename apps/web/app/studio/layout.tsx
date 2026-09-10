@@ -17,9 +17,36 @@ import { DemoProviders } from "../../lib/demo/providers";
  * resolves in dev — the panel sat on its loading fallback forever while
  * production rendered fine. A boundary here would only hide that again.
  */
+
+// Request-time rendering, so the machine configuration below is read from the
+// runtime environment rather than baked in at build time.
+export const dynamic = "force-dynamic";
+
+/** The machine's own id form, `uuid4().hex` truncated to twelve. */
+const SESSION_ID = /^[a-f0-9]{12}$/;
+
+/**
+ * Which world this render is showing, resolved on the server (ADR-0021 D5).
+ *
+ * BOTH variables are required. A session id with no base URL would enter a mode
+ * whose every read fails, and a base URL with no session id has nothing to
+ * show; either alone is a misconfiguration rather than an intention. Neither
+ * value reaches the client: only the session id is passed down, and the address
+ * of the machine stays on the server (AC-P10.1).
+ */
+function machineSessionId(): string | null {
+  const base = process.env.DROP_MACHINE_BASE_URL;
+  const session = process.env.DROP_MACHINE_SESSION_ID;
+  if (typeof base !== "string" || base.trim() === "") return null;
+  if (typeof session !== "string" || !SESSION_ID.test(session.trim())) return null;
+  return session.trim();
+}
+
 export default function StudioLayout({ children }: { children: ReactNode }) {
+  const machineSession = machineSessionId();
+
   return (
-    <DemoProviders>
+    <DemoProviders machineSessionId={machineSession}>
       <SidebarProvider>
         <Suspense fallback={null}>
           <StudioSidebar />
@@ -33,9 +60,14 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
               per-surface simulation notices; this is what keeps 18 §12 true
               without narrating it on every card — nothing in this panel may
               imply that real machine work, research or publication happened.
+
+              Which is exactly why it cannot be a constant any more. When the
+              panel is reading a live machine session, «حالت نمایشی» is itself
+              the false claim the marker exists to prevent. One marker, one
+              testid, and the sentence changes with the world.
             */}
             <Badge variant="outline" className="ms-auto" data-testid="demo-marker">
-              حالت نمایشی
+              {machineSession === null ? "حالت نمایشی" : "دادهٔ زندهٔ ماشین"}
             </Badge>
           </header>
           {/*
