@@ -1,5 +1,9 @@
 # Ticket Index — Panel-First Plan (P-series)
 
+> **v1 is frozen.** The P-series below is delivered and merged to `main` at `646efd7`, and
+> `main` takes no more work. New work happens on the `v2` branch, cloned from that commit with
+> its full history. See CLAUDE.md, "Branches".
+
 ## Scope note
 
 The build is **panel-first** per the authoritative scope correction

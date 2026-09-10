@@ -173,17 +173,30 @@ describe("the workflow cannot hang or pile up", () => {
     }
   });
 
-  it("a superseded run is cancelled, except on main", () => {
+  it("a superseded run is cancelled, except on an integration branch", () => {
     expect(workflow.concurrency).toBeDefined();
-    expect(String(workflow.concurrency?.["cancel-in-progress"])).toContain("main");
+    const rule = String(workflow.concurrency?.["cancel-in-progress"]);
+    for (const branch of ["main", "v2"]) {
+      expect(rule, `a landed change on ${branch} can lose its run`).toContain(branch);
+    }
   });
 
-  it("runs on every branch and on pull requests to main", () => {
+  it("runs on every branch and on pull requests to both integration branches", () => {
+    /*
+      `v2` is where work happens; `main` is frozen as v1. A workflow that only
+      watched pull requests into `main` would let every v2 pull request merge
+      unchecked — which is the shape of the risk CI was added to remove, just
+      relocated to a different branch.
+    */
     const on = workflow.on as {
       push?: { branches?: string[] };
       pull_request?: { branches?: string[] };
     };
     expect(on.push?.branches).toContain("**");
-    expect(on.pull_request?.branches).toContain("main");
+    for (const branch of ["main", "v2"]) {
+      expect(on.pull_request?.branches, `pull requests into ${branch} are unchecked`).toContain(
+        branch,
+      );
+    }
   });
 });

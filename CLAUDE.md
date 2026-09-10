@@ -7,6 +7,19 @@ auditable creative operating system. Five governed AI machines (01 Concept → 0
 This file exists per `docs/implementation/16_CLAUDE_CODE_BUILD_PROTOCOL.md` §2. It is
 navigation and discipline, not authority. When it disagrees with the documents below, they win.
 
+## Branches: v1 is frozen, work happens on `v2`
+
+**`main` is v1 and is frozen.** It holds the delivered panel — ADR-0019 with tickets P1-R→P8,
+ADR-0020 with P9, and CI — merged at `646efd7`. Nothing more lands there. Do not commit to it,
+do not open pull requests against it, and do not "just fix" something on it.
+
+**`v2` is the working line.** It was branched from `main` at that same commit, with the full
+history, and it is where every new branch starts and every pull request lands. The two lines are
+deliberately independent: a change on `v2` never reaches v1.
+
+CI watches pull requests into **both**, so a proposal against the frozen line is still measured
+if one is ever made. `tests/repo/ci.test.ts` fails if either integration branch loses its checks.
+
 ## Current scope (ADR-0017, narrowed by ADR-0019, restructured by ADR-0020 — read this first)
 
 **Panel first, and now frontend only.** This delivery builds the operational dashboard/control

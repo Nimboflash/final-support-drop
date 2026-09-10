@@ -14,14 +14,17 @@ on:
   push:
     branches: ["**"]
   pull_request:
-    branches: [main]
+    # Both integration branches. `main` is frozen as v1 and takes no more work,
+    # but it keeps its checks so that anything ever proposed against it is
+    # still measured. `v2` is where work happens now.
+    branches: [main, v2]
 
-# A newer push supersedes an older run on the same ref. `main` is exempt: a
-# push there is a landed change and its result is worth having even if another
-# lands behind it.
+# A newer push supersedes an older run on the same ref. The integration
+# branches are exempt: a push to one is a landed change, and its result is
+# worth having even if another lands behind it.
 concurrency:
   group: checks-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/v2' }}
 
 permissions:
   contents: read
