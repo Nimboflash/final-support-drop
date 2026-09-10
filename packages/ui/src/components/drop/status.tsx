@@ -49,10 +49,18 @@ type Tone = "neutral" | "active" | "waiting" | "success" | "warning" | "danger";
 // ADR-0019 D14: `--accent` is the neutral hover tint now, so `active` reaches
 // for `--selected` — the single brand accent — and the `--success`/`--warning`
 // bracket escapes become real utilities, since @theme inline finally maps them.
+//
+// ADR-0022: `waiting` is the one tone that means a PERSON is the blocker, and
+// it now carries Acid Lime rather than the same amber as `warning`. The two
+// had been visually identical, so the only state this panel exists to surface
+// looked exactly like the states it does not. Filled rather than tinted: at
+// 15.9:1 with Charcoal on it, this is the signal that has to survive being
+// glanced at. Every `waiting` badge still carries its icon and its Persian
+// label — ADR-0010 D11 means the colour is never what tells you.
 const toneClass: Record<Tone, string> = {
   neutral: "bg-secondary text-secondary-foreground border-border",
   active: "bg-selected/10 text-foreground border-selected",
-  waiting: "bg-warning/10 text-foreground border-warning",
+  waiting: "bg-attention text-attention-foreground border-attention font-medium",
   success: "bg-success/10 text-foreground border-success",
   warning: "bg-warning/15 text-foreground border-warning",
   danger: "bg-destructive/10 text-foreground border-destructive",

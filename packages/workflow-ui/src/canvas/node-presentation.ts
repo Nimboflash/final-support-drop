@@ -54,11 +54,22 @@ export const NODE_CLASS_LABEL_FA: Readonly<Record<ProductNodeClass, string>> = {
   CALENDAR: "تقویم",
 };
 
-/** Tone classes, used ALONGSIDE the icon and label, never instead of them. */
+/**
+ * Tone classes, used ALONGSIDE the icon and label, never instead of them.
+ *
+ * ADR-0022 draws the line this map had blurred. `AWAITING_REVIEW` and
+ * `BLOCKED` were the same amber, so "this is waiting for YOU" and "this is
+ * stuck on something else" were indistinguishable on a canvas of forty-six
+ * near-identical dark cards — on the one surface whose job is to show you
+ * where you are needed.
+ *
+ * Acid Lime now means a person is the blocker, and nothing else does. `DONE`
+ * stays deliberately quiet: finished work has no claim on anyone's attention.
+ */
 export const NODE_STATE_TONE: Readonly<Record<NodeState, string>> = {
   PENDING: "border-border text-muted-foreground",
   RUNNING: "border-selected",
-  AWAITING_REVIEW: "border-warning",
+  AWAITING_REVIEW: "border-attention",
   DONE: "border-success/60",
   BLOCKED: "border-warning",
   REJECTED: "border-destructive",

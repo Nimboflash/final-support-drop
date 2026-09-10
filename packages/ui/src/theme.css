@@ -25,11 +25,26 @@
   --drop-aluminium: #b3b6b9; /* APPROVED — secondary text and neutral accents */
   --drop-logo-charcoal: #1e1e1e; /* APPROVED — raised neutral surfaces */
 
+  /*
+    The two brand accents (ADR-0022). Read out of the Lite deck's own content
+    streams rather than eyeballed, so these are the deck's values exactly.
+
+    Oxide Red is a PRINT value and behaves like one: 6.95:1 on Paper, but only
+    2.47:1 on Charcoal, which is why the dark theme derives a lighter tone
+    from it below rather than using it raw.
+
+    Acid Lime is the opposite — 15.9:1 on Charcoal and 15.9:1 the other way
+    with Charcoal text on it, so one treatment works in both themes. It is
+    unusable as text on Paper (1.08:1), and therefore never used that way.
+  */
+  --drop-oxide: #8f382d; /* APPROVED — Oxide Red */
+  --drop-acid: #c8ff32; /* APPROVED — Acid Lime */
+
   /* Derived neutrals — cool, never warm (V2 02 §1 forbids a sepia palette). */
   --drop-steel: #5f6368; /* PROVISIONAL — secondary text on light surfaces */
   --drop-graphite: #8a9096; /* PROVISIONAL — light-theme control boundary, 3:1 */
 
-  --drop-lens-accent: #b23a26; /* PROVISIONAL value; THE single Lens accent (ADR-0010 D10) */
+  --drop-lens-accent: var(--drop-oxide); /* THE single Lens accent (ADR-0010 D10) */
 
   /* functional colors — system state, not brand (09 §3) — all PROVISIONAL */
   --drop-success: #3f6a4a; /* PROVISIONAL */
@@ -62,6 +77,20 @@
   --ring: var(--drop-lens-accent);
   --success: var(--drop-success);
   --warning: var(--drop-warning);
+  /*
+    ATTENTION — a person is the blocker, and only that.
+
+    Split out from `--warning` deliberately. They had been the same amber, so
+    "this is waiting for YOU" looked exactly like "this is paused" and exactly
+    like every other muted state on a very dark screen. This panel exists to
+    surface the first one; it is the only state that should be able to catch
+    an eye from across a room.
+
+    Identical in both themes, because it is always a filled chip with Charcoal
+    on it — 15.9:1 either way — never coloured text.
+  */
+  --attention: var(--drop-acid);
+  --attention-foreground: var(--drop-charcoal);
 
   /* ---------- layer 3: component ---------- */
   --sidebar: var(--card);
@@ -95,7 +124,12 @@
   --muted-foreground: var(--drop-aluminium);
   --accent: #2b2b2b; /* PROVISIONAL — neutral hover tint, not the brand accent */
   --accent-foreground: var(--drop-paper);
-  --drop-lens-accent: #d65b44; /* PROVISIONAL — dark value of THE single Lens accent token */
+  /*
+    Oxide Red lightened for Charcoal. The brand value itself is 2.47:1 here and
+    fails everything; this holds its hue at 5.43:1 with Charcoal on it and
+    4.83:1 as a ring against a raised card. DERIVED, not a brand value.
+  */
+  --drop-lens-accent: #d9694f;
   --selected: var(--drop-lens-accent);
   --selected-foreground: var(--drop-charcoal);
   --destructive: #c25043; /* PROVISIONAL */
@@ -105,5 +139,7 @@
   --ring: var(--drop-lens-accent);
   --success: #7fa886; /* PROVISIONAL */
   --warning: #c89141; /* PROVISIONAL */
+  --attention: var(--drop-acid);
+  --attention-foreground: var(--drop-charcoal);
   --edge-stroke: var(--drop-aluminium);
 }

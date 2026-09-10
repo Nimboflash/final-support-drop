@@ -139,14 +139,26 @@ function AttentionRowView({ row }: { row: AttentionRow }) {
     <div
       data-testid="attention-row"
       data-kind={row.kind}
-      className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card p-3"
+      /*
+        The acid edge (ADR-0022). This row was `border bg-card` — the exact
+        styling of a project card — so on a charcoal screen the one list that
+        means "a person is blocking this" was indistinguishable from the list
+        that means "here is a project". A start-side edge, not a fill: it marks
+        the row without competing with the sentence inside it, and it is
+        logical rather than physical so it stays on the correct side in RTL.
+      */
+      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-s-4 border-s-attention bg-card p-3"
     >
       <div className="min-w-0 space-y-1">
         <p className="font-medium">{row.projectTitleFa}</p>
-        {/* One human sentence, never a dependency warning (ADR-0020 D5). */}
-        <p className="text-sm text-muted-foreground">{row.detailFa}</p>
+        {/*
+          One human sentence, never a dependency warning (ADR-0020 D5). Full
+          foreground rather than muted: this sentence IS the reason the row is
+          here, and it was being rendered quieter than the project name above it.
+        */}
+        <p className="text-sm">{row.detailFa}</p>
       </div>
-      <Button asChild size="sm" variant="outline">
+      <Button asChild size="sm">
         <Link href={row.href}>{row.actionLabelFa}</Link>
       </Button>
     </div>

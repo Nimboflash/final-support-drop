@@ -98,7 +98,20 @@ export function EnginePage({ world }: { world: PanelSnapshot }) {
       <ul className="flex flex-wrap gap-2 text-xs" data-testid="engine-legend">
         {Object.entries(counts).map(([state, count]) => (
           <li key={state}>
-            <Badge variant="outline">
+            {/*
+              The waiting count carries the acid signal (ADR-0022); the rest
+              stay neutral. This strip is the first thing read on the surface,
+              and "how many are waiting for me" is the only number on it that
+              asks for anything. The label is still the word, not the colour.
+            */}
+            <Badge
+              variant="outline"
+              className={
+                state === "AWAITING_REVIEW"
+                  ? "bg-attention text-attention-foreground border-attention font-medium"
+                  : undefined
+              }
+            >
               {NODE_STATE_LABEL_FA[state as keyof typeof NODE_STATE_LABEL_FA] ?? state} — {toPersianDigits(String(count))}
             </Badge>
           </li>

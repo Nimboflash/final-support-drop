@@ -59,6 +59,9 @@
   --color-selected-foreground: var(--selected-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  /* ADR-0022 — the acid attention signal; a token is useless until it is mapped. */
+  --color-attention: var(--attention);
+  --color-attention-foreground: var(--attention-foreground);
   --color-node-surface: var(--node-surface);
   --color-edge-stroke: var(--edge-stroke);
   --color-table-header-bg: var(--table-header-bg);
