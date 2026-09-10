@@ -1,0 +1,111 @@
+name: checks
+
+# Every guard in this repository was advisory until this file existed. The
+# frozen-package check, the verbatim-interface check, the boundary zones, the
+# determinism scan, the language guard and 668 tests all passed because a human
+# ran them by hand — and nothing stopped the next change from landing red.
+# That was §6.1 of the P8 handoff, recorded as the highest standing risk.
+#
+# The six commands below are the canonical set (CLAUDE.md, "Build discipline").
+# They are named here exactly as a person runs them locally, and
+# `tests/repo/ci.test.ts` fails if this file stops running one of them.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+# A newer push supersedes an older run on the same ref. `main` is exempt: a
+# push there is a landed change and its result is worth having even if another
+# lands behind it.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # typecheck, lint, unit tests, the inert db gate and the build. None of these
+  # render anything, so they run on the cheap runner.
+  static:
+    name: typecheck · lint · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        # Version comes from the `packageManager` field, so the toolchain cannot
+        # drift between here and a developer's machine.
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        # Frozen: a lockfile that would need updating is a failure, not a
+        # silent resolution. `check-pinned.mjs` enforces exact versions and this
+        # is what keeps that true at install time.
+        run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm test:db
+      - run: pnpm build
+
+  # The browser suite, including the committed visual baselines.
+  #
+  # This runs on macOS because the baselines are platform-pinned — Playwright
+  # names them `*-chromium-darwin.png`, and text rendering genuinely differs
+  # between platforms, so a Linux runner would not find them and would not be
+  # comparing the same pixels if it did. Running the visual gate where the
+  # baselines were made is the honest option; the alternative is to commit a
+  # second Linux set, which is a decision for whoever pays for the minutes.
+  e2e:
+    name: e2e · axe · visual baselines
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          # Keyed on the pinned Playwright version, so a version bump fetches
+          # matching browsers instead of reusing stale ones.
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the browser suite
+        # `test:e2e` builds the app first and serves the production build:
+        # the dev overlay would pollute every snapshot.
+        run: pnpm test:e2e
+
+      - name: Upload the report and any diffs
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

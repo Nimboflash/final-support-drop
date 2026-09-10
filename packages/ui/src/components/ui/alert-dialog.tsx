@@ -5,6 +5,7 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { cn } from "../../lib/utils"
 import { Button } from "./button"
+import { useDirection } from "@radix-ui/react-direction"
 
 function AlertDialog({
   ...props
@@ -51,11 +52,13 @@ function AlertDialogContent({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm"
 }) {
+  const direction = useDirection()
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
+        dir={direction}
         data-size={size}
         className={cn(
           // eslint-disable-next-line drop/no-physical-direction-classes -- viewport centering: left-[50%] is paired with translate-x-[-50%], which cancels direction — identical rendering in LTR and RTL, no logical equivalent needed

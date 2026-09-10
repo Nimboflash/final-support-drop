@@ -8,8 +8,13 @@ by ADR-0017. This delivery builds the operational panel and its minimum supporti
 only; Machines 01–05, their runtime and their infrastructure are a separate build that
 connects later through the `MachineGateway` adapter (18 §1–2, §9).
 
-- **The P-series (P1–P8) is the active plan.** It implements the (18 §11) build sequence
-  against the (18 §12) acceptance criteria and the fourteen (18 §7.2) mock scenarios.
+- **The P-series is the active plan**, now scoped by the owner's V2 pack (`docs/frontend-v2/`,
+  adopted by ADR-0019). It implements the (18 §11) build sequence against the (18 §12)
+  acceptance criteria **extended by the V2 journeys A01–A20**, and the fourteen (18 §7.2) mock
+  scenarios **extended to twenty-four** (S01–S14 are the recorded fourteen, 1:1 and in order;
+  S15–S24 are additive per ADR-0019 D15).
+- **Frontend only** (ADR-0019 D2): doc 18 §4.2's permission for mock API routes and a local mock
+  server is withdrawn. Demo state persists in one versioned browser key `drop-panel-demo-v2`.
 - **The 0-series is partitioned** (ADR-0017 D2): **0.1 is DONE** and committed — nothing here
   reopens it; its thirteen scaffold packages stay frozen inert placeholders (ADR-0017 D3).
   The remaining 0-series tickets are **deferred** (machine-side) or **superseded** into the
@@ -27,20 +32,38 @@ File format is unchanged: `docs/tickets/<id>-<slug>.md` with the mandatory YAML 
 
 ## Active tickets (P-series)
 
+Scopes below are the **V2 mapping** (`docs/frontend-v2/04_MOCKS_AND_ACCEPTANCE.md` §3), adopted
+by ADR-0019. P1 is **reopened as P1-R** by ADR-0019 D13 for the navigation collapse, the seven
+project tabs and the approved brand tokens; Ticket 0.1 stays untouchable.
+
 | ID | Title | Depends on | Status |
 |---|---|---|---|
-| P1 | Panel shell and FA-first RTL baseline (owned shadcn/ui, tokens, fonts, `/studio` shell) | 0.1 (done) — frontier | ready |
-| P2 | Panel domain contracts, `MachineGateway` + `PanelGateway` seams (`panel-domain`, `machine-gateway`) | P1 (ADR-0018 D2) | ready |
-| P3 | Deterministic mock scenarios and `MockMachineGateway` (`mock-data`, fourteen 18 §7.2 scenarios) | P2 | ready |
-| P4 | Dashboard surfaces on mock data (overview, Programs, Lenses, approvals, artifacts, requests, audit) | P1, P2, P3 | ready |
-| P5 | Workflow graph surfaces (React Flow definition and run-inspection views on mock data) | P1, P2, P3 | ready |
-| P6 | Mocked commands and degraded states (run controls, approvals, synchronize, audit visibility) | P4, P5 | ready |
-| P7 | Test hardening (component, adapter-contract, scenario, accessibility, visual, FA/RTL e2e) | P6 | ready |
-| P8 | Integration boundary handoff (`RealMachineGateway` connection points, provisional contracts) | P7 | ready |
+| P1 | Panel shell and FA-first RTL baseline (owned shadcn/ui, tokens, fonts, `/studio` shell) | 0.1 (done) | **done** — superseded in part by P1-R |
+| P1-R | Five-destination shell, seven project tabs, approved tokens, RTL and responsive primitives | P1 — frontier | **done** |
+| P2 | Preserve `MachineGateway`; panel/revision contracts, version-linked review and calendar/package DTOs | P1-R | **done** |
+| P3 | Deterministic seed, scenario recipes, shared repository, persistence and command behavior | P2 | **done** |
+| P4 | Full start → concept → content → package → calendar card journey, inbox and global views | P3 | **done** |
+| P5 | Synchronized graph with branches, localized loops, inspectors and definition inspection | P4 | **done** |
+| P6 | Functional commands, version conflicts, errors, stale dependencies, downloadable mock ZIP | P5 | **done** |
+| P7 | Behavior/contract checks plus responsive, RTL, keyboard and visual QA | P6 | **done** |
+| P8 | Future integration mapping, unresolved contracts and frontend handoff; stop before machine work | P7 | **done** |
+| P9 | Studio simplification: navigation by work unit, the Engine surface, the calendar, and the interface-language guard | P8 | **done** |
 
-**P1 is the sole frontier** (ADR-0018 D2 — sequential execution): P2 starts only after P1 completes
-(their packages do not overlap). P3 and P4 must not start before the P2 contract freeze lands
-(doc 15 §11 discipline applies unchanged to the P-series).
+All P-tickets are **delivered**. The frontend handoff is
+`docs/handoff/P8-frontend-to-machine-build.md`, whose navigation and surface sections are
+superseded by `docs/handoff/P9-studio-simplification.md`; its open decisions, provisional
+contracts and connection points stand unchanged. Machine work does not begin automatically
+(ADR-0019 D20).
+
+**P9 is not a reopening of the hard stop.** P8 stops **machine** work, and that stop holds:
+nothing in P9 starts a machine, a transport or a backend. ADR-0020 D1 reopens the panel's
+own presentation on the owner's simplification brief, which is panel scope, and P9 is that
+work.
+
+**Exactly one frontier** (ADR-0018 D2, ADR-0019 D20 — sequential execution). The order is
+**P1-R → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P9**; each ticket starts only when its
+predecessor completes with green checks. P5's earlier `dependencies: ["P1","P2","P3"]` is
+corrected to include P4 (ADR-0019 D20).
 
 ## Dependency graph
 
@@ -50,27 +73,26 @@ directly.
 
 ```mermaid
 graph TD
-  P1["P1 Panel shell + RTL baseline"]
-  P2["P2 Panel domain + MachineGateway seam"]
-  P3["P3 Mock scenarios + MockMachineGateway"]
-  P4["P4 Dashboard surfaces"]
-  P5["P5 Workflow graph surfaces"]
-  P6["P6 Mocked commands + degraded states"]
-  P7["P7 Test hardening"]
-  P8["P8 Integration boundary handoff"]
+  P1["P1 Panel shell + RTL baseline (done)"]
+  P1R["P1-R Five destinations, seven tabs, approved tokens"]
+  P2["P2 Panel + revision contracts"]
+  P3["P3 Seed, scenarios, repository, persistence"]
+  P4["P4 Card journey, inbox, global views"]
+  P5["P5 Workflow graph"]
+  P6["P6 Commands, conflicts, ZIP export"]
+  P7["P7 Behavior, contract and visual QA"]
+  P8["P8 Integration handoff (machine hard stop)"]
+  P9["P9 Studio simplification (ADR-0020)"]
 
-  P1 --> P2
+  P1 --> P1R
+  P1R --> P2
   P2 --> P3
-  P1 --> P4
-  P2 --> P4
   P3 --> P4
-  P1 --> P5
-  P2 --> P5
-  P3 --> P5
-  P4 --> P6
+  P4 --> P5
   P5 --> P6
   P6 --> P7
   P7 --> P8
+  P8 --> P9
 ```
 
 ## Deferred / superseded 0-series tickets
@@ -111,3 +133,8 @@ hand off the completed panel for review." After P8, the panel is handed to the h
 no machine work, no provider integration, no further tickets begin in this repository under
 this scope. Machine-side work resumes only in the separate machine build, connecting through
 `RealMachineGateway` (18 §9).
+
+P9 is not an exception to that stop — it is panel presentation on the owner's own brief
+(ADR-0020 D1). **The stop itself was put to the owner on 2026-09-10 and upheld**: no machine
+work, and not even the infrastructure beneath it. See `docs/handoff/P8-frontend-to-machine-build.md`
+§8.

@@ -1,5 +1,14 @@
 # Ticket P1 — Panel shell and FA-first RTL baseline
 
+> **Status: DONE and committed, superseded in part by ticket P1-R** (ADR-0019 D13).
+> The navigation decisions here — doc 04 §2's eleven destinations — and the
+> provisional brand tokens of doc 09 §3 are superseded. Everything else this
+> ticket delivered (the FA-first RTL root, the bundled Vazirmatn pipeline, the
+> owned shadcn set, the logical-properties rule, the single theme file and the
+> `/dev/gallery` visual-QA route) stands unchanged and is not reopened.
+> See `docs/tickets/P1-R-five-destination-shell-and-approved-tokens.md`.
+
+
 ```yaml
 ticket_id: "P1"
 title: "Panel shell and FA-first RTL baseline: owned shadcn/ui, tokens, fonts, /studio shell and state primitives"

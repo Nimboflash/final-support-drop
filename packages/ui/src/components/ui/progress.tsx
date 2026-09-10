@@ -19,10 +19,16 @@ function Progress({
       )}
       {...props}
     >
+      {/*
+        ADR-0019 D14 defect 3. This was an inline `translateX(-N%)`: a PHYSICAL
+        direction that does not flip under RTL, and one the lint rule cannot see
+        because it lives in a style object rather than a class. `inline-size` is
+        logical, so the bar fills from the inline start in both directions.
+      */}
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        className="h-full w-full flex-1 bg-primary transition-all"
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+        className="h-full bg-primary transition-all"
+        style={{ inlineSize: `${Math.min(100, Math.max(0, value || 0))}%` }}
       />
     </ProgressPrimitive.Root>
   )

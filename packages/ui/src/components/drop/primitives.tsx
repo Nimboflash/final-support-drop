@@ -84,6 +84,32 @@ export function formatPersianDateTime(utcIso: string): { date: string; time: str
   };
 }
 
+/**
+ * Jalali display for an ALL-DAY calendar date (V2 01 §7; ADR-0019 D8).
+ *
+ * Deliberately separate from `formatPersianDateTime`. An all-day date has no
+ * time and no timezone: pushing "2026-09-12" through `TZDate(..., "Asia/Tehran")`
+ * would parse it as midnight UTC and render the previous day in Tehran, which is
+ * exactly the off-by-one that makes calendars untrustworthy.
+ *
+ * The Gregorian string stays canonical; this is display only — a formatted
+ * Persian date is never stored (V2 01 §7).
+ */
+export function formatPersianCalendarDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number) as [number, number, number];
+  // Constructed from the parts, so no timezone is ever applied.
+  const local = new Date(year, month - 1, day);
+  return toPersianDigits(formatJalali(local, "d MMMM yyyy"));
+}
+
+export function PersianCalendarDate({ value, className }: { value: string; className?: string }) {
+  return (
+    <time data-testid="persian-calendar-date" dateTime={value} className={className}>
+      {formatPersianCalendarDate(value)}
+    </time>
+  );
+}
+
 export function PersianDateTime({
   value,
   withTime = true,

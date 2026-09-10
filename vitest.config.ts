@@ -15,7 +15,7 @@ export default defineConfig({
             "packages/*/src/**/*.test.ts",
             "apps/worker/src/**/*.test.ts",
           ],
-          exclude: ["packages/ui/**"],
+          exclude: ["packages/ui/**", "packages/workflow-ui/**"],
         },
       },
       {
@@ -27,6 +27,11 @@ export default defineConfig({
           setupFiles: ["packages/ui/test/setup.ts"],
           include: [
             "packages/ui/src/**/*.test.{ts,tsx}",
+            // ticket P5: without this glob, workflow-ui's tests match NOTHING —
+            // the node project globs only *.test.ts and this one listed only
+            // packages/ui and apps/web, so they would silently never run while
+            // `pnpm test` stayed green.
+            "packages/workflow-ui/src/**/*.test.{ts,tsx}",
             "apps/web/**/*.test.{ts,tsx}",
           ],
         },

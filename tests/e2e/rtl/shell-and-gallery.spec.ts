@@ -6,6 +6,10 @@ import AxeBuilder from "@axe-core/playwright";
  * local-fonts/no-external-requests (AC-P1.5), state primitives on scaffolds
  * (AC-P1.10), themes + axe WCAG 2.2 AA + reduced motion (AC-P1.11), and the
  * committed visual baselines at the three 09 §14 breakpoints.
+ *
+ * Retargeted by ticket P9 to the work-unit navigation (ADR-0020 D2). The shell
+ * contract itself is unchanged — direction, fonts, focus, axe and the baselines
+ * are all still asserted here; only the destinations moved.
  */
 
 const BREAKPOINTS = [
@@ -16,10 +20,41 @@ const BREAKPOINTS = [
 
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 
-// 04 §2 — the eleven Persian navigation entries.
-const NAV_LABELS = [
-  "نمای کلی", "پروژه‌ها", "برنامه‌ها", "لنزهای هفته", "درخواست‌ها", "تقویم",
-  "اجراها", "جریان‌های کاری", "رجیسترها", "تیم و دسترسی", "تنظیمات",
+// The six primary destinations are the work units plus Engine (ADR-0020 D2).
+// This supersedes ADR-0019 D13's five, which were named after stages of a
+// process rather than after the things a person works on.
+const NAV_LABELS = ["نمای کلی", "کانسپت‌ها", "محتوا", "خروجی‌ها", "تقویم", "Engine"];
+
+// Settings and history left the sidebar; they are not work.
+const SECONDARY_LABELS = ["تنظیمات", "تاریخچه"];
+
+// Every destination retired by either restructure, with where it now lands.
+// They REDIRECT rather than 404: `app/studio/[...rest]/page.tsx` sits at the
+// same depth, so deleting a folder would silently render an empty state at
+// HTTP 200 instead.
+const REDIRECTS: readonly (readonly [string, string])[] = [
+  ["/studio/projects", "/studio/concepts"],
+  ["/studio/reviews", "/studio/content"],
+  ["/studio/programs", "/studio/concepts"],
+  ["/studio/lenses", "/studio/concepts"],
+  ["/studio/requests", "/studio"],
+  ["/studio/runs", "/studio/engine"],
+  ["/studio/workflows", "/studio/engine"],
+  ["/studio/registries", "/studio/settings"],
+  ["/studio/team", "/studio/settings"],
+];
+
+// The seven project tabs ADR-0020 D2 dissolved, with the destination each
+// folds into. A project is now a filter, so every tab had a work unit to
+// land on.
+const PROJECT_TAB_REDIRECTS: readonly (readonly [string, string])[] = [
+  ["overview", "/studio?project=p1"],
+  ["concepts", "/studio/concepts"],
+  ["content", "/studio/content"],
+  ["outputs", "/studio/outputs"],
+  ["plan", "/studio/calendar"],
+  ["workflow", "/studio/engine"],
+  ["activity", "/studio/activity"],
 ];
 
 test.describe("root direction (AC-P1.1)", () => {
@@ -59,16 +94,56 @@ test.describe("no request leaves the app origin (AC-P1.5; 00 §4)", () => {
 });
 
 test.describe("/studio shell (AC-P1.9)", () => {
-  test("renders all eleven 04 §2 navigation entries", async ({ page }) => {
+  test("renders exactly the six work-unit destinations (ADR-0020 D2)", async ({ page }) => {
     await page.goto("/studio");
+    const nav = page.getByRole("navigation");
     for (const label of NAV_LABELS) {
-      await expect(page.getByRole("link", { name: label })).toBeVisible();
+      await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+    }
+    // No stage of a process, and no project, is a destination any more.
+    for (const gone of [
+      "پروژه‌ها", "بررسی‌ها", "برنامه‌ها", "لنزهای هفته", "درخواست‌ها",
+      "اجراها", "جریان‌های کاری", "رجیسترها", "تیم و دسترسی", "تقویم و برنامه",
+    ]) {
+      await expect(nav.getByRole("link", { name: gone, exact: true })).toHaveCount(0);
+    }
+  });
+
+  test("settings and history are reachable but are not destinations", async ({ page }) => {
+    await page.goto("/studio");
+    for (const label of SECONDARY_LABELS) {
+      await expect(page.getByRole("navigation").getByRole("link", { name: label, exact: true })).toHaveCount(0);
+    }
+    await page.getByTestId("secondary-menu-trigger").click();
+    for (const label of SECONDARY_LABELS) {
+      await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
+    }
+  });
+
+  test("every destination states the one question it answers (brief §5)", async ({ page }) => {
+    await page.goto("/studio");
+    // The sidebar's own justification for each entry, available to a screen
+    // reader rather than only to the person who read the brief.
+    for (const label of NAV_LABELS) {
+      const link = page.getByRole("navigation").getByRole("link", { name: label, exact: true });
+      await expect(link).toHaveAttribute("title", /؟$/);
+    }
+  });
+
+  test("every removed destination redirects instead of dead-ending (AC-P1R.2)", async ({ page }) => {
+    for (const [from, to] of REDIRECTS) {
+      await page.goto(from);
+      await page.waitForURL(`**${to}`);
+      // Real destinations render an EmptyState too while their surfaces are
+      // unbuilt, so the empty state cannot tell a redirect from a dead end.
+      // The catch-all's own marker can.
+      await expect(page.getByTestId("studio-catch-all"), `${from} must not fall through to the catch-all`).toHaveCount(0);
     }
   });
 
   test("navigation is keyboard-operable with visible focus", async ({ page }) => {
     await page.goto("/studio");
-    const link = page.getByRole("link", { name: "برنامه‌ها" });
+    const link = page.getByRole("navigation").getByRole("link", { name: "کانسپت‌ها", exact: true });
     await link.focus();
     await expect(link).toBeFocused();
     const outline = await link.evaluate((el) => {
@@ -77,14 +152,34 @@ test.describe("/studio shell (AC-P1.9)", () => {
     });
     expect(outline, "focused nav link must have a visible focus indicator").not.toBe("none|none");
     await page.keyboard.press("Enter");
-    await page.waitForURL("**/studio/programs");
+    await page.waitForURL("**/studio/concepts");
   });
 
-  test("route scaffolds and unknown routes resolve to the EmptyState primitive, never a 404", async ({ page }) => {
-    await page.goto("/studio/registries");
-    await expect(page.getByTestId("empty-state")).toBeVisible();
+  test("an unknown route resolves to the EmptyState primitive, never a 404", async ({ page }) => {
+    // P4 filled the real destinations, so the surviving scaffold case is the
+    // catch-all itself — which must still render rather than 404.
     await page.goto("/studio/not/built/yet");
+    await expect(page.getByTestId("studio-catch-all")).toBeVisible();
     await expect(page.getByTestId("empty-state")).toBeVisible();
+  });
+
+  test("a project link becomes a filter, not a place (ADR-0020 D2)", async ({ page }) => {
+    await page.goto("/studio/projects/p1");
+    await page.waitForURL("**/studio/concepts?project=p1");
+    await expect(page.getByTestId("studio-catch-all")).toHaveCount(0);
+    // The project is now carried by the selector on a work-unit page.
+    await expect(page.getByTestId("project-selector")).toBeVisible();
+  });
+
+  test("each retired project tab folds into a work unit", async ({ page }) => {
+    for (const [tab, to] of PROJECT_TAB_REDIRECTS) {
+      await page.goto(`/studio/projects/p1/${tab}`);
+      await page.waitForURL(`**${to}**`);
+      await expect(
+        page.getByTestId("studio-catch-all"),
+        `${tab} must not fall through to the catch-all`,
+      ).toHaveCount(0);
+    }
   });
 
   for (const bp of BREAKPOINTS) {
@@ -92,9 +187,56 @@ test.describe("/studio shell (AC-P1.9)", () => {
       await page.setViewportSize({ width: bp.width, height: bp.height });
       await page.goto("/studio");
       await expect(page.getByText("دراپ او اس — ماژول استودیو")).toBeVisible();
+      // Wait for the surface's own content so the baseline is stable.
+      await expect(page.getByTestId("project-card").first()).toBeVisible();
       await expect(page).toHaveScreenshot(`studio-shell-${bp.name}.png`, { fullPage: false });
     });
   }
+});
+
+test.describe("portal direction (AC-P1R.7; V2 02 §1)", () => {
+  /**
+   * Portals mount into document.body, outside the React tree that carries
+   * `dir`. Radix's DirectionProvider crosses the portal via context, but the
+   * DOM attribute did not exist on any overlay before P1-R — so this was never
+   * actually verified, only assumed. Each case opens the overlay for real and
+   * reads the attribute off the portalled node.
+   */
+  const OVERLAYS = [
+    { name: "گفت‌وگو", slot: "dialog-content" },
+    { name: "تأیید حذف", slot: "alert-dialog-content" },
+    { name: "پنل کناری", slot: "sheet-content" },
+    { name: "پاپ‌اور", slot: "popover-content" },
+  ] as const;
+
+  for (const overlay of OVERLAYS) {
+    test(`${overlay.name} opens right-to-left inside its portal`, async ({ page }) => {
+      await page.goto("/dev/gallery");
+      await page.getByRole("button", { name: overlay.name }).click();
+      const content = page.locator(`[data-slot="${overlay.slot}"]`);
+      await expect(content).toBeVisible();
+      await expect(content).toHaveAttribute("dir", "rtl");
+      await page.keyboard.press("Escape");
+    });
+  }
+
+  test("the dropdown menu carries direction on its root, where Radix reads it", async ({ page }) => {
+    await page.goto("/dev/gallery");
+    await page.getByRole("button", { name: "منوی عملیات" }).click();
+    const menu = page.locator('[data-slot="dropdown-menu-content"]');
+    await expect(menu).toBeVisible();
+    // Radix stamps the resolved direction on the portalled menu itself.
+    await expect(menu).toHaveAttribute("dir", "rtl");
+    await page.keyboard.press("Escape");
+  });
+
+  test("an opened overlay is still axe-clean (AC-P1R.7)", async ({ page }) => {
+    await page.goto("/dev/gallery");
+    await page.getByRole("button", { name: "پنل کناری" }).click();
+    await expect(page.locator('[data-slot="sheet-content"]')).toBeVisible();
+    const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+    expect(results.violations).toEqual([]);
+  });
 });
 
 test.describe("gallery themes, snapshots and axe (AC-P1.10, AC-P1.11)", () => {
@@ -150,6 +292,7 @@ test.describe("gallery themes, snapshots and axe (AC-P1.10, AC-P1.11)", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/studio");
     await expect(page.locator("html")).toHaveClass(/dark/);
+    await expect(page.getByTestId("project-card").first()).toBeVisible();
     await expect(page).toHaveScreenshot("studio-shell-dark-desktop.png");
   });
 

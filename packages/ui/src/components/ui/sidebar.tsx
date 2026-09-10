@@ -195,9 +195,14 @@ function Sidebar({
           }
           side={side}
         >
+          {/*
+            fa-IR is the only language this product ships (00 §4). The upstream
+            registry's English copy is screen-reader-only, which is exactly why
+            it survived every visual review.
+          */}
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>منوی کناری</SheetTitle>
+            <SheetDescription>نمایش منوی کناری در نمای موبایل.</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -277,7 +282,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon className="rtl:rotate-180" />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">نمایش یا پنهان‌کردن منو</span>
     </Button>
   )
 }
@@ -316,7 +321,12 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
     <main
       data-slot="sidebar-inset"
       className={cn(
-        "relative flex w-full flex-1 flex-col bg-background",
+        // `min-w-0` is load-bearing, not cosmetic. A flex item defaults to
+        // `min-width: auto`, so any wide descendant — a card grid, a tab row, a
+        // table — pushes the inset past its track instead of shrinking, and the
+        // whole document scrolls sideways. P1 could not see this because every
+        // page was an empty state; it appears the moment real content lands.
+        "relative flex w-full min-w-0 flex-1 flex-col bg-background",
         "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2",
         className
       )}

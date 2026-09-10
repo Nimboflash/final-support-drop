@@ -5,11 +5,17 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 import { ContextMenu as ContextMenuPrimitive } from "radix-ui"
 
 import { cn } from "../../lib/utils"
+import { useDirection } from "@radix-ui/react-direction"
 
+// V2 02 §1 / ADR-0019 D14: direction is set explicitly rather than left to the
+// cascade. Radix reads `dir` on the Root — it drives arrow-key navigation, so it
+// belongs here and not on the portalled Content, whose props type rejects it.
 function ContextMenu({
+  dir,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
-  return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />
+  const direction = useDirection()
+  return <ContextMenuPrimitive.Root data-slot="context-menu" dir={dir ?? direction} {...props} />
 }
 
 function ContextMenuTrigger({

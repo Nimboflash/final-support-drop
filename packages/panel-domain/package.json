@@ -1,0 +1,21 @@
+{
+  "name": "@drop/panel-domain",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Panel-facing domain DTOs and Zod validation schemas (18 \u00a710; ticket P2) \u2014 pure TypeScript, no framework or transport dependency",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

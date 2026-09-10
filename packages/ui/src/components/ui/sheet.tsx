@@ -5,6 +5,7 @@ import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "../../lib/utils"
+import { useDirection } from "@radix-ui/react-direction"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -56,11 +57,13 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  const direction = useDirection()
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        dir={direction}
         className={cn(
           "fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
           side === "right" &&
@@ -78,10 +81,15 @@ function SheetContent({
         {...props}
       >
         {children}
-        {showCloseButton && (
+        {/*
+        fa-IR is the only language this product ships (00 §4). The upstream
+        registry's English close label is screen-reader-only, which is exactly
+        why it survived every visual review.
+      */}
+      {showCloseButton && (
           <SheetPrimitive.Close className="absolute top-4 end-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary">
             <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">بستن</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Content>

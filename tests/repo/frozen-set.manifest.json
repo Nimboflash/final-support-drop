@@ -1,0 +1,188 @@
+{
+  "$note": "Frozen-set manifest for the placeholder-purity check (ticket P2, AC-P2.9). ADR-0018 D3 freezes apps/worker and the eleven machine-oriented packages through P8: no content beyond their committed ticket-0.1 placeholders may land in them during panel scope. Recorded per the P2 body's frozen-set reconciliation note (mechanic 5): packages/ui (activated by P1) and packages/workflow-ui (activated by the workflow-surface ticket) are PANEL packages and are deliberately absent from this list, as are the three 18 §10 panel packages.",
+  "$frozenAt": "commit 3f58cf8 — [0.1] pnpm monorepo foundation",
+  "$verified": "Each entry was confirmed byte-identical to 3f58cf8 when this manifest was generated (ticket P2).",
+  "workspaces": {
+    "packages/core": {
+      "name": "@drop/core",
+      "files": {
+        "package.json": "aeb6cee47db49cd4",
+        "src/boundary-proof.ts": "d45f067c5fb00c79",
+        "src/index.test.ts": "a6b5f7b648801e19",
+        "src/index.ts": "8db2f2907369a46c",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [
+        "@drop/contracts",
+        "@drop/db"
+      ],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/studio": {
+      "name": "@drop/studio",
+      "files": {
+        "package.json": "8da685afe21113b8",
+        "src/boundary-proof.ts": "2163d35541720382",
+        "src/index.test.ts": "5b717b62890c5a0a",
+        "src/index.ts": "fc0437574eac2ed9",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [
+        "@drop/contracts"
+      ],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/contracts": {
+      "name": "@drop/contracts",
+      "files": {
+        "package.json": "030a5fe8181d9b0c",
+        "src/index.test.ts": "8253e32a0ffdcd89",
+        "src/index.ts": "fff4dcc411249b8e",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/db": {
+      "name": "@drop/db",
+      "files": {
+        "package.json": "d392fa9e1f98384b",
+        "src/boundary-proof.ts": "2163d35541720382",
+        "src/index.test.ts": "dbb342278381022b",
+        "src/index.ts": "c7393d904eaaa24e",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [
+        "@drop/contracts"
+      ],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/pipeline": {
+      "name": "@drop/pipeline",
+      "files": {
+        "package.json": "b59c1da8ae166afd",
+        "src/boundary-proof.ts": "6079219306516727",
+        "src/index.test.ts": "2bb02ae1f45b7eeb",
+        "src/index.ts": "4e945c82aeb58044",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [
+        "@drop/ai-gateway",
+        "@drop/core",
+        "@drop/retrieval",
+        "@drop/storage",
+        "@drop/studio"
+      ],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/ai-gateway": {
+      "name": "@drop/ai-gateway",
+      "files": {
+        "package.json": "a83b2e81a9d5f57c",
+        "src/index.test.ts": "b74437fba92d5bf4",
+        "src/index.ts": "c9169272968da4e0",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/retrieval": {
+      "name": "@drop/retrieval",
+      "files": {
+        "package.json": "3b2316e7ce2ed394",
+        "src/index.test.ts": "4c0ffeabdca7a72b",
+        "src/index.ts": "d0cb4865a1d2cba8",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/storage": {
+      "name": "@drop/storage",
+      "files": {
+        "package.json": "bfbf49c088703f5b",
+        "src/index.test.ts": "2bc2abffa67ac57f",
+        "src/index.ts": "153cbcaae2b2e62b",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/config": {
+      "name": "@drop/config",
+      "files": {
+        "package.json": "4223b1b0c22c1306",
+        "src/index.test.ts": "d26deda815a22659",
+        "src/index.ts": "c50bbdc90468dc01",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/observability": {
+      "name": "@drop/observability",
+      "files": {
+        "package.json": "8d92bbafb466e951",
+        "src/index.test.ts": "7796e7208e322cd6",
+        "src/index.ts": "dbbbd5ef2cb5fdfe",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "packages/testing": {
+      "name": "@drop/testing",
+      "files": {
+        "package.json": "2e054a19474fdde9",
+        "src/boundary-proof.ts": "2163d35541720382",
+        "src/index.test.ts": "25fa5a5798aff68e",
+        "src/index.ts": "7df11698b3f0c588",
+        "tsconfig.json": "8f6e85eeaa8025fe"
+      },
+      "dependencies": [
+        "@drop/contracts"
+      ],
+      "devDependencies": [
+        "typescript"
+      ]
+    },
+    "apps/worker": {
+      "name": "@drop/worker",
+      "files": {
+        "package.json": "d9d9008fe6b8cacb",
+        "src/index.test.ts": "9f55c6c4d63864b4",
+        "src/index.ts": "fde3a1b87bbf3876",
+        "tsconfig.json": "cd51f8d07695a842"
+      },
+      "dependencies": [
+        "@drop/config",
+        "@drop/observability",
+        "@drop/pipeline"
+      ],
+      "devDependencies": [
+        "@types/node",
+        "typescript"
+      ]
+    }
+  }
+}

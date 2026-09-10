@@ -1,0 +1,20 @@
+{
+  "name": "@drop/mock-data",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Typed deterministic scenarios and fixtures (18 §10; safe placeholder — ticket P2 creates the boundary, content arrives with ticket P3)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  },
+  "dependencies": {
+    "@drop/panel-domain": "workspace:*"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@drop/mutated-placeholder-fixture",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Bad fixture for tests/repo/placeholder-purity.test.ts — a frozen placeholder that grew content and a dependency. Never a workspace member.",
+  "type": "module",
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

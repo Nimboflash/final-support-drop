@@ -3,10 +3,13 @@ import {
   ACTOR_ROLES,
   APPROVAL_STATES,
   CALENDAR_ITEM_STATUSES,
+  FRESHNESS_STATES,
   LENS_STATUSES,
+  PACKAGE_STATUSES,
   PROGRAM_STATUSES,
   PROJECT_STATUSES,
   REQUEST_STATUSES,
+  REVIEW_STATUSES,
   RUN_STATUSES,
   STAGE_STATUSES,
   faLabel,
@@ -52,7 +55,22 @@ describe("presentation vocabulary (ADR-0012, ADR-0015, 11 §3)", () => {
   });
 
   it("approval presentation states cover the ADR-0013 decision set plus pending", () => {
-    expect(APPROVAL_STATES).toEqual(["PENDING", "APPROVED", "CHANGES_REQUESTED", "ESCALATED"]);
+    // REJECTED joined in P1-R (ADR-0019 D14, AC-P1R.9): ADR-0013 D2 lists it and
+    // ADR-0012 D1 gives it a terminal stage transition, so it always needed a badge.
+    expect(APPROVAL_STATES).toEqual([
+      "PENDING", "APPROVED", "CHANGES_REQUESTED", "REJECTED", "ESCALATED",
+    ]);
+  });
+
+  it("the V2 card review axis is exactly the recorded five (ADR-0019 D5)", () => {
+    expect(REVIEW_STATUSES).toEqual([
+      "DRAFT", "IN_REVIEW", "REVISION_REQUESTED", "APPROVED", "REJECTED",
+    ]);
+  });
+
+  it("freshness and package status are their own closed axes", () => {
+    expect(FRESHNESS_STATES).toEqual(["CURRENT", "STALE"]);
+    expect(PACKAGE_STATUSES).toEqual(["CURRENT", "HISTORICAL", "STALE"]);
   });
 });
 
@@ -66,6 +84,9 @@ describe("central Persian label mapping (09 §9; ADR-0015 via P1 adr_constraints
     request: REQUEST_STATUSES,
     calendarItem: CALENDAR_ITEM_STATUSES,
     approval: APPROVAL_STATES,
+    review: REVIEW_STATUSES,
+    freshness: FRESHNESS_STATES,
+    packageStatus: PACKAGE_STATUSES,
     role: ACTOR_ROLES,
   };
 

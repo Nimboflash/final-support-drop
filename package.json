@@ -8,6 +8,7 @@
   },
   "packageManager": "pnpm@11.14.0",
   "scripts": {
+    "dev": "pnpm --filter @drop/web dev",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r run typecheck",
     "lint": "eslint . && node scripts/check-pinned.mjs && node scripts/check-token-literals.mjs",
     "test": "vitest run",
@@ -17,6 +18,9 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@drop/machine-gateway": "workspace:*",
+    "@drop/mock-data": "workspace:*",
+    "@drop/panel-domain": "workspace:*",
     "@playwright/test": "1.62.1",
     "@types/node": "26.2.0",
     "@vitejs/plugin-react": "6.1.0",

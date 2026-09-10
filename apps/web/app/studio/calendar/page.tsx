@@ -1,11 +1,25 @@
-import { EmptyState } from "@drop/ui";
+"use client";
 
-/** Route scaffold (ticket P1) — the surface itself arrives with its owning ticket. */
+import { Suspense } from "react";
+import { LoadingState } from "@drop/ui";
+import { CalendarPage } from "../../../components/panel/calendar-page";
+import { QueryBoundary } from "../../../components/panel/states";
+import { usePanelSnapshot } from "../../../lib/demo/queries";
+
+/**
+ * `useSearchParams` needs a Suspense boundary at PAGE level in the app router.
+ * It must never be used at layout level: there it suspends and never resolves
+ * in dev, which once left the whole panel on its loading state.
+ */
 export default function Page() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">تقویم</h1>
-      <EmptyState detail="تقویم در تیکت P4 ساخته می‌شود." />
-    </div>
+    <Suspense fallback={<LoadingState />}>
+      <Surface />
+    </Suspense>
   );
+}
+
+function Surface() {
+  const query = usePanelSnapshot();
+  return <QueryBoundary query={query}>{(world) => <CalendarPage world={world} />}</QueryBoundary>;
 }

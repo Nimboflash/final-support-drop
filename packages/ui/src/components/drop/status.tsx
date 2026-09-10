@@ -35,20 +35,26 @@ import { Badge } from "../ui/badge";
 import {
   type ActorRole,
   type ApprovalState,
+  type Freshness,
+  type PackageStatus,
   type ProgramStatus,
+  type ReviewStatus,
   type RunStatus,
   type StageStatus,
 } from "./vocabulary";
-import { FA_LABELS, faLabel } from "./labels-fa";
+import { FA_LABELS, faLabel, type LabelDomain } from "./labels-fa";
 
 type Tone = "neutral" | "active" | "waiting" | "success" | "warning" | "danger";
 
+// ADR-0019 D14: `--accent` is the neutral hover tint now, so `active` reaches
+// for `--selected` — the single brand accent — and the `--success`/`--warning`
+// bracket escapes become real utilities, since @theme inline finally maps them.
 const toneClass: Record<Tone, string> = {
   neutral: "bg-secondary text-secondary-foreground border-border",
-  active: "bg-accent/10 text-foreground border-accent",
-  waiting: "bg-[var(--warning)]/10 text-foreground border-[var(--warning)]",
-  success: "bg-[var(--success)]/10 text-foreground border-[var(--success)]",
-  warning: "bg-[var(--warning)]/15 text-foreground border-[var(--warning)]",
+  active: "bg-selected/10 text-foreground border-selected",
+  waiting: "bg-warning/10 text-foreground border-warning",
+  success: "bg-success/10 text-foreground border-success",
+  warning: "bg-warning/15 text-foreground border-warning",
   danger: "bg-destructive/10 text-foreground border-destructive",
 };
 
@@ -94,7 +100,9 @@ function StatusBadge({
   visuals,
   testId,
 }: {
-  domain: "stage" | "run" | "program" | "approval";
+  // Derived from the central label table, so a new vocabulary cannot be
+  // badged without also being labelled (09 §9).
+  domain: LabelDomain;
   value: string;
   visuals: Partial<Record<string, StatusVisual>>;
   testId: string;
@@ -139,6 +147,7 @@ const APPROVAL_VISUALS: Partial<Record<ApprovalState, StatusVisual>> = {
   PENDING: { icon: ShieldQuestion, tone: "waiting" },
   APPROVED: { icon: CircleCheck, tone: "success" },
   CHANGES_REQUESTED: { icon: RotateCcw, tone: "warning" },
+  REJECTED: { icon: CircleX, tone: "danger" },
   ESCALATED: { icon: OctagonAlert, tone: "danger" },
 };
 
@@ -170,11 +179,11 @@ export function BlockerCallout({
       role="status"
       data-testid="blocker-callout"
       className={cn(
-        "rounded-md border border-[var(--warning)] bg-[var(--warning)]/10 p-3 text-sm",
+        "rounded-md border border-warning bg-warning/10 p-3 text-sm",
         "flex items-start gap-2",
       )}
     >
-      <CircleSlash className="mt-0.5 size-4 shrink-0 text-[var(--warning)]" aria-hidden="true" />
+      <CircleSlash className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
       <div className="space-y-1">
         <p className="font-medium leading-none">{title}</p>
         {detail ? <p className="text-muted-foreground">{detail}</p> : null}
@@ -182,4 +191,41 @@ export function BlockerCallout({
       </div>
     </div>
   );
+}
+
+const REVIEW_VISUALS: Partial<Record<ReviewStatus, StatusVisual>> = {
+  DRAFT: { icon: FileClock, tone: "neutral" },
+  IN_REVIEW: { icon: ShieldQuestion, tone: "waiting" },
+  REVISION_REQUESTED: { icon: RotateCcw, tone: "warning" },
+  APPROVED: { icon: CircleCheck, tone: "success" },
+  REJECTED: { icon: CircleX, tone: "danger" },
+};
+
+/** The V2 card review axis (ADR-0019 D5). Icon plus label, never color alone. */
+export function ReviewStatusBadge({ status }: { status: ReviewStatus }) {
+  return <StatusBadge domain="review" value={status} visuals={REVIEW_VISUALS} testId="review-status-badge" />;
+}
+
+const FRESHNESS_VISUALS: Partial<Record<Freshness, StatusVisual>> = {
+  CURRENT: { icon: CircleCheck, tone: "neutral" },
+  STALE: { icon: FileClock, tone: "warning" },
+};
+
+/**
+ * Freshness is a SEPARATE axis from review status (V2 01 §8): an approved card
+ * whose upstream concept changed stays approved AND becomes stale, so the two
+ * badges must be able to appear together.
+ */
+export function FreshnessBadge({ freshness }: { freshness: Freshness }) {
+  return <StatusBadge domain="freshness" value={freshness} visuals={FRESHNESS_VISUALS} testId="freshness-badge" />;
+}
+
+const PACKAGE_VISUALS: Partial<Record<PackageStatus, StatusVisual>> = {
+  CURRENT: { icon: CircleCheck, tone: "success" },
+  HISTORICAL: { icon: Layers, tone: "neutral" },
+  STALE: { icon: FileClock, tone: "warning" },
+};
+
+export function PackageStatusBadge({ status }: { status: PackageStatus }) {
+  return <StatusBadge domain="packageStatus" value={status} visuals={PACKAGE_VISUALS} testId="package-status-badge" />;
 }
