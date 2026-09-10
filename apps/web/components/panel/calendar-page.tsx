@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Badge,
   Button,
+  ContentText,
   EmptyState,
   Sheet,
   SheetContent,
@@ -176,7 +177,7 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
             <ul className="space-y-2" data-testid="unscheduled-tray">
               {unscheduled.map((entry) => (
                 <li key={entry.id} className="rounded-md border bg-card p-3 text-sm">
-                  <p className="font-medium">{entry.titleFa}</p>
+                  <p className="font-medium"><ContentText>{entry.titleFa}</ContentText></p>
                   <p className="pb-2 text-muted-foreground">
                     {materialsSummaryFa(world, entry)}
                   </p>
@@ -316,7 +317,7 @@ function DayCellView({
           carry "today" instead, and the accessible name says the word.
         */}
         <span className={cell.isToday ? "font-bold underline underline-offset-4" : ""}>
-          {cell.labelFa}
+          <ContentText>{cell.labelFa}</ContentText>
         </span>
       </button>
       <ul className="space-y-1 pt-1">
@@ -329,7 +330,7 @@ function DayCellView({
               // Colour marks the project; the text is what states the meaning.
               className="w-full truncate rounded border border-selected/40 bg-selected/10 px-1 py-0.5 text-start text-xs"
             >
-              {entry.titleFa}
+              <ContentText>{entry.titleFa}</ContentText>
             </button>
           </li>
         ))}
@@ -365,7 +366,7 @@ function AgendaView({
               onClick={() => onOpen(entry.id)}
               className="flex w-full flex-wrap items-center justify-between gap-3 rounded-md border bg-card p-3 text-start"
             >
-              <span className="font-medium">{entry.titleFa}</span>
+              <span className="font-medium"><ContentText>{entry.titleFa}</ContentText></span>
               <span className="text-sm text-muted-foreground">{formatDayFa(entry.date!)}</span>
             </button>
           </li>
@@ -413,7 +414,7 @@ function EventSheet({
       >
         <SheetHeader>
           <SheetTitle className="flex flex-wrap items-center gap-2">
-            {entry.titleFa}
+            <ContentText>{entry.titleFa}</ContentText>
             {/* A date is a plan, never a publication (V2 01 §7). */}
             <Badge variant="outline">
               {entry.date === null ? "آماده برنامه‌ریزی" : "برنامه‌ریزی‌شده"}

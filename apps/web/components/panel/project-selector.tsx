@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  ContentText,
   Select,
   SelectContent,
   SelectItem,
@@ -72,7 +73,7 @@ export function ProjectSelector({
         {allowAll ? <SelectItem value={ALL_PROJECTS}>همه پروژه‌ها</SelectItem> : null}
         {world.projects.map((project) => (
           <SelectItem key={project.id} value={project.id}>
-            {project.titleFa}
+            <ContentText>{project.titleFa}</ContentText>
           </SelectItem>
         ))}
       </SelectContent>

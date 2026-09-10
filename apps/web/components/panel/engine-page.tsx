@@ -8,6 +8,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ContentText,
   EmptyState,
   formatPersianDateTime,
   toPersianDigits,
@@ -183,7 +184,7 @@ function NodeDetails({ node, projectId }: { node: ProductNode; projectId: string
     <Card data-testid="engine-node-details" className="gap-3">
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-          {node.labelFa}
+          <ContentText>{node.labelFa}</ContentText>
           <Badge variant="secondary">{NODE_STATE_LABEL_FA[node.state]}</Badge>
         </CardTitle>
       </CardHeader>
@@ -201,13 +202,13 @@ function NodeDetails({ node, projectId }: { node: ProductNode; projectId: string
 
         {node.reasonFa === null ? null : (
           <p data-testid="engine-node-reason" className="rounded-md border border-warning bg-warning/10 p-2">
-            {node.reasonFa}
+            <ContentText>{node.reasonFa}</ContentText>
           </p>
         )}
 
         {node.state === "AWAITING_REVIEW" || node.state === "BLOCKED" ? (
           <Button asChild size="sm" data-testid="engine-node-link">
-            <a href={destination.href}>{destination.labelFa}</a>
+            <a href={destination.href}><ContentText>{destination.labelFa}</ContentText></a>
           </Button>
         ) : null}
       </CardContent>

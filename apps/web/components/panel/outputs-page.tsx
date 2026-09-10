@@ -8,6 +8,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ContentText,
   EmptyState,
   Sheet,
   SheetContent,
@@ -122,14 +123,14 @@ function OutputCard({ output, onOpen }: { output: OutputView; onOpen: () => void
             <Badge variant="outline" data-testid="output-state">
               {OUTPUT_STATE_LABEL_FA[output.state]}
             </Badge>
-            <Badge variant="secondary">{output.projectTitleFa}</Badge>
+            <Badge variant="secondary"><ContentText>{output.projectTitleFa}</ContentText></Badge>
           </div>
           <button
             type="button"
             onClick={onOpen}
             className="text-start text-base font-semibold underline-offset-4 hover:underline"
           >
-            {output.titleFa}
+            <ContentText>{output.titleFa}</ContentText>
           </button>
         </CardTitle>
       </CardHeader>
@@ -177,10 +178,10 @@ function OutputDetail({
       >
         <SheetHeader>
           <SheetTitle className="flex flex-wrap items-center gap-2">
-            {output.titleFa}
+            <ContentText>{output.titleFa}</ContentText>
             <Badge variant="outline">{OUTPUT_STATE_LABEL_FA[output.state]}</Badge>
           </SheetTitle>
-          <SheetDescription>{output.projectTitleFa}</SheetDescription>
+          <SheetDescription><ContentText>{output.projectTitleFa}</ContentText></SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-2">

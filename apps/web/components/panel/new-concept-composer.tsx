@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Badge,
   Button,
+  ContentText,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -137,7 +138,7 @@ export function NewConceptComposer({
                 <SelectContent>
                   {world.projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
-                      {project.titleFa}
+                      <ContentText>{project.titleFa}</ContentText>
                     </SelectItem>
                   ))}
                 </SelectContent>

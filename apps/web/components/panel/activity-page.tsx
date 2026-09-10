@@ -1,6 +1,11 @@
 "use client";
 
-import { Badge, EmptyState, PersianDateTime } from "@drop/ui";
+import {
+  Badge,
+  ContentText,
+  EmptyState,
+  PersianDateTime,
+} from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { ProjectSelector, useSelectedProject, ALL_PROJECTS } from "./project-selector";
 
@@ -100,7 +105,7 @@ export function ActivityPage({ world }: { world: PanelSnapshot }) {
                 <PersianDateTime value={row.at} className="ms-auto text-xs text-muted-foreground" />
               </div>
               {row.bodyFa === null || row.bodyFa === "" ? null : (
-                <p className="pt-1 leading-7">{row.bodyFa}</p>
+                <p className="pt-1 leading-7"><ContentText>{row.bodyFa}</ContentText></p>
               )}
             </li>
           ))}

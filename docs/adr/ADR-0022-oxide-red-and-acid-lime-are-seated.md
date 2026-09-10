@@ -107,6 +107,32 @@ lets a person find the thing across a room; the label is what tells them what it
 axe sweep runs WCAG 2.2 AA over every surface in both themes and is the check that keeps this
 honest.
 
+### D5 — Text the panel did not write is bidi-isolated
+
+Not a palette decision, but found by looking at the same screens and fixed here because it made
+the panel unreadable in a way no amount of colour could excuse.
+
+The panel is fa-IR and its surfaces are RTL. Project titles, concept theses, content items and
+comments are **not** written by the panel — a person or the machine wrote them — and their
+direction is not ours to assume. When an English run is set inside an RTL paragraph it keeps its
+words in order but hands its trailing punctuation to the paragraph, so the full stop moves to the
+visual start of the line:
+
+```
+.A gathering about things that become meaningful when we return to them
+```
+
+That is the Unicode bidi algorithm doing exactly what it is specified to do. `BidiIdentifier` has
+isolated Latin ids since P1 for precisely this reason — the mechanism existed and was simply
+never applied to content, so every machine-authored string broke the moment ADR-0021 wired a real
+session in.
+
+`ContentText` isolates the run with `<bdi>` and resolves its direction with `dir="auto"`, from
+the first strong character. **`auto`, deliberately, not `ltr`:** the machine answers in English
+today, ADR-0021 D7 is open, and pinning a direction would break silently on the day that decision
+goes the other way. Twenty-two render sites across ten files, and
+`tests/repo/bidi-isolation.test.ts` fails on the twenty-third that forgets.
+
 ---
 
 ## Consequences

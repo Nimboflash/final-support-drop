@@ -43,7 +43,7 @@ export function StageList({
             className={`flex w-full flex-wrap items-center justify-between gap-2 rounded-md border bg-card p-3 text-start ${NODE_STATE_TONE[node.state]}`}
           >
             <span className="min-w-0 space-y-1">
-              <span className="block font-medium">{node.labelFa}</span>
+              <span className="block font-medium"><bdi dir="auto">{node.labelFa}</bdi></span>
               <span className="block text-xs text-muted-foreground">
                 {NODE_CLASS_LABEL_FA[node.nodeClass]}
                 {groupLabel(node.groupId) === null ? null : ` — شاخهٔ ${groupLabel(node.groupId)}`}

@@ -72,6 +72,52 @@ export function BidiIdentifier({
 }
 
 /* ------------------------------------------------------------------ */
+/* ContentText — bidi isolation for text the PANEL did not write.       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Any string whose language the panel cannot know in advance.
+ *
+ * `BidiIdentifier` above already isolates Latin ids and URLs, and the reason
+ * it exists applies just as hard to content — it was simply never applied to
+ * it. Interface chrome is written in Persian by us and needs nothing. A
+ * project title, a concept thesis, a content item, a comment: those are
+ * authored by a person or by the machine, and their direction is not ours to
+ * assume.
+ *
+ * The failure is not subtle when it happens. An English sentence set inside an
+ * RTL paragraph keeps its words in order but hands its trailing punctuation to
+ * the paragraph, so a full stop jumps to the visual START of the line:
+ *
+ *     .A gathering about things that become meaningful when we return to them
+ *
+ * That is the Unicode bidi algorithm behaving exactly as specified. The fix is
+ * to tell it the truth about the run.
+ *
+ * `<bdi>` isolates, so whatever is inside cannot reorder the Persian around
+ * it. `dir="auto"` resolves direction from the first strong character, which
+ * is what makes this survive ADR-0021 D7 either way: Persian content stays
+ * RTL, English content lays out LTR with its punctuation where it belongs,
+ * and if the machine is ever asked to answer in Persian nothing here changes.
+ */
+export function ContentText({
+  children,
+  className,
+  as: As = "bdi",
+}: {
+  children: ReactNode;
+  className?: string;
+  /** `bdi` by default; `span` only where a parent already isolates. */
+  as?: "bdi" | "span";
+}) {
+  return (
+    <As data-testid="content-text" dir="auto" className={cn("min-w-0", className)}>
+      {children}
+    </As>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* PersianDateTime — 09 §12 / 05 §2: store UTC, display Jalali Tehran,
    expose the raw instant for sorting.                                 */
 /* ------------------------------------------------------------------ */

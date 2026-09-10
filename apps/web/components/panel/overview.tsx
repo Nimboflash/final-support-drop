@@ -9,6 +9,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ContentText,
   EmptyState,
   PersianCalendarDate,
   toPersianDigits,
@@ -169,13 +170,13 @@ function AttentionRowView({ row }: { row: AttentionRow }) {
       className="drop-material flex flex-wrap items-center justify-between gap-3 rounded-md border border-s-4 border-s-attention bg-card p-3"
     >
       <div className="min-w-0 space-y-1">
-        <p className="font-medium">{row.projectTitleFa}</p>
+        <p className="font-medium"><ContentText>{row.projectTitleFa}</ContentText></p>
         {/*
           One human sentence, never a dependency warning (ADR-0020 D5). Full
           foreground rather than muted: this sentence IS the reason the row is
           here, and it was being rendered quieter than the project name above it.
         */}
-        <p className="text-sm">{row.detailFa}</p>
+        <p className="text-sm"><ContentText>{row.detailFa}</ContentText></p>
       </div>
       <Button asChild size="sm">
         <Link href={row.href}>{row.actionLabelFa}</Link>
@@ -203,7 +204,7 @@ function ProjectCard({ world, project }: { world: PanelSnapshot; project: PanelP
             href={`/studio/concepts?project=${project.id}`}
             className="text-base font-semibold underline-offset-4 hover:underline"
           >
-            {project.titleFa}
+            <ContentText>{project.titleFa}</ContentText>
           </Link>
         </CardTitle>
       </CardHeader>

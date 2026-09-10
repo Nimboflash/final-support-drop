@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   Badge,
   Button,
+  Checkbox,
+  ContentText,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Checkbox,
+  formatPersianCalendarDate,
   Label,
   Sheet,
   SheetContent,
@@ -16,7 +18,6 @@ import {
   SheetHeader,
   SheetTitle,
   Textarea,
-  formatPersianCalendarDate,
   toPersianDigits,
   useIsMobile,
 } from "@drop/ui";
@@ -165,7 +166,7 @@ export function ConceptDetail({
               </div>
             </Section>
             {active?.feedbackAppliedFa == null ? null : (
-              <Section titleFa="بازخورد اعمال‌شده">{active.feedbackAppliedFa}</Section>
+              <Section titleFa="بازخورد اعمال‌شده"><ContentText>{active.feedbackAppliedFa}</ContentText></Section>
             )}
           </article>
 
@@ -177,7 +178,7 @@ export function ConceptDetail({
                 .filter((c) => c.target.id === concept.id)
                 .map((c) => (
                   <li key={c.id} className="rounded-md border p-2 text-sm leading-7">
-                    {c.bodyFa}
+                    <ContentText>{c.bodyFa}</ContentText>
                   </li>
                 ))}
               {sent.map((text, index) => (

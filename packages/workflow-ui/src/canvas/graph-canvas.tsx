@@ -69,7 +69,7 @@ function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
       className={`h-full w-full overflow-hidden rounded-md border-2 bg-card p-3 text-start ${NODE_STATE_TONE[node.state]}`}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} style={HANDLE_STYLE} />
-      <p className="truncate text-sm font-medium">{node.labelFa}</p>
+      <p className="truncate text-sm font-medium"><bdi dir="auto">{node.labelFa}</bdi></p>
       <p className="truncate text-xs text-muted-foreground">
         {NODE_CLASS_LABEL_FA[node.nodeClass]}
       </p>
