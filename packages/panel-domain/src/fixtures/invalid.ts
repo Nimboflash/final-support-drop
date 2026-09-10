@@ -28,6 +28,55 @@ function withOverride<T extends object>(base: T, patch: Record<string, unknown>)
 const valid = (name: string): unknown => VALID_FIXTURES[name]!.value;
 
 export const INVALID_FIXTURES: readonly RejectionFixture[] = [
+  /* ------------------------------------------- machine wire (ADR-0021) -- */
+  {
+    schemaName: "machineSessionSchema",
+    schema: S.machineSessionSchema,
+    rule:
+      "ADR-0021 D6 — a machine session id is `uuid4().hex[:12]` and is used by the service " +
+      "as a filesystem path segment WITHOUT validation. The boundary is the only place it " +
+      "is checked at all, so anything but 12 hex characters is refused here.",
+    value: { ...(valid("machineSessionSchema") as object), session_id: "../../etc/passwd" },
+    expectPath: "session_id",
+    expectMessage: "MACHINE_SESSION_ID_MUST_BE_12_HEX",
+  },
+  {
+    schemaName: "machineConceptCardSchema",
+    schema: S.machineConceptCardSchema,
+    rule: "ADR-0021 D6 — a concept card without a title has nothing to render.",
+    value: { ...(valid("machineConceptCardSchema") as object), title: 42 },
+    expectPath: "title",
+  },
+  {
+    schemaName: "machineConceptBatchSchema",
+    schema: S.machineConceptBatchSchema,
+    rule: "ADR-0021 D6 — a round is a list of cards; anything else is not a round.",
+    value: { ...(valid("machineConceptBatchSchema") as object), concepts: "five of them" },
+    expectPath: "concepts",
+  },
+  {
+    schemaName: "machineRecommendationSchema",
+    schema: S.machineRecommendationSchema,
+    rule:
+      "ADR-0021 D6 — `links` are model-authored strings. They are never trusted, but they " +
+      "must at least BE strings before anything downstream reasons about them.",
+    value: { ...(valid("machineRecommendationSchema") as object), links: [{ href: "x" }] },
+    expectPath: "links.0",
+  },
+  {
+    schemaName: "machinePortfolioSchema",
+    schema: S.machinePortfolioSchema,
+    rule: "ADR-0021 D6 — a portfolio names the concept it was built for.",
+    value: { ...(valid("machinePortfolioSchema") as object), concept_id: 7 },
+    expectPath: "concept_id",
+  },
+  {
+    schemaName: "machineConceptRequestSchema",
+    schema: S.machineConceptRequestSchema,
+    rule: "ADR-0021 D6 — the brief is the machine's only required input.",
+    value: { ...(valid("machineConceptRequestSchema") as object), project_brief: null },
+    expectPath: "project_brief",
+  },
   // ---------------------------------------------------------- common ----
   {
     schemaName: "schemaVersionSchema",

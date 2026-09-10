@@ -31,3 +31,5 @@ export * from "./projection/review-status";
 export * from "./projection/product-stage";
 export * from "./projection/wire-codec";
 export * from "./projection/output-type-label";
+export * from "./projection/machine-wire";
+export * from "./projection/machine-session";

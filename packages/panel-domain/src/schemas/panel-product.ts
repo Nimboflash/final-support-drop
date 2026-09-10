@@ -520,17 +520,34 @@ export type PanelCalendarEntry = z.infer<typeof panelCalendarEntrySchema>;
 /* --------------------------------------------------------- snapshot ----- */
 
 /**
- * The whole demo world in one validated envelope (V2 03 §6).
+ * What produced a snapshot (ADR-0021, amending ADR-0019 D8).
+ *
+ * This was `z.literal("drop.panel.mock.v2")`, which meant a snapshot could only
+ * exist if it declared itself mock — so a real machine's data was literally
+ * unrepresentable in the panel's own envelope. The one way to render it would
+ * have been to lie in the discriminator that storage, persistence and every
+ * honesty guarantee are keyed on.
+ *
+ * Widening it is the smaller change and the honest one. `drop.panel.mock.v2`
+ * keeps its exact spelling, so every stored world, the rejecting fixtures and
+ * the persistence discriminator are untouched.
+ */
+export const SNAPSHOT_KINDS = ["drop.panel.mock.v2", "drop.panel.machine.v1"] as const;
+export type SnapshotKind = (typeof SNAPSHOT_KINDS)[number];
+
+/**
+ * The whole world in one validated envelope (V2 03 §6).
  *
  * `schemaVersion` stays semver (`PANEL_SCHEMA_VERSION`) because
  * `schemaVersionSchema` pins that form and a rejecting fixture already proves
- * `"v1"` fails. V2's `drop.panel.mock.v2` rides alongside as `snapshotKind`,
- * which is also the storage-key discriminator (ADR-0019 D8).
+ * `"v1"` fails. `snapshotKind` rides alongside it and is also the storage-key
+ * discriminator (ADR-0019 D8) — persistence still accepts only the mock kind,
+ * because real machine state belongs to the machine, not to a browser key.
  */
 export const panelSnapshotSchema = z
   .object({
     schemaVersion: z.string().regex(/^\d+\.\d+\.\d+$/, "SCHEMA_VERSION_MUST_BE_SEMVER"),
-    snapshotKind: z.literal("drop.panel.mock.v2"),
+    snapshotKind: z.enum(SNAPSHOT_KINDS),
     revision: rowVersionSchema,
     /** The injected clock (ADR-0019 D16). No adapter reads Date.now. */
     clock: instantSchema,

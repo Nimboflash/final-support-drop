@@ -260,9 +260,107 @@ export const weeklyLensSummary: S.WeeklyLensSummary = {
 };
 
 /** The registry the frozen contract test drives (AC-P2.1). */
+
+/* ------------------------------------------------- machine wire (0021) -- */
+
+/**
+ * The machine's wire shapes (ADR-0021 D6).
+ *
+ * Transcribed from a REAL captured session —
+ * `services/concept-portfolio/demo_runs/c18c18e12aea/session_state.json`,
+ * committed by the machine's own authors — and trimmed to two concepts and two
+ * recommendations so it stays readable. It is deliberately a demanding shape:
+ * two rounds, the SAME concept ids repeated in both (which is what the machine
+ * really does), and an approval made in round 1 that the machine never cleared
+ * when round 2 arrived.
+ *
+ * The English strings are not an oversight. The machine returns English, into a
+ * Persian-only interface, and a fixture that quietly said otherwise would hide
+ * the open decision (ADR-0021 D7) this repository is supposed to keep visible.
+ */
+export const machineConceptCard: S.MachineConceptCard = {
+  concept_id: "concept_02",
+  title: "The second meaning",
+  one_line: "A concept about returning with changed perception.",
+  human_truth: "People often return to the same thing with a changed self.",
+  central_idea: "Meaning changes because we change.",
+  guest_takeaway: "Returning can reveal who we are now.",
+  territory: "TEMPORAL",
+  anchor_score: 5,
+  portfolio_score: 4.4,
+  why_it_fits: "It directly extends the brief about renewed meaning in return.",
+};
+
+export const machineRecommendation: S.MachineRecommendation = {
+  rank: 1,
+  title: "Music Track 1",
+  creator: "Artist 1",
+  why_related: "Track 1 matches the concept through reflective return.",
+  source_notes: "Mock source note.",
+  links: ["https://example.com/music/1"],
+};
+
+export const machineConceptBatch: S.MachineConceptBatch = {
+  round_index: 1,
+  concepts: [machineConceptCard],
+  notes: "Mock concept generation.",
+};
+
+export const machinePortfolio: S.MachinePortfolio = {
+  concept_id: "concept_02",
+  concept_title: "The second meaning",
+  music: [machineRecommendation],
+  films_and_series: [{ ...machineRecommendation, title: "Film or Series 1" }],
+  artworks: [{ ...machineRecommendation, title: "Artwork 1" }],
+  scientific_readings: [{ ...machineRecommendation, title: "Scientific Reading 1" }],
+  artistic_readings: [{ ...machineRecommendation, title: "Artistic Reading 1" }],
+};
+
+export const machineConceptRequest = {
+  project_brief: "A gathering about things that become meaningful when we return to them.",
+  initial_context: "small intimate cultural gathering",
+  desired_feeling: "reflective, warm",
+  seed: "returning changes us",
+  previous_ideas: [],
+};
+
+export const machineSession: S.MachineSession = {
+  session_id: "c18c18e12aea",
+  status: "PORTFOLIO_READY",
+  input: machineConceptRequest,
+  concept_rounds: [
+    machineConceptBatch,
+    {
+      // Round two repeats the same concept id — the machine's own behaviour,
+      // not a copy-paste. Nothing downstream may key on it alone.
+      round_index: 2,
+      concepts: [{ ...machineConceptCard, title: "The second meaning refined" }],
+      notes: "Mock concept refinement.",
+    },
+  ],
+  approved_concept_id: "concept_02",
+  approved_concept: machineConceptCard,
+  portfolio: machinePortfolio,
+  run_dir: "/mnt/data/drop_concept_portfolio_project/demo_runs/c18c18e12aea",
+};
+
 export const VALID_FIXTURES: Readonly<
   Record<string, { schema: z.ZodType; value: unknown }>
 > = {
+  // ---- machine wire (ADR-0021) ----
+  machineConceptCardSchema: { schema: S.machineConceptCardSchema, value: machineConceptCard },
+  machineConceptBatchSchema: { schema: S.machineConceptBatchSchema, value: machineConceptBatch },
+  machineRecommendationSchema: {
+    schema: S.machineRecommendationSchema,
+    value: machineRecommendation,
+  },
+  machinePortfolioSchema: { schema: S.machinePortfolioSchema, value: machinePortfolio },
+  machineConceptRequestSchema: {
+    schema: S.machineConceptRequestSchema,
+    value: machineConceptRequest,
+  },
+  machineSessionSchema: { schema: S.machineSessionSchema, value: machineSession },
+
   // ---- common ----
   schemaVersionSchema: { schema: S.schemaVersionSchema, value: "1.0.0" },
   idSchema: { schema: S.idSchema, value: "run_01" },
