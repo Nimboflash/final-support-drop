@@ -70,6 +70,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Node and pnpm are here only so this job can invoke the check by the
+      # same name a developer types. `tests/repo/ci.test.ts` requires CI to run
+      # `pnpm test:machine` verbatim, and the point of that requirement is that
+      # what CI runs and what a person runs cannot drift apart.
+      #
+      # No `pnpm install`: the script uses node builtins only, so the workspace
+      # does not need installing to run it.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+
       - uses: actions/setup-python@v5
         with:
           # The service declares >=3.10 in its pyproject; CI honours the
