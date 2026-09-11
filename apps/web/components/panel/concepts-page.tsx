@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState } from "@drop/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  ContentText,
+  EmptyState,
+} from "@drop/ui";
 import type { Concept, PanelSnapshot } from "@drop/panel-domain";
 import {
   ALL_PROJECTS,
@@ -153,13 +162,23 @@ function ConceptCard({
     <Card data-testid="concept-card" data-state={state} className={`h-full gap-3 ${STATE_TONE[state]}`}>
       <CardHeader>
         <CardTitle className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {/* Three states, in three words (ADR-0020 D7). */}
             <Badge variant="outline" data-testid="concept-state">
               {CONCEPT_STATE_LABEL_FA[state]}
             </Badge>
+            {/*
+              A machine title is a whole English sentence, and `Badge` is
+              `w-fit shrink-0 whitespace-nowrap`: it sizes to its content and
+              refuses to shrink, so one long title pushed 74px of the card off
+              the side of the screen. It ellipsises now. The mock world's titles
+              are short Persian, which is why the e2e overflow sweep never
+              caught this.
+            */}
             {projectTitleFa === null ? null : (
-              <Badge variant="secondary">{projectTitleFa}</Badge>
+              <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate">
+                <ContentText>{projectTitleFa}</ContentText>
+              </Badge>
             )}
           </div>
           <button
@@ -167,14 +186,14 @@ function ConceptCard({
             onClick={onOpen}
             className="text-start text-base font-semibold underline-offset-4 hover:underline"
           >
-            {version?.titleFa ?? "کانسپت بدون عنوان"}
+            <ContentText>{version?.titleFa ?? "کانسپت بدون عنوان"}</ContentText>
           </button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Two to three lines; the full document lives in the detail view. */}
         <p className="line-clamp-3 text-sm leading-7 text-muted-foreground">
-          {version?.thesisFa}
+          <ContentText>{version?.thesisFa}</ContentText>
         </p>
         <Button size="sm" variant="outline" onClick={onOpen} data-testid="open-concept">
           باز کردن کانسپت

@@ -130,8 +130,21 @@ session in.
 `ContentText` isolates the run with `<bdi>` and resolves its direction with `dir="auto"`, from
 the first strong character. **`auto`, deliberately, not `ltr`:** the machine answers in English
 today, ADR-0021 D7 is open, and pinning a direction would break silently on the day that decision
-goes the other way. Twenty-two render sites across ten files, and
-`tests/repo/bidi-isolation.test.ts` fails on the twenty-third that forgets.
+goes the other way. Thirty-seven leaf render sites across twelve files, and
+`tests/repo/bidi-isolation.test.ts` fails on the thirty-eighth that forgets.
+
+The first attempt at that guard matched `{x.field}` with a regex and **passed while fifteen
+sites were still broken**: `{projectTitleFa}` destructured, `{version?.titleFa ?? "…"}` with
+optional chaining, and anything nested inside a `.map()` were all invisible to it. A guard that
+cannot see the bug it was written for is worse than none, because it is reassuring. It now parses
+JSX children with balanced braces and carries fixtures for both shapes that defeated it.
+
+**The same blind spot produced a second defect.** The mock world's titles are short and Persian;
+a machine title is a long English sentence. `Badge` is `w-fit shrink-0 whitespace-nowrap`, and a
+grid or flex item's default `min-width: auto` means it can never shrink below its content — so
+one real title pushed 74px of a card off the side of the screen, with `CardTitle` widening its
+grid column to accommodate it. The e2e overflow sweep runs at four breakpoints and had always
+passed, because no fixture could exhibit it.
 
 ---
 

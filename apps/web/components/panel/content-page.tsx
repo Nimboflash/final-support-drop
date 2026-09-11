@@ -8,6 +8,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ContentText,
   EmptyState,
   Input,
   Label,
@@ -111,7 +112,7 @@ export function ContentPage({ world }: { world: PanelSnapshot }) {
                   apart — the concepts page already guards against exactly this.
                 */}
                 <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold">
-                  {version?.titleFa ?? "کانسپت"}
+                  <ContentText>{version?.titleFa ?? "کانسپت"}</ContentText>
                   {selectedProject === ALL_PROJECTS && concept !== undefined ? (
                     <Badge variant="secondary" className="font-normal">
                       {world.projects.find((p) => p.id === concept.projectId)?.titleFa ?? ""}
@@ -186,12 +187,12 @@ function ContentCard({
             onClick={onOpen}
             className="text-start text-base font-semibold underline-offset-4 hover:underline"
           >
-            {version?.titleFa ?? "محتوای بدون عنوان"}
+            <ContentText>{version?.titleFa ?? "محتوای بدون عنوان"}</ContentText>
           </button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="line-clamp-3 text-sm leading-7 text-muted-foreground">{version?.bodyFa}</p>
+        <p className="line-clamp-3 text-sm leading-7 text-muted-foreground"><ContentText>{version?.bodyFa}</ContentText></p>
         {action === null ? null : (
           <p data-testid="content-action" className="rounded-md border border-warning bg-warning/10 p-2 text-sm">
             {action}
@@ -244,7 +245,7 @@ function ContentDetail({
       >
         <SheetHeader>
           <SheetTitle className="flex flex-wrap items-center gap-2">
-            {version?.titleFa ?? "محتوا"}
+            <ContentText>{version?.titleFa ?? "محتوا"}</ContentText>
             <Badge variant="outline">{CONTENT_STATE_LABEL_FA[state]}</Badge>
           </SheetTitle>
           <SheetDescription>
@@ -328,7 +329,7 @@ function ContentDetail({
             </div>
           ) : null}
 
-          <p className="whitespace-pre-wrap text-sm leading-7">{version?.bodyFa}</p>
+          <p className="whitespace-pre-wrap text-sm leading-7"><ContentText>{version?.bodyFa}</ContentText></p>
 
           <div className="space-y-2">
             <Label htmlFor={`feedback-${item.id}`} className="text-sm font-semibold">

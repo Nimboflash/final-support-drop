@@ -123,7 +123,7 @@ function OutputCard({ output, onOpen }: { output: OutputView; onOpen: () => void
             <Badge variant="outline" data-testid="output-state">
               {OUTPUT_STATE_LABEL_FA[output.state]}
             </Badge>
-            <Badge variant="secondary"><ContentText>{output.projectTitleFa}</ContentText></Badge>
+            <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate"><ContentText>{output.projectTitleFa}</ContentText></Badge>
           </div>
           <button
             type="button"
@@ -192,7 +192,7 @@ function OutputDetail({
               return (
                 <li key={item.id} className="rounded-md border p-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium">{version?.titleFa ?? "محتوا"}</span>
+                    <span className="font-medium"><ContentText>{version?.titleFa ?? "محتوا"}</ContentText></span>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">
                         {DIRECTION_LABEL_FA[item.type] ?? item.type}
@@ -202,7 +202,7 @@ function OutputDetail({
                         <Badge variant="outline">{CONTENT_STATE_LABEL_FA[state]}</Badge>
                     </div>
                   </div>
-                  <p className="line-clamp-2 pt-1 text-muted-foreground">{version?.bodyFa}</p>
+                  <p className="line-clamp-2 pt-1 text-muted-foreground"><ContentText>{version?.bodyFa}</ContentText></p>
                 </li>
               );
             })}

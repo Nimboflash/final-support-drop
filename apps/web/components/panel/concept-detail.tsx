@@ -138,7 +138,7 @@ export function ConceptDetail({
       >
         <SheetHeader>
           <SheetTitle className="flex flex-wrap items-center gap-2">
-            {active?.titleFa ?? "کانسپت"}
+            <ContentText>{active?.titleFa ?? "کانسپت"}</ContentText>
             <Badge variant="outline">{CONCEPT_STATE_LABEL_FA[state]}</Badge>
             <ConceptHistoryMenu count={versions.length} />
           </SheetTitle>
@@ -154,7 +154,7 @@ export function ConceptDetail({
         >
           {/* The document */}
           <article className="space-y-4 py-2" data-testid="concept-document">
-            <Section titleFa="ایده اصلی">{active?.thesisFa}</Section>
+            <Section titleFa="ایده اصلی"><ContentText>{active?.thesisFa}</ContentText></Section>
             <Section titleFa="چرا این مسیر">{active?.dropRationaleFa}</Section>
             <Section titleFa="جهت محتوایی">
               <div className="flex flex-wrap gap-1">
@@ -318,7 +318,7 @@ function ConceptHistoryMenu({ count }: { count: number }) {
 function Section({ titleFa, children }: { titleFa: string; children: React.ReactNode }) {
   return (
     <section className="space-y-1">
-      <h3 className="text-sm font-semibold text-muted-foreground">{titleFa}</h3>
+      <h3 className="text-sm font-semibold text-muted-foreground"><ContentText>{titleFa}</ContentText></h3>
       <div className="text-sm leading-7">{children}</div>
     </section>
   );

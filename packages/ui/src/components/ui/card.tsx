@@ -43,7 +43,11 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      // `min-w-0`: CardTitle is a grid item of CardHeader, and a grid item's
+      // default `min-width: auto` means it can never shrink below its content.
+      // One unbreakable title therefore widens the column and pushes the card
+      // off the side of the screen instead of ellipsising inside it.
+      className={cn("min-w-0 leading-none font-semibold", className)}
       {...props}
     />
   )
