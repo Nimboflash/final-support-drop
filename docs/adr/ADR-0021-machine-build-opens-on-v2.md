@@ -80,6 +80,34 @@ the location of the fix was wrong.
    was removed rather than repointed: no surface called it, and an `/openapi.json` check renamed
    "health" would report nothing about the backend and would be a lie by its own name.
 
+### D2a — One named restoration, and only one (owner, 2026-09-11)
+
+D2 freezes the service. This is the single exception, and it is deliberately expressed as a
+restoration rather than a change.
+
+`src/drop_portfolio/prompts.py` now carries the language directive its own upstream reference
+notebook orders and the port dropped, quoted from that notebook:
+
+> `Titles/one_line must be natural Persian and must never be execution instructions.`
+> `Return concise Persian content in the exact JSON structure. No prose outside JSON.`
+> `Use Persian for analysis text; keep artist/song titles exactly as published.`
+
+Applied to all three prompts, because a refinement round that answered in English would undo the
+generation prompt on the very next call. The second clause of the research directive is
+load-bearing and is kept verbatim: a translated album or film title is not a citation any more,
+and the portfolio is evidence.
+
+Nothing new is decided by this. `project-master-document.md:140` already requires generated
+artifacts to be authored natively in Persian and **prohibits mechanical translation**, which is
+what ruled out the alternative of translating at the projection boundary.
+
+`tests/repo/vendored-machine.test.ts` hash-pins every file and names this one file as the only
+permitted difference, so a second "small fix" cannot arrive quietly beside it.
+
+**It does not take effect on the mock backend.** `backends/mock.py` returns hard-coded English
+strings (`f'Music Track {i}'`) and never reads a prompt. Persian output requires the real
+OpenRouter backend, which requires the provider gate (doc 15 §12) that is still open.
+
 ### D3 — Scope: Machines 01 and 02, and no further
 
 What this ADR opens is the **concept and research portfolio** service and its wiring. It does

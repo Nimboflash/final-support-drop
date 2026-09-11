@@ -9,7 +9,16 @@ def concept_generation_prompt() -> str:
         "You are the DROP concept generator. Generate 5 concept-level cards from the brief. "
         "Stay at the concept level. Each concept must include a title, one_line, human_truth, "
         "central_idea, guest_takeaway, territory, anchor_score (0-5), portfolio_score (0-5), and why_it_fits. "
-        "Do not generate execution tactics. Output JSON only."
+        "Do not generate execution tactics. "
+        # DROP RESTORATION (ADR-0021 D2, amended 2026-09-11): the language
+        # directive the upstream reference notebook carries and this port
+        # dropped. Quoted from that notebook, which the README keeps "untouched
+        # for traceability". Not new policy — project-master-document.md:140
+        # already requires generated artifacts to be authored natively in
+        # Persian and prohibits mechanical translation.
+        "Titles/one_line must be natural Persian and must never be execution instructions. "
+        "Return concise Persian content in the exact JSON structure. No prose outside JSON. "
+        "Output JSON only."
     )
 
 
@@ -17,7 +26,12 @@ def concept_refinement_prompt() -> str:
     return (
         "You are the DROP concept generator in refinement mode. Read the brief, previous concept cards, "
         "the liked concept ids, and the user's feedback. Generate a revised set of 5 concept-level cards. "
-        "Preserve useful lineage but improve according to the feedback. Output JSON only."
+        "Preserve useful lineage but improve according to the feedback. "
+        # DROP RESTORATION: a refinement that answered in English would undo the
+        # generation prompt above on the very next round.
+        "Titles/one_line must be natural Persian and must never be execution instructions. "
+        "Return concise Persian content in the exact JSON structure. No prose outside JSON. "
+        "Output JSON only."
     )
 
 
@@ -27,7 +41,12 @@ def portfolio_research_prompt() -> str:
         "Return: 8 music recommendations, 5 films/series, 5 artworks, 3 scientific readings, 3 artistic/critical readings. "
         "Every item must explicitly explain why it is related to the approved concept. For artworks, explain observable form, "
         "why material/form matters, artist intent if available, curator/scholar view if available, historical/cultural context, "
-        "and the DROP connection. Output JSON only."
+        "and the DROP connection. "
+        # DROP RESTORATION: the research directive, quoted from the same
+        # notebook. The second clause is load-bearing — a translated album or
+        # film title is not a citation any more, and the portfolio is evidence.
+        "Use Persian for analysis text; keep artist/song titles exactly as published. "
+        "Output JSON only."
     )
 
 

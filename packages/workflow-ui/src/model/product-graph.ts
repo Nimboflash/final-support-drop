@@ -197,31 +197,72 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
     });
     link(reviewId, researchId);
 
-    for (const item of branchContent) {
-      const blocked = item.generationState === "BLOCKED";
-      const itemGenId = `n:content-generation:${item.id}`;
-      const itemReviewId = `n:content-review:${item.id}`;
+    /*
+      How many generation steps actually happened.
 
+      The panel's own world generates each content item separately and can
+      regenerate one of them alone, which is why V2 02 §9 asks for a localized
+      revision loop back to ITS OWN step. The machine does no such thing: one
+      `POST /portfolio/build` returns the entire portfolio, there is no
+      per-item generation and no way to regenerate a single item.
+
+      Drawing eighteen generation nodes for one call is not a cosmetic problem.
+      It states that eighteen steps happened, and it offers a branch-level
+      affordance the machine cannot perform — the thing ADR-0020 D11 exists to
+      prevent. So a machine snapshot gets ONE step, feeding every review.
+    */
+    const batchedGeneration = world.snapshotKind === "drop.panel.machine.v1";
+    const sharedGenId = `n:content-generation:${concept.id}`;
+
+    if (batchedGeneration && branchContent.length > 0) {
+      const anyRunning = branchContent.some((item) => item.generationState === "RUNNING");
+      const anyBlocked = branchContent.some(
+        (item) => item.generationState === "BLOCKED" || item.generationState === "FAILED",
+      );
       push({
-        id: itemGenId,
+        id: sharedGenId,
         nodeClass: "CONTENT_GENERATION",
-        labelFa: `تولید محتوا — ${outputTypeLabelFa(item.type)}`,
-        state: blocked
-          ? "BLOCKED"
-          : item.generationState === "RUNNING"
-            ? "RUNNING"
-            : item.generationState === "FAILED"
-              ? "BLOCKED"
-              : "DONE",
+        // No type suffix: it produced all of them, not one of them.
+        labelFa: "تولید محتوا",
+        state: anyRunning ? "RUNNING" : anyBlocked ? "BLOCKED" : "DONE",
         groupId: concept.id,
-        subject: { kind: "CONTENT", id: item.id },
-        attempts: world.contentVersions.filter((v) => v.contentId === item.id).length,
-        outputCount: 1,
+        subject: { kind: "CONCEPT", id: concept.id },
+        attempts: 1,
+        outputCount: branchContent.length,
         terminal: false,
         machineNumber: null,
-        reasonFa: item.blockedReasonFa,
+        reasonFa: branchContent.find((item) => item.blockedReasonFa !== null)?.blockedReasonFa ?? null,
       });
-      link(researchId, itemGenId);
+      link(researchId, sharedGenId);
+    }
+
+    for (const item of branchContent) {
+      const blocked = item.generationState === "BLOCKED";
+      const itemGenId = batchedGeneration ? sharedGenId : `n:content-generation:${item.id}`;
+      const itemReviewId = `n:content-review:${item.id}`;
+
+      if (!batchedGeneration) {
+        push({
+          id: itemGenId,
+          nodeClass: "CONTENT_GENERATION",
+          labelFa: `تولید محتوا — ${outputTypeLabelFa(item.type)}`,
+          state: blocked
+            ? "BLOCKED"
+            : item.generationState === "RUNNING"
+              ? "RUNNING"
+              : item.generationState === "FAILED"
+                ? "BLOCKED"
+                : "DONE",
+          groupId: concept.id,
+          subject: { kind: "CONTENT", id: item.id },
+          attempts: world.contentVersions.filter((v) => v.contentId === item.id).length,
+          outputCount: 1,
+          terminal: false,
+          machineNumber: null,
+          reasonFa: item.blockedReasonFa,
+        });
+        link(researchId, itemGenId);
+      }
 
       push({
         id: itemReviewId,

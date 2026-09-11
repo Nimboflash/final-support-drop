@@ -65,6 +65,27 @@ describe("the vendored machine is byte-identical to what the owner supplied", ()
     expect(changed, `modified vendored files:\n${changed.join("\n")}`).toEqual([]);
   });
 
+  it("has exactly ONE restored file, and it is the language directive", () => {
+    /*
+      ADR-0021 D2 as amended permits a single, named restoration: the Persian
+      directive the upstream reference notebook carries and this port dropped.
+      It is a RESTORATION rather than an addition — `project-master-document.md`
+      :140 already requires generated artifacts to be authored natively in
+      Persian and prohibits mechanical translation, so nothing new is decided
+      here; an instruction that was lost is put back.
+
+      Nothing else in the service may differ. The manifest above is what
+      enforces that; this names the one exception so it cannot quietly become
+      two.
+    */
+    const prompts = readFileSync(join(SERVICE, "src/drop_portfolio/prompts.py"), "utf8");
+    expect(prompts).toContain("Titles/one_line must be natural Persian");
+    expect(prompts).toContain("Use Persian for analysis text; keep artist/song titles exactly as published.");
+    // Every stage, or a refinement round answers in English and undoes it.
+    expect(prompts.match(/natural Persian/g) ?? []).toHaveLength(2);
+    expect(prompts).toContain("DROP RESTORATION");
+  });
+
   it("still demands a credential and still has no health route", () => {
     /*
       The two specific edits that were made and reverted. Asserted by their
