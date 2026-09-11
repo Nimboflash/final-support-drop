@@ -43,7 +43,6 @@ async function read(path: string): Promise<MachineHttpResult> {
 
 export function createBrowserMachinePort(): MachineHttpPort {
   return {
-    getHealth: () => read("/health"),
     // The id is validated by the client before it arrives here and again by the
     // route handler. `encodeURIComponent` is belt to those braces: a value that
     // somehow reached this point could not break out of the path segment.

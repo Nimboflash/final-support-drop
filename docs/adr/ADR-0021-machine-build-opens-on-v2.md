@@ -42,24 +42,43 @@ Machines 01 and 02 of the recorded model, and nothing downstream of them.
 mocks. Machine work happens on `v2`. Someone reading `main` should find the hard stop intact and
 true of what they are looking at.
 
-### D2 — The machine is vendored, not reimplemented
+### D2 — The machine is vendored VERBATIM, and nothing is added to it
 
-`services/concept-portfolio/` holds the owner's service as delivered. It sits **outside** the
-pnpm workspace globs (`apps/*`, `packages/*`) so it cannot disturb the sixteen-package integrity
-check, and it keeps its own toolchain.
+**Amended by the owner, 2026-09-11.** This decision originally permitted two documented
+modifications. It no longer permits any. The owner's instruction was that the machine must be
+exactly the file they supplied, with no difference and nothing added, and they were right: a
+vendored artefact that has been helpfully improved is no longer the artefact anyone reviewed, and
+"it was documented" does not make it the same file.
 
-Every change made to it after extraction is listed in `services/concept-portfolio/MODIFICATIONS.md`
-and marked `DROP MODIFICATION` at its site. Two were needed to bring the system up at all:
+`services/concept-portfolio/` is now byte-identical to `drop_concept_portfolio_project.zip`.
+`tests/repo/vendored-machine.test.ts` hash-pins all twenty-nine files, in the pattern
+`placeholder-purity.test.ts` already uses for the twelve frozen workspaces, and additionally
+asserts the shape of the two edits that were made and reverted, so a failure names what was done
+rather than only reporting that a digest moved. `MODIFICATIONS.md` is deleted, because there are
+none.
 
-1. The service **could not start without a paid credential**. `Settings.from_env()` raised
-   whenever `OPENROUTER_API_KEY` was absent and `api.py` constructed the OpenRouter backend
-   unconditionally — so not even the deterministic `MockBackend` its own tests use could be
-   served. The backend is now chosen by `DROP_BACKEND`, and the key is required only by the
-   backend that uses it. The real path is unchanged and still the default.
-2. There was **no readiness probe**. `GET /health` now answers without creating a session or
-   spending a token, and names the backend so a mock run cannot be mistaken for a real one.
+**What the two edits were for, and where each now lives instead.** Both problems were real; only
+the location of the fix was wrong.
 
-Nothing else was touched: no prompt, no model, no service logic, no test.
+1. *The service could not start without a paid credential.* `_service()` constructs
+   `OpenRouterBackend` unconditionally and `Settings.from_env()` raises when
+   `OPENROUTER_API_KEY` is absent, so not even the deterministic `MockBackend` its own tests use
+   could be served.
+
+   `scripts/machine-server.py` — **outside** the service — rebinds `api_mod._service` before
+   starting uvicorn. That is not a workaround invented here: the service's own
+   `tests/test_api.py` does `monkeypatch.setattr(api_mod, '_service', lambda: service)` and
+   builds `Settings(...)` directly rather than through `from_env()`. Nothing is patched that its
+   authors do not already patch themselves.
+
+2. *There was no readiness probe.* None is needed. `Settings.from_env()` is reached **only** from
+   `_service()`, so FastAPI's own `/openapi.json` answers without touching configuration, without
+   creating a session and without spending a token. CI probes that.
+
+   The panel's proxy therefore allow-lists exactly **one** upstream path, `GET /sessions/{12
+   hex}`, which is a narrower boundary than before. The `health()` method on the machine client
+   was removed rather than repointed: no surface called it, and an `/openapi.json` check renamed
+   "health" would report nothing about the backend and would be a lie by its own name.
 
 ### D3 — Scope: Machines 01 and 02, and no further
 
@@ -108,19 +127,52 @@ Where the machine has no equivalent for something the panel requires, the projec
 honestly rather than fabricating a value — and where that cannot be done honestly, it becomes an
 open decision rather than a silent choice.
 
-### D7 — The machine's output is English; the panel is Persian-only
+### D7 — CORRECTED: Persian is mandated, and the port dropped the instruction
 
-This is a real and unsolved conflict, recorded here rather than glossed. The service returns
-English concept titles, one-liners and portfolio entries — from the mock backend and from the
-real one, since `prompts.py` asks for English. The panel ships fa-IR only (00 §4) and
-`tests/repo/interface-language.test.ts` enforces its vocabulary rules.
+**Amended 2026-09-11.** The original D7 called this "a real and unsolved conflict" and an open
+decision. It was neither, and it rested on two statements of fact that are simply untrue. Both
+are corrected here rather than quietly edited away, because the reasoning built on them was
+offered to the owner as a reason to wait.
 
-Machine-generated content is **data**, not interface chrome, so the guard does not fail on it —
-the guard reads source, not runtime values. But a Persian interface rendering English cards is a
-defect a person sees immediately, and calling it acceptable because no test fails would be
-exactly the kind of green-tick reasoning this repository has spent its whole life removing.
+**Error 1 — "since `prompts.py` asks for English".** It does not. All ninety-seven lines contain
+no language directive of any kind: no "Persian", no "English", no "language". The model answers
+in English because the prompt is written in English and says nothing, not because anything asked.
 
-It is therefore an **open decision** (see Consequences), not something this ADR resolves.
+**Error 2 — "The panel ships fa-IR only (00 §4)".** Doc 00 §4 does not say that. It says *"All
+human-facing product UI is FA-first and RTL from the first component"* (`00:80`). The phrase
+"fa-IR only" appears at `spec-v0.md:340`, inside an out-of-scope list.
+
+**And the framing was wrong.** D7 argued machine output is "data, not interface chrome, so the
+guard does not fail on it". That is true of the *test guard's* scope and false of the *policy*:
+
+> All human-facing generated artifacts are **authored natively in Persian** (`NATIVE_FA`);
+> mechanical translation is prohibited
+> — `docs/source-material/project-master-document.md:140`
+
+Restated at `spec-v0.md:190`, at `spec-v0.md:115` for research synthesis specifically, and at
+`docs/implementation/12:157`. Generated artifacts are governed. They were always governed.
+
+**Where the instruction went.** The machine's own upstream reference —
+`notebooks/reference/DROP_Idea_Engine_V7_10_...ipynb`, which its README says is *"included
+untouched for traceability"* — orders Persian on twenty lines, for exactly the fields that now
+arrive in English:
+
+> `Titles/one_line must be natural Persian and must never be execution instructions.`
+> `Use Persian for analysis text; keep artist/song titles exactly as published.`
+
+with `_FA`-suffixed fields throughout (`WHY_CONCEPT_FA`, `DROP_CONNECTION_FA`,
+`OBSERVABLE_FORM_FA`, …). The directive was **lost when the notebook was ported into
+`prompts.py`**. Nothing decided against Persian; the instruction was dropped.
+
+**What this leaves.** Two of the three options D7 offered are gone. Translating at the projection
+boundary is *prohibited* — that is mechanical translation by definition. Accepting mixed-language
+content contradicts four recorded documents. Native Persian generation is the only compliant
+outcome, and it requires the prompt to ask for it.
+
+Which collides head-on with D2 as the owner has now amended it: the machine is verbatim and
+nothing is added to it. **That collision is real, it is the owner's to resolve, and this ADR does
+not resolve it.** It is recorded in the P10 handoff as the open question it is. What is no longer
+open is whether Persian is required. It is.
 
 ### D8 — CI covers the machine as its own job
 

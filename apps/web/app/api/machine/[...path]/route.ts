@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
  *
  * Three rules, each answering a specific way this could be got wrong:
  *
- * 1. **`GET` only.** Five of the service's seven routes are POSTs that mutate
+ * 1. **`GET` only.** Five of the service's six routes are POSTs that mutate
  *    and cost money, and `concepts/generate` takes NO request body — which
  *    makes it a CORS *simple request* that any page the user has open could
  *    fire with `mode: "no-cors"`, burn credits, and never see the response.
@@ -87,7 +87,9 @@ function off(): NextResponse {
  * is checked before it gets there.
  */
 function resolveUpstreamPath(segments: readonly string[]): string | null {
-  if (segments.length === 1 && segments[0] === "health") return "/health";
+  // Exactly one reachable path. `/health` used to be here; it does not exist,
+  // because the vendored service is the owner's VERBATIM (ADR-0021 D2) and
+  // adding a route to it was a modification that has since been reverted.
   if (segments.length === 2 && segments[0] === "sessions") {
     const id = segments[1];
     if (typeof id === "string" && SESSION_ID.test(id)) return "/sessions/" + id;
@@ -105,8 +107,6 @@ const SESSION_FIELDS = [
   "approved_concept",
   "portfolio",
 ] as const;
-
-const HEALTH_FIELDS = ["status", "backend"] as const;
 
 function pick(body: unknown, fields: readonly string[]): Record<string, unknown> {
   if (typeof body !== "object" || body === null) return {};
@@ -158,8 +158,7 @@ export async function GET(
     return NextResponse.json({ error: "UPSTREAM_NOT_JSON" }, { status: 502 });
   }
 
-  const fields = upstreamPath === "/health" ? HEALTH_FIELDS : SESSION_FIELDS;
-  return NextResponse.json(pick(body, fields), {
+  return NextResponse.json(pick(body, SESSION_FIELDS), {
     status: 200,
     headers: { "cache-control": "no-store" },
   });

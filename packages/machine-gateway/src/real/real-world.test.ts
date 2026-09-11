@@ -4,7 +4,6 @@ import { machineSession as MACHINE_SESSION } from "@drop/panel-domain/fixtures";
 import { GatewayError, isGatewayError } from "../errors";
 import type { MachineHttpPort, MachineHttpResult } from "./machine-http-port";
 import { createRealWorld } from "./real-world";
-import { createMachineClient } from "./machine-client";
 
 /**
  * The read-only real adapter (ticket P10, slice 1).
@@ -20,7 +19,7 @@ const NOW = "2026-09-10T09:00:00Z";
 
 /** A port that answers each call from a script, so failures are reproducible. */
 function portReturning(result: MachineHttpResult): MachineHttpPort {
-  return { getHealth: () => Promise.resolve(result), getSession: () => Promise.resolve(result) };
+  return { getSession: () => Promise.resolve(result) };
 }
 
 function worldOver(port: MachineHttpPort) {
@@ -159,11 +158,3 @@ describe("every write refuses, and says something true while refusing", () => {
   });
 });
 
-describe("health", () => {
-  it("names the backend, so a mock run is not mistaken for a real one", async () => {
-    const client = createMachineClient(
-      portReturning({ status: 200, body: { status: "ok", backend: "mock" } }),
-    );
-    await expect(client.health()).resolves.toEqual({ status: "ok", backend: "mock" });
-  });
-});

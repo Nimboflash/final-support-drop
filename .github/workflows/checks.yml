@@ -99,17 +99,23 @@ jobs:
         # needs no API key and spends nothing.
         run: pnpm test:machine
 
-      - name: Prove it starts and answers without a credential
-        # The service could not start at all without a paid key until this
-        # branch changed that. This step is what keeps that true.
+      - name: Prove the VERBATIM service starts and answers without a credential
+        # The service is the owner's, unmodified (ADR-0021 D2): it has no health
+        # route and its `_service()` demands a paid key. `scripts/machine-server.py`
+        # overrides `_service` from OUTSIDE the module — which is exactly what the
+        # service's own tests/test_api.py does — and `/openapi.json` answers
+        # without touching configuration, because `Settings.from_env()` is reached
+        # only from `_service()`.
+        #
+        # This step is what keeps the service verbatim: if anyone "fixes" it by
+        # editing config.py or adding a route, the next step catches it.
         run: |
-          DROP_BACKEND=mock PYTHONPATH=services/concept-portfolio/src \
-            python -m uvicorn drop_portfolio.api:app --host 127.0.0.1 --port 8000 &
+          DROP_BACKEND=mock python scripts/machine-server.py &
           for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:8000/health && break
+            curl -sf http://127.0.0.1:8000/openapi.json >/dev/null && break
             sleep 1
           done
-          curl -sf http://127.0.0.1:8000/health | tee /dev/stderr | grep -q '"backend":"mock"'
+          curl -sf http://127.0.0.1:8000/openapi.json | grep -q 'DROP Concept Portfolio API'
 
 
   # The browser suite, including the committed visual baselines.

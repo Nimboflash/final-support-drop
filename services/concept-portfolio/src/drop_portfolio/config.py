@@ -17,27 +17,14 @@ class Settings:
     http_timeout: int = 180
     site_url: str | None = None
     site_name: str | None = "DROP Concept Portfolio"
-    # DROP MODIFICATION (see MODIFICATIONS.md): which backend the service runs
-    # on. "mock" needs no API key, which is what lets the system come up, be
-    # demonstrated and be tested without a paid credential.
-    backend: str = "openrouter"
 
     @classmethod
     def from_env(cls) -> "Settings":
         load_dotenv()
-        backend = os.getenv("DROP_BACKEND", "openrouter").strip().lower()
         api_key = os.getenv("OPENROUTER_API_KEY", "")
-        # DROP MODIFICATION: the key is required only by the backend that uses
-        # it. Demanding it unconditionally meant the service could not start at
-        # all without a paid credential — not even on the deterministic mock its
-        # own tests are written against.
-        if not api_key and backend != "mock":
-            raise RuntimeError(
-                "OPENROUTER_API_KEY was not found in the environment. "
-                "Set it, or set DROP_BACKEND=mock to run on the deterministic backend."
-            )
+        if not api_key:
+            raise RuntimeError("OPENROUTER_API_KEY was not found in the environment.")
         return cls(
-            backend=backend,
             openrouter_api_key=api_key,
             openrouter_base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
             runs_dir=Path(os.getenv("DROP_RUNS_DIR", "./drop_runs")),

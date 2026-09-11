@@ -124,7 +124,18 @@ met without it, and because it was equally broken on `main`.
 
 ## 6. Open decisions reached, and left open
 
-- **ADR-0021 D7 — the language of machine output. STILL OPEN, and now visible.** The composition
+- **The verbatim machine vs. Persian output — the one open question, and it is the owner's.**
+  The record mandates Persian for generated artifacts and *prohibits mechanical translation*
+  (`project-master-document.md:140`; `spec-v0.md:115,190`; `doc 12:157`). The machine's own
+  reference notebook orders Persian on twenty lines. The ported `prompts.py` dropped the
+  instruction and asks for no language at all. So native Persian generation is the only compliant
+  outcome, and it needs one line in `prompts.py` — which ADR-0021 D2, as the owner amended it,
+  forbids touching. Both instructions are the owner's and they cannot both hold. Nothing has been
+  chosen; the machine stays verbatim and the output stays English until it is.
+  With the `mock` backend the question is moot in any case: its strings are hard-coded English
+  (`backends/mock.py:59` is `f'Music Track {i}'`), so no brief in any language changes them.
+
+- **ADR-0021 D7 (superseded by the correction above).** The composition
   root injects the identity renderer, so the machine's English reaches the screen unchanged. This
   is the only option that does not pre-empt the owner: translating would bury a ruling nobody has
   made, and asking the machine for Persian means editing a vendored service (D2).

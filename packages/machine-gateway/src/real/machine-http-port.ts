@@ -27,8 +27,6 @@ export interface MachineHttpResult {
 }
 
 export interface MachineHttpPort {
-  /** `GET /health` — answers without creating a session or spending a token. */
-  getHealth(): Promise<MachineHttpResult>;
   /**
    * `GET /sessions/{id}`.
    *

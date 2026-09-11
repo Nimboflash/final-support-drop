@@ -27,12 +27,6 @@ export function isMachineSessionId(value: string): boolean {
   return MACHINE_SESSION_ID.test(value);
 }
 
-export interface MachineHealth {
-  readonly status: string;
-  /** Which backend answered. A mock run must never be mistaken for a real one. */
-  readonly backend: string;
-}
-
 /**
  * Maps a transport result onto the closed reason set.
  *
@@ -79,21 +73,11 @@ function requireOk(result: MachineHttpResult, what: string): unknown {
 }
 
 export interface MachineClient {
-  health(): Promise<MachineHealth>;
   session(sessionId: string): Promise<MachineSession>;
 }
 
 export function createMachineClient(port: MachineHttpPort): MachineClient {
   return {
-    async health(): Promise<MachineHealth> {
-      const body = requireOk(await port.getHealth(), "the machine's health");
-      const record = body as { status?: unknown; backend?: unknown };
-      return {
-        status: typeof record.status === "string" ? record.status : "unknown",
-        backend: typeof record.backend === "string" ? record.backend : "unknown",
-      };
-    },
-
     async session(sessionId: string): Promise<MachineSession> {
       if (!isMachineSessionId(sessionId)) {
         // Refused before it can reach a path. The panel is the only layer that

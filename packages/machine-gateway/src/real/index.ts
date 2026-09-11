@@ -5,7 +5,6 @@ export {
   isMachineSessionId,
   MACHINE_SESSION_ID,
   type MachineClient,
-  type MachineHealth,
 } from "./machine-client";
 export type { PanelWorld, PanelWorldPolicy } from "./panel-world";
 export { createRealWorld, type RealWorld, type RealWorldOptions } from "./real-world";
