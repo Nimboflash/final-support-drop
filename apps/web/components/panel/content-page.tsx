@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 import {
+  BookOpen,
+  Clapperboard,
+  ClipboardList,
+  LayoutTemplate,
+  MessageSquare,
+  Music,
+  Palette,
+  PenLine,
+  type LucideIcon,
+} from "lucide-react";
+import {
   Badge,
   Button,
   Card,
@@ -49,6 +60,53 @@ import {
  * this (§7.4): show one clear, actionable message and offer the action that
  * resolves it.
  */
+/**
+ * One icon per kind, and one dot per state.
+ *
+ * Borrowed structure, not colour: the reference pattern is an icon tile, a
+ * two-line label and a single status dot at the end of the row. The palette is
+ * DROP's — Acid marks the one state where a person is the blocker (ADR-0022
+ * D3), Oxide is nowhere near it, and `approved` stays quiet because finished
+ * work has no claim on anyone's attention.
+ *
+ * The dot is never the only carrier: the state's Persian name sits under the
+ * title on every card (ADR-0010 D11).
+ */
+const KIND_ICON: Record<ContentItem["type"], LucideIcon> = {
+  MUSIC: Music,
+  FILM: Clapperboard,
+  ART_DESIGN: Palette,
+  BOOK: BookOpen,
+  EDITORIAL: PenLine,
+  SOCIAL: MessageSquare,
+  LANDING: LayoutTemplate,
+  PRODUCTION_BRIEF: ClipboardList,
+};
+
+/**
+ * The action line's tone follows the STATE, not the fact that an action exists.
+ *
+ * It was Acid for all of them, which put "a person is the blocker" (ADR-0022
+ * D3) on a build failure and on a missing source. Acid belongs to exactly one
+ * state; the others keep the tone they already carry on the card's border, so
+ * the strip and the border of a card never disagree.
+ */
+const STATE_ACTION_TONE: Record<ContentState, string> = {
+  draft: "bg-muted text-foreground",
+  needs_input: "bg-warning/15 text-foreground",
+  failed: "bg-destructive/15 text-foreground",
+  ready_for_review: "bg-attention text-attention-foreground",
+  approved: "bg-muted text-foreground",
+};
+
+const STATE_DOT: Record<ContentState, string> = {
+  draft: "bg-muted-foreground",
+  needs_input: "bg-warning",
+  failed: "bg-destructive",
+  ready_for_review: "bg-attention",
+  approved: "bg-success",
+};
+
 const STATE_TONE: Record<ContentState, string> = {
   draft: "border-border",
   needs_input: "border-warning",
@@ -144,47 +202,60 @@ export function ContentPage({ world }: { world: PanelSnapshot }) {
                 </div>
 
                 {/*
-                  Sectioned by kind inside the concept, not one flat list.
+                  The concept is a ROW; its kinds are COLUMNS beneath it.
 
-                  A real portfolio is eighteen items, and eighteen cards in a
-                  single column is a wall: music, film and artwork read as one
-                  undifferentiated scroll with only a small badge per card to
-                  tell them apart. The machine's own portfolio is BUILT in
-                  categories — `music`, `films_and_series`, `artworks` are
-                  separate fields on its response — so this shows the shape the
-                  work already has rather than inventing one.
+                  Eighteen cards in one flowing grid is a wall — music, film and
+                  artwork as a single undifferentiated scroll. Stacking the kinds
+                  was better but still made the page long and still asked you to
+                  scroll to learn what a concept produced.
 
-                  Insertion order is kept, which is the projection's order and
-                  therefore the machine's own.
+                  Side by side, the shape of a concept's portfolio is legible in
+                  one look: how much music against how much film, which column
+                  is waiting on you, which is empty. The machine's own portfolio
+                  is BUILT this way — `music`, `films_and_series` and `artworks`
+                  are separate fields on its response — so this shows the shape
+                  the work already has rather than inventing one.
+
+                  `auto-fit` rather than a fixed column count, so the columns
+                  become rows on a narrow screen instead of scrolling sideways;
+                  `items-start` so a short column does not stretch to match a
+                  tall one. Insertion order is kept, which is the projection's
+                  order and therefore the machine's own.
                 */}
-                {[...groupByType(groupItems)].map(([type, typeItems]) => (
-                  <section key={type} className="space-y-3" data-testid="content-kind-group">
-                    <div className="drop-rule flex items-baseline justify-between gap-2 pb-1">
-                      <h3 className="text-sm font-medium text-muted-foreground">
-                        {DIRECTION_LABEL_FA[type] ?? type}
-                      </h3>
-                      <span className="text-sm text-muted-foreground tabular-nums">
-                        {toPersianDigits(String(typeItems.length))}
-                      </span>
-                    </div>
-                    <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]">
-                      {typeItems.map((item) => (
-                        <li key={item.id}>
-                          <ContentCard
-                            item={item}
-                            world={world}
-                            showKind={false}
-                            onOpen={() => {
-                              detailFocus.remember();
-                              setLastOpened(item.id);
-                              setOpenId(item.id);
-                            }}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ))}
+                <div className="grid items-start gap-x-5 gap-y-6 grid-cols-[repeat(auto-fit,minmax(min(17rem,100%),1fr))]">
+                  {[...groupByType(groupItems)].map(([type, typeItems]) => (
+                    <section key={type} className="space-y-3" data-testid="content-kind-group">
+                      {/*
+                        A chip and a count, the way a board heads its columns —
+                        quiet enough to read past, specific enough to find.
+                      */}
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 text-xs font-medium tracking-wide text-muted-foreground">
+                          {DIRECTION_LABEL_FA[type] ?? type}
+                        </h3>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {toPersianDigits(String(typeItems.length))}
+                        </span>
+                      </div>
+                      <ul className="space-y-3">
+                        {typeItems.map((item) => (
+                          <li key={item.id}>
+                            <ContentCard
+                              item={item}
+                              world={world}
+                              showKind={false}
+                              onOpen={() => {
+                                detailFocus.remember();
+                                setLastOpened(item.id);
+                                setOpenId(item.id);
+                              }}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
               </section>
             );
           })}
@@ -225,44 +296,54 @@ function ContentCard({
   const version = world.contentVersions.find((v) => v.id === item.activeVersionId);
   const state = contentStateOf(item);
   const action = CONTENT_STATE_ACTION_FA[state];
+  const Icon = KIND_ICON[item.type] ?? PenLine;
 
   return (
-    <Card data-testid="content-card" data-state={state} className={`h-full gap-3 ${STATE_TONE[state]}`}>
-      <CardHeader>
-        <CardTitle className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {/*
-              Suppressed inside a kind section: eighteen cards each repeating
-              the heading directly above them is noise, not information. Still
-              shown wherever a card appears outside one.
-            */}
-            {showKind ? (
-              <Badge variant="secondary">{DIRECTION_LABEL_FA[item.type] ?? item.type}</Badge>
-            ) : null}
-            <Badge variant="outline" data-testid="content-state">
-              {CONTENT_STATE_LABEL_FA[state]}
-            </Badge>
-          </div>
-          <button
-            type="button"
-            onClick={onOpen}
-            className="text-start text-base font-semibold underline-offset-4 hover:underline"
-          >
+    <Card
+      data-testid="content-card"
+      data-state={state}
+      className={`drop-material gap-0 overflow-hidden py-0 ${STATE_TONE[state]}`}
+    >
+      {/*
+        The whole card is the control, not a button buried at the bottom of it.
+
+        Eighteen cards each carrying a heading, a three-line excerpt, a state
+        box and its own «باز کردن و ویرایش» button is a wall of chrome around
+        very little information. A row states four things — what kind, what it
+        is called, where it stands, and whether it wants you — and opens the
+        detail sheet that already holds everything else.
+      */}
+      <button
+        type="button"
+        data-testid="open-content"
+        onClick={onOpen}
+        className="flex w-full items-start gap-3 p-3 text-start transition-colors hover:bg-accent/50"
+      >
+        <span
+          aria-hidden="true"
+          className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-secondary/60 text-muted-foreground"
+        >
+          <Icon className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">
             <ContentText>{version?.titleFa ?? "محتوای بدون عنوان"}</ContentText>
-          </button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="line-clamp-3 text-sm leading-7 text-muted-foreground"><ContentText>{version?.bodyFa}</ContentText></p>
-        {action === null ? null : (
-          <p data-testid="content-action" className="rounded-md border border-warning bg-warning/10 p-2 text-sm">
-            {action}
-          </p>
-        )}
-        <Button size="sm" variant="outline" onClick={onOpen} data-testid="open-content">
-          باز کردن و ویرایش
-        </Button>
-      </CardContent>
+          </span>
+          {/* The state in words, always — the dot beside it is never alone. */}
+          <span data-testid="content-state" className="mt-0.5 block text-xs text-muted-foreground">
+            {CONTENT_STATE_LABEL_FA[state]}
+          </span>
+        </span>
+        <span aria-hidden="true" className={`mt-2 size-2 shrink-0 rounded-full ${STATE_DOT[state]}`} />
+      </button>
+      {action === null ? null : (
+        <p
+          data-testid="content-action"
+          className={`border-t border-border px-3 py-1.5 text-xs font-medium ${STATE_ACTION_TONE[state]}`}
+        >
+          {action}
+        </p>
+      )}
     </Card>
   );
 }
