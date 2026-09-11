@@ -18,6 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
   Textarea,
+  toPersianDigits,
   useIsMobile,
 } from "@drop/ui";
 import type { ContentItem, PanelSnapshot } from "@drop/panel-domain";
@@ -55,6 +56,21 @@ const STATE_TONE: Record<ContentState, string> = {
   ready_for_review: "border-selected/50",
   approved: "border-success/60",
 };
+
+/**
+ * Content items by kind, in the order they arrive.
+ *
+ * A `Map` rather than sorting: insertion order is the projection's order, which
+ * is the machine's own field order (music, then films, then artworks). Sorting
+ * alphabetically would scramble a sequence somebody chose.
+ */
+function groupByType(items: readonly ContentItem[]): Map<ContentItem["type"], ContentItem[]> {
+  const byType = new Map<ContentItem["type"], ContentItem[]>();
+  for (const item of items) {
+    byType.set(item.type, [...(byType.get(item.type) ?? []), item]);
+  }
+  return byType;
+}
 
 export function ContentPage({ world }: { world: PanelSnapshot }) {
   const selectedProject = useSelectedProject();
@@ -111,29 +127,64 @@ export function ContentPage({ world }: { world: PanelSnapshot }) {
                   showed «آیین مکث» four times with nothing to tell the sections
                   apart — the concepts page already guards against exactly this.
                 */}
-                <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold">
-                  <ContentText>{version?.titleFa ?? "کانسپت"}</ContentText>
-                  {selectedProject === ALL_PROJECTS && concept !== undefined ? (
-                    <Badge variant="secondary" className="font-normal">
-                      {world.projects.find((p) => p.id === concept.projectId)?.titleFa ?? ""}
-                    </Badge>
-                  ) : null}
-                </h2>
-                <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]">
-                  {groupItems.map((item) => (
-                    <li key={item.id}>
-                      <ContentCard
-                        item={item}
-                        world={world}
-                        onOpen={() => {
-                          detailFocus.remember();
-                          setLastOpened(item.id);
-                          setOpenId(item.id);
-                        }}
-                      />
-                    </li>
-                  ))}
-                </ul>
+                <div className="drop-rule flex flex-wrap items-baseline justify-between gap-2 pb-2">
+                  <h2 className="flex min-w-0 flex-wrap items-center gap-2 text-lg font-semibold">
+                    <ContentText>{version?.titleFa ?? "کانسپت"}</ContentText>
+                    {selectedProject === ALL_PROJECTS && concept !== undefined ? (
+                      <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate font-normal">
+                        <ContentText>
+                          {world.projects.find((p) => p.id === concept.projectId)?.titleFa ?? ""}
+                        </ContentText>
+                      </Badge>
+                    ) : null}
+                  </h2>
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {toPersianDigits(String(groupItems.length))}
+                  </span>
+                </div>
+
+                {/*
+                  Sectioned by kind inside the concept, not one flat list.
+
+                  A real portfolio is eighteen items, and eighteen cards in a
+                  single column is a wall: music, film and artwork read as one
+                  undifferentiated scroll with only a small badge per card to
+                  tell them apart. The machine's own portfolio is BUILT in
+                  categories — `music`, `films_and_series`, `artworks` are
+                  separate fields on its response — so this shows the shape the
+                  work already has rather than inventing one.
+
+                  Insertion order is kept, which is the projection's order and
+                  therefore the machine's own.
+                */}
+                {[...groupByType(groupItems)].map(([type, typeItems]) => (
+                  <section key={type} className="space-y-3" data-testid="content-kind-group">
+                    <div className="drop-rule flex items-baseline justify-between gap-2 pb-1">
+                      <h3 className="text-sm font-medium text-muted-foreground">
+                        {DIRECTION_LABEL_FA[type] ?? type}
+                      </h3>
+                      <span className="text-sm text-muted-foreground tabular-nums">
+                        {toPersianDigits(String(typeItems.length))}
+                      </span>
+                    </div>
+                    <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]">
+                      {typeItems.map((item) => (
+                        <li key={item.id}>
+                          <ContentCard
+                            item={item}
+                            world={world}
+                            showKind={false}
+                            onOpen={() => {
+                              detailFocus.remember();
+                              setLastOpened(item.id);
+                              setOpenId(item.id);
+                            }}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
               </section>
             );
           })}
@@ -163,10 +214,13 @@ function ContentCard({
   item,
   world,
   onOpen,
+  showKind = true,
 }: {
   item: ContentItem;
   world: PanelSnapshot;
   onOpen: () => void;
+  /** False inside a section that already names the kind. */
+  showKind?: boolean;
 }) {
   const version = world.contentVersions.find((v) => v.id === item.activeVersionId);
   const state = contentStateOf(item);
@@ -177,7 +231,14 @@ function ContentCard({
       <CardHeader>
         <CardTitle className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">{DIRECTION_LABEL_FA[item.type] ?? item.type}</Badge>
+            {/*
+              Suppressed inside a kind section: eighteen cards each repeating
+              the heading directly above them is noise, not information. Still
+              shown wherever a card appears outside one.
+            */}
+            {showKind ? (
+              <Badge variant="secondary">{DIRECTION_LABEL_FA[item.type] ?? item.type}</Badge>
+            ) : null}
             <Badge variant="outline" data-testid="content-state">
               {CONTENT_STATE_LABEL_FA[state]}
             </Badge>
