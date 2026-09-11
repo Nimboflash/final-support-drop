@@ -15,6 +15,28 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fa-IR" dir="rtl" suppressHydrationWarning>
+      <head>
+        {/*
+          Preload the interface font.
+
+          It was declared and served, but never preloaded, so the browser only
+          discovered it after parsing the stylesheet that references it. With
+          `font-display: swap` that means every load painted Persian in whatever
+          the operating system picked and then reflowed — which is how a panel
+          that IS set in Vazirmatn can still look like it is not.
+
+          `crossOrigin` is required even same-origin: fonts are fetched in CORS
+          mode, and a preload whose mode does not match the real request is
+          simply fetched twice.
+        */}
+        <link
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          href="/fonts/Vazirmatn-Variable.woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <ThemeProvider>
           <DirectionProvider dir="rtl">{children}</DirectionProvider>
