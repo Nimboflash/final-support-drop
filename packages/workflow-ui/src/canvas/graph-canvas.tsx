@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 // Bundled, never fetched: the e2e asserts zero external requests, and a CDN
 // stylesheet would also violate 00 §4 / ADR-0016. The canvas package owns its
 // own styles rather than asking each surface to remember to import them.
@@ -15,9 +15,10 @@ import {
   type Edge,
   type Node,
   type NodeProps,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import type { ProductGraph, ProductNode } from "../model/product-graph";
-import { NODE_HEIGHT, NODE_WIDTH, layoutProductGraph } from "../model/layout";
+import { NODE_HEIGHT, NODE_WIDTH, layoutProductGraph, type ProductLayout } from "../model/layout";
 import {
   NODE_CLASS_LABEL_FA,
   NODE_STATE_LABEL_FA,
@@ -38,6 +39,10 @@ import {
  */
 export interface ProductNodeData extends Record<string, unknown> {
   readonly product: ProductNode;
+}
+
+export interface ConceptLaneData extends Record<string, unknown> {
+  readonly labelFa: string;
 }
 
 /**
@@ -83,7 +88,35 @@ function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
   );
 }
 
-const nodeTypes = { product: ProductNodeCard };
+/**
+ * A concept's swim lane.
+ *
+ * `ProductGraph` has carried `groups` — "one group per approved concept
+ * (V2 02 §9)" — since it was written, and ELK has always laid each one out as
+ * a padded container so a branch stays together instead of interleaving with
+ * its siblings. Only the accessible stage list ever read them. The canvas drew
+ * nodes that WERE grouped and gave the reader nothing to see the grouping by,
+ * which on a real session is forty-six cards with no visible answer to "which
+ * concept does this belong to".
+ *
+ * Quiet on purpose: a hairline and a faint ground. The lane is the thing you
+ * read past, not the thing you read — the stages inside it carry the state.
+ */
+function ConceptLane({ data }: NodeProps<Node<ConceptLaneData>>) {
+  return (
+    <div
+      data-testid="concept-lane"
+      className="h-full w-full rounded-lg border border-border bg-muted/25"
+    >
+      {/* Inside the padding ELK reserved at the top of the container. */}
+      <p className="truncate px-3 pt-1.5 text-start text-xs text-muted-foreground">
+        <bdi dir="auto">{data.labelFa}</bdi>
+      </p>
+    </div>
+  );
+}
+
+const nodeTypes = { product: ProductNodeCard, lane: ConceptLane };
 
 /** Every string React Flow speaks, in Persian. */
 const ARIA_LABELS_FA = {
@@ -113,18 +146,47 @@ export function GraphCanvas({
   graph: ProductGraph;
   onSelect: (node: ProductNode) => void;
 }) {
-  const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [layout, setLayout] = useState<ProductLayout>({ nodes: [], groups: [] });
 
   useEffect(() => {
     let cancelled = false;
     void layoutProductGraph(graph).then((laidOut) => {
       if (cancelled) return;
-      setPositions(new Map(laidOut.map((n) => [n.id, { x: n.x, y: n.y }])));
+      setLayout(laidOut);
     });
     return () => {
       cancelled = true;
     };
   }, [graph]);
+
+  const positions = useMemo(
+    () => new Map(layout.nodes.map((n) => [n.id, { x: n.x, y: n.y }])),
+    [layout],
+  );
+
+  /*
+    Lanes first in the array and at a lower `zIndex`, so a stage always sits on
+    top of the lane it belongs to. Not draggable and not selectable: a lane is
+    the shape of the work, not a thing to move — dragging one would imply it
+    could be reorganised, and ADR-0019 D18 keeps this canvas a pure projection.
+  */
+  const laneNodes = useMemo<Node<ConceptLaneData>[]>(
+    () =>
+      layout.groups.map((lane) => ({
+        id: `lane:${lane.id}`,
+        type: "lane",
+        position: { x: lane.x, y: lane.y },
+        width: lane.width,
+        height: lane.height,
+        measured: { width: lane.width, height: lane.height },
+        data: { labelFa: graph.groups.find((g) => g.id === lane.id)?.labelFa ?? "" },
+        draggable: false,
+        selectable: false,
+        focusable: false,
+        zIndex: 0,
+      })),
+    [layout, graph],
+  );
 
   const nodes = useMemo<Node<ProductNodeData>[]>(
     () =>
@@ -176,6 +238,7 @@ export function GraphCanvas({
           { type: "target", position: Position.Top, x: NODE_WIDTH / 2, y: 0 },
           { type: "source", position: Position.Bottom, x: NODE_WIDTH / 2, y: NODE_HEIGHT },
         ],
+        zIndex: 1,
         // `data` carries the DTO-derived node, never a copy of its status that
         // could be written to and read back.
         data: { product },
@@ -214,6 +277,37 @@ export function GraphCanvas({
     }));
   }, [graph]);
 
+  /*
+    Re-fit whenever the layout changes.
+
+    `fitView` as a prop runs ONCE, at init — and at init this canvas has no
+    positions at all, because ELK resolves asynchronously and every node is
+    still at the origin. So the one fit that ever happened was a fit to a
+    single point, and every graph since has been framed by whatever transform
+    that left behind: nodes crowded at one edge with empty canvas opposite.
+
+    It was survivable while the graph was small and invisible while it had no
+    edges. A real session is forty-six nodes inside lanes, and it is not.
+  */
+  const [instance, setInstance] = useState<ReactFlowInstance | null>(null);
+  const onInit = useCallback((rf: ReactFlowInstance) => setInstance(rf), []);
+
+  useEffect(() => {
+    if (instance === null || layout.nodes.length === 0) return;
+    // After paint, so React Flow has measured what it is being asked to frame.
+    const id = requestAnimationFrame(() => {
+      void instance.fitView({ padding: 0.12, minZoom: 0.15, maxZoom: 1 });
+    });
+    return () => {
+      cancelAnimationFrame(id);
+    };
+  }, [instance, layout]);
+
+  const allNodes = useMemo<Node[]>(
+    () => [...laneNodes, ...nodes] as Node[],
+    [laneNodes, nodes],
+  );
+
   return (
     <div className="h-[32rem] w-full rounded-md border" data-testid="graph-canvas">
       {/*
@@ -224,10 +318,22 @@ export function GraphCanvas({
       */}
       <style>{ATTRIBUTION_CONTRAST_CSS}</style>
       <ReactFlow
-        nodes={nodes}
+        onInit={onInit}
+        nodes={allNodes}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        /*
+          React Flow's default `minZoom` is 0.5, and a fit that needs to go
+          below it is silently clamped — which is why the earlier transform sat
+          at exactly `scale(0.5)` with a third of the graph outside the frame.
+          A real session is forty-six nodes; 0.5 cannot hold it.
+
+          `maxZoom` keeps the other end honest: without it, a two-node graph
+          fits by blowing the cards up to fill the canvas.
+        */
+        minZoom={0.15}
+        maxZoom={1.5}
         // No editing affordances: template authoring is deferred (ADR-0019 D18).
         nodesConnectable={false}
         edgesFocusable={false}

@@ -151,12 +151,32 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
     const reviewId = `n:concept-review:${concept.id}`;
     const rejected = concept.reviewStatus === "REJECTED";
 
+    /*
+      Whether this concept opens a lane, decided BEFORE its card is pushed so
+      the card can go inside it.
+
+      The card used to sit on the spine with `groupId: null`, so a lane held a
+      concept's research and content but not the concept — the one card that
+      says which idea any of it came from. On a real session that is eighteen
+      content cards with nothing naming what they came out of.
+
+      A lane still means an approved concept with a real branch (V2 02 §9), not
+      every candidate: four lanes each holding a single review card would be
+      four boxes drawn around nothing.
+    */
+    const branchContent = content.filter((item) => item.conceptId === concept.id);
+    const isSelected = selected.has(concept.activeVersionId);
+    const hasLane = !rejected && (isSelected || branchContent.length > 0);
+    if (hasLane) {
+      groups.push({ id: concept.id, labelFa: version?.titleFa ?? UNTITLED_CONCEPT_FA });
+    }
+
     push({
       id: reviewId,
       nodeClass: "CONCEPT_REVIEW",
       labelFa: `بررسی کانسپت — ${version?.titleFa ?? UNTITLED_CONCEPT_FA}`,
       state: reviewState(concept.reviewStatus, false),
-      groupId: null,
+      groupId: hasLane ? concept.id : null,
       subject: { kind: "CONCEPT", id: concept.id },
       attempts: world.conceptVersions.filter((v) => v.conceptId === concept.id).length,
       outputCount: 1,
@@ -173,13 +193,7 @@ export function buildProductGraph(world: PanelSnapshot, project: PanelProject): 
       link(reviewId, genId, "REVISION", "بازنگری");
     }
 
-    if (rejected) continue;
-
-    const branchContent = content.filter((item) => item.conceptId === concept.id);
-    const isSelected = selected.has(concept.activeVersionId);
-    if (!isSelected && branchContent.length === 0) continue;
-
-    groups.push({ id: concept.id, labelFa: version?.titleFa ?? UNTITLED_CONCEPT_FA });
+    if (!hasLane) continue;
 
     const researchId = `n:research:${concept.id}`;
     push({

@@ -21,9 +21,32 @@ export interface LaidOutNode {
   readonly y: number;
 }
 
+/**
+ * A concept's swim lane — the box ELK already reserved for its branch.
+ *
+ * ELK lays each concept out as a hierarchical container with its own padding,
+ * which is what keeps a branch together instead of interleaved with its
+ * siblings. It has always computed these boxes; the walk below simply threw
+ * them away and kept the leaves, so the canvas drew nodes that were grouped
+ * and gave the reader nothing to see the grouping BY.
+ */
+export interface LaidOutGroup {
+  /** The concept id — the `group:` prefix ELK needs is stripped here. */
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface ProductLayout {
+  readonly nodes: readonly LaidOutNode[];
+  readonly groups: readonly LaidOutGroup[];
+}
+
 const elk = new ELK();
 
-export async function layoutProductGraph(graph: ProductGraph): Promise<readonly LaidOutNode[]> {
+export async function layoutProductGraph(graph: ProductGraph): Promise<ProductLayout> {
   // Grouping per concept is expressed as ELK children, so a branch stays
   // visually together rather than being interleaved with its siblings.
   const grouped = new Map<string, ElkNode[]>();
@@ -64,14 +87,27 @@ export async function layoutProductGraph(graph: ProductGraph): Promise<readonly 
   });
 
   const out: LaidOutNode[] = [];
+  const lanes: LaidOutGroup[] = [];
   const walk = (node: ElkNode, offsetX: number, offsetY: number) => {
     for (const child of node.children ?? []) {
       const x = (child.x ?? 0) + offsetX;
       const y = (child.y ?? 0) + offsetY;
-      if (child.children === undefined) out.push({ id: child.id, x, y });
-      else walk(child, x, y);
+      if (child.children === undefined) {
+        out.push({ id: child.id, x, y });
+        continue;
+      }
+      // The container's own box, kept rather than discarded. Children are
+      // positioned relative to it, so the recursion carries its origin.
+      lanes.push({
+        id: child.id.replace(/^group:/, ""),
+        x,
+        y,
+        width: child.width ?? 0,
+        height: child.height ?? 0,
+      });
+      walk(child, x, y);
     }
   };
   walk(laidOut, 0, 0);
-  return out;
+  return { nodes: out, groups: lanes };
 }
