@@ -1,4 +1,5 @@
 import { toPersianDigits } from "@drop/ui";
+import type { ProjectStage } from "./read-models";
 import {
   OUTPUT_TYPE_LABEL_FA,
   type Concept,
@@ -269,3 +270,21 @@ export function projectMessageFa(world: PanelSnapshot, project: PanelProject): s
 
   return "کار جدیدی در انتظار شما نیست.";
 }
+
+/**
+ * The five stages, in the user's words (ADR-0020 D5; ADR-0023).
+ *
+ * Each name is the destination a person already knows from the navigation, so
+ * the board and the menu agree: «کانسپت‌ها», «خروجی», «تقویم». `PACKAGE` reads
+ * «خروجی» and never «بسته» — that noun is banned from every surface by
+ * `interface-language.test.ts`, and the recorded vocabulary keeps its own name
+ * underneath regardless.
+ */
+export const PROJECT_STAGE_LABEL_FA: Readonly<Record<ProjectStage, string>> = {
+  DRAFT: "ورودی",
+  CONCEPTS: "کانسپت‌ها",
+  RESEARCH_CONTENT: "تحقیق و محتوا",
+  PACKAGE: "خروجی",
+  CALENDAR: "تقویم",
+};
+

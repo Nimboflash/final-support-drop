@@ -216,3 +216,44 @@ export function unscheduledEntries(world: PanelSnapshot): readonly PanelCalendar
 export function scheduledEntries(world: PanelSnapshot): readonly PanelCalendarEntry[] {
   return world.calendar.filter((entry) => entry.date !== null);
 }
+
+/**
+ * Where a project stands in the journey (ADR-0023).
+ *
+ * The five recorded product stages, derived from FACTS rather than from a
+ * stored status — the panel has no `stage` column and inventing one would be a
+ * state the V2 pack never defines. Read the other way round: the furthest thing
+ * that exists is the stage the work has reached.
+ *
+ * Deliberately the same five as `PRODUCT_STAGES` in `@drop/panel-domain`, and
+ * deliberately not re-exported from there: that enum belongs to the machine
+ * contract, this is a read model over a snapshot, and collapsing the two would
+ * make a UI grouping look like part of the contract.
+ */
+export const PROJECT_STAGES = [
+  "DRAFT",
+  "CONCEPTS",
+  "RESEARCH_CONTENT",
+  "PACKAGE",
+  "CALENDAR",
+] as const;
+export type ProjectStage = (typeof PROJECT_STAGES)[number];
+
+export function projectStage(world: PanelSnapshot, project: PanelProject): ProjectStage {
+  // A DATED entry only: an output sitting in the unscheduled tray has not
+  // reached the calendar, and saying it had would be the panel's own lie.
+  if (world.calendar.some((e) => e.projectId === project.id && e.date !== null)) return "CALENDAR";
+  if (world.packages.some((pkg) => pkg.projectId === project.id)) return "PACKAGE";
+  if (contentFor(world, project.id).length > 0) return "RESEARCH_CONTENT";
+  if (conceptsFor(world, project.id).length > 0) return "CONCEPTS";
+  return "DRAFT";
+}
+
+/** The attention rows belonging to one project — what it needs from a person. */
+export function attentionFor(
+  world: PanelSnapshot,
+  projectId: string,
+): readonly AttentionRow[] {
+  return attentionRows(world).filter((row) => row.projectId === projectId);
+}
+
