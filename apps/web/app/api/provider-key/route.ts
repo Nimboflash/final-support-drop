@@ -43,8 +43,22 @@ const ENV_KEY = "OPENROUTER_API_KEY";
  */
 const KEY_SHAPE = /^sk-or-v1-[A-Za-z0-9]{32,}$/;
 
+/**
+ * On in development, off in production unless explicitly switched on.
+ *
+ * The first cut required `DROP_PROVIDER_KEY_ADMIN=1` everywhere, which made the
+ * feature invisible on the machine it was built for: a dev server starts
+ * without it, so the field never appeared and the owner could not paste a key.
+ * A safety gate that hides the feature from the only person allowed to use it
+ * is not protecting anything.
+ *
+ * The danger was never `next dev` on loopback — it is a DEPLOYED panel, which
+ * has no authentication. So that is what the gate is about now: development
+ * has the field, production must ask for it by name.
+ */
 function enabled(): boolean {
-  return process.env.DROP_PROVIDER_KEY_ADMIN === "1";
+  if (process.env.DROP_PROVIDER_KEY_ADMIN === "1") return true;
+  return process.env.NODE_ENV !== "production";
 }
 
 function off(): NextResponse {

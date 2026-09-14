@@ -39,9 +39,12 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("the provider key is written, never read back", () => {
-  it("is off unless deliberately switched on", () => {
+  it("is off in production unless deliberately switched on", () => {
     const route = readFileSync(ROUTE, "utf8");
     expect(route).toContain("DROP_PROVIDER_KEY_ADMIN");
+    // A deployed panel has no authentication; a dev server on loopback is the
+    // machine this was built for. The gate is about the first, not the second.
+    expect(route).toContain('process.env.NODE_ENV !== "production"');
     // Absent config is a 404, not a 403: a 403 confirms the route exists.
     expect(route).toContain('{ error: "NOT_FOUND" }, { status: 404 }');
   });

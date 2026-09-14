@@ -32,43 +32,31 @@ export default function Page() {
   const live = session.mode === "REAL";
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">تنظیمات</h1>
+    <div className="space-y-6">
+      <header className="drop-rule pb-4">
+        <h1 className="text-3xl font-bold tracking-tight">تنظیمات</h1>
+      </header>
 
-      <Card className="gap-3">
+      {/* The one thing on this page a person comes here to DO, first. */}
+      <ProviderKeyCard />
+
+      <Card className="drop-material gap-3">
         <CardHeader>
-          <CardTitle className="text-base">سناریوی نمایشی</CardTitle>
+          <CardTitle className="text-base">جهان نمایشی</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p className="text-muted-foreground">
-            نام و شرح هر سناریو، عیناً از فهرست ثبت‌شدهٔ سند مرجع است و ترجمه نمی‌شود تا
-            پیوندش با آن سند حفظ بماند.
-          </p>
-          <p className="text-muted-foreground">
-            پنل روی «جهان پایه» باز می‌شود؛ هر سناریو آن را برای نمایش یک وضعیت خاص محدود
-            می‌کند. انتخاب سناریو در نشانی صفحه ذخیره می‌شود، پس می‌توانید یک وضعیت مشخص را
-            هم‌رسانی کنید یا صفحه را تازه کنید بدون از دست رفتن آن.
-          </p>
-
-          {/*
-            V2 03 §6 — "Corrupt/old data offers Reset Demo with confirmation
-            instead of crashing." The panel now RESUMES stored state, so this is
-            the way out when what was stored cannot be read, and the way to
-            return to a clean world after a demo.
-          */}
+        <CardContent className="space-y-4 text-sm">
           {session.hydration === "UNUSABLE" ? (
             <p
               role="alert"
               data-testid="hydration-warning"
-              className="rounded-md border border-warning bg-warning/10 p-2 text-sm"
+              className="rounded-md border border-warning bg-warning/10 p-2"
             >
-              وضعیت ذخیره‌شدهٔ قبلی خوانده نشد، پس پنل از جهان تازه شروع کرد. می‌توانید آن را
-              پاک کنید تا این پیام دیگر دیده نشود.
+              وضعیت ذخیره‌شدهٔ قبلی خوانده نشد، پس پنل از جهان تازه شروع کرد.
             </p>
           ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">سناریوی جاری:</span>
+            <span className="text-muted-foreground">جاری:</span>
             <Badge data-testid="active-scenario">
               <bdi lang="en" dir="ltr">
                 {active}
@@ -79,13 +67,6 @@ export default function Page() {
                 <a href="/studio/settings">بازگشت به جهان پایه</a>
               </Button>
             )}
-            {/*
-              Disabled rather than removed when the panel is reading a live
-              machine session: there is no stored world to clear, because REAL
-              mode deliberately writes nothing. `no-inert-controls.test.ts`
-              wants the `disabled` in the tag itself, and V2 03 §6 wants the
-              reason on screen rather than in a tooltip.
-            */}
             <Button
               size="sm"
               variant="outline"
@@ -93,8 +74,6 @@ export default function Page() {
               disabled={live}
               onClick={() => {
                 session.persistence.reset();
-                // A full navigation, so the world is rebuilt from the seed
-                // rather than patched in place.
                 window.location.reload();
               }}
             >
@@ -103,28 +82,32 @@ export default function Page() {
           </div>
 
           {live ? (
-            <p className="text-sm text-muted-foreground" data-testid="reset-disabled-reason">
-              چون این صفحه دادهٔ زندهٔ ماشین را نشان می‌دهد، چیزی روی این دستگاه ذخیره نمی‌شود و
-              پاک‌کردنی هم در کار نیست.
+            <p className="text-muted-foreground" data-testid="reset-disabled-reason">
+              این صفحه دادهٔ زندهٔ ماشین را نشان می‌دهد، پس چیزی روی این دستگاه ذخیره نمی‌شود.
             </p>
           ) : null}
 
-          <ul className="grid gap-2 sm:grid-cols-2" data-testid="scenario-list">
+          {/*
+            One line per scenario, not a card each.
+
+            This was twenty-four two-line cards carrying the recorded English
+            setup sentence, and it made the page mostly scenario list — on a
+            surface whose actual job is one credential and one reset. The id and
+            the name locate a scenario; the sentence is reference detail that
+            belongs in the document it was quoted from.
+          */}
+          <ul
+            className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-3"
+            data-testid="scenario-list"
+          >
             <li>
-              <ScenarioRow
-                id="BASE"
-                nameFa={BASE_WORLD_LABEL_FA}
-                setup="جهان پایهٔ کامل با هفت پروژه، بدون هیچ پوشش سناریویی."
-                active={active === "BASE"}
-              />
+              <ScenarioRow id="BASE" nameFa={BASE_WORLD_LABEL_FA} active={active === "BASE"} />
             </li>
             {scenarios.map((scenario) => (
               <li key={scenario.id}>
                 <ScenarioRow
                   id={scenario.id}
                   nameEn={scenario.name}
-                  setup={scenario.setup}
-                  acceptanceId={scenario.acceptanceId}
                   active={active === scenario.id}
                 />
               </li>
@@ -132,35 +115,28 @@ export default function Page() {
           </ul>
         </CardContent>
       </Card>
-
-      <ProviderKeyCard />
     </div>
   );
 }
 
 /**
- * A scenario row.
+ * One scenario, one line.
  *
- * `nameEn` and its setup line are the RECORDED names of the (18 §7.2) scenario
- * list, pinned 1:1 by `scenarios.test.ts` against a committed copy — translating
- * them would break that guard and lose the link to the specification. They are
- * therefore marked as reference text rather than passed off as interface
- * language: `lang="en" dir="ltr"` so a screen reader pronounces them correctly
- * instead of reading English letters as Persian.
+ * `nameEn` is the RECORDED name of the (18 §7.2) scenario list, pinned 1:1 by
+ * `scenarios.test.ts` against a committed copy — translating it would break that
+ * guard and lose the link to the specification. It is marked as reference text
+ * rather than passed off as interface language: `lang="en" dir="ltr"`, so a
+ * screen reader pronounces it instead of reading English letters as Persian.
  */
 function ScenarioRow({
   id,
   nameFa,
   nameEn,
-  setup,
-  acceptanceId,
   active,
 }: {
   id: string;
   nameFa?: string;
   nameEn?: string;
-  setup: string;
-  acceptanceId?: string;
   active: boolean;
 }) {
   const href = id === "BASE" ? "/studio/settings" : `/studio/settings?scenario=${id}`;
@@ -170,37 +146,19 @@ function ScenarioRow({
       data-testid="scenario-option"
       data-scenario={id}
       aria-current={active ? "true" : undefined}
-      className={`block rounded-md border p-2 transition-colors hover:bg-accent ${
-        active ? "border-selected bg-selected/10" : "border-border"
+      className={`flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-accent ${
+        active ? "bg-selected/15 font-medium" : ""
       }`}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline">
-          {/* The recorded scenario id, quoted verbatim like the names above. */}
-          <bdi lang="en" dir="ltr">
-            {id}
-          </bdi>
-        </Badge>
-        {nameFa === undefined ? null : <span className="font-medium">{nameFa}</span>}
-        {nameEn === undefined ? null : (
-          <span className="font-medium" lang="en" dir="ltr">
-            {nameEn}
-          </span>
-        )}
-        {acceptanceId === undefined || acceptanceId === "-" ? null : (
-          <Badge variant="secondary">
-            <bdi dir="ltr">{acceptanceId}</bdi>
-          </Badge>
-        )}
-        {active ? <Badge>فعال</Badge> : null}
-      </div>
-      <p
-        className="pt-1 text-xs text-muted-foreground"
-        lang={nameEn === undefined ? undefined : "en"}
-        dir={nameEn === undefined ? undefined : "ltr"}
-      >
-        {setup}
-      </p>
+      <bdi lang="en" dir="ltr" className="shrink-0 font-mono text-xs text-muted-foreground">
+        {id}
+      </bdi>
+      {nameFa === undefined ? null : <span className="truncate">{nameFa}</span>}
+      {nameEn === undefined ? null : (
+        <span className="truncate" lang="en" dir="ltr">
+          {nameEn}
+        </span>
+      )}
     </a>
   );
 }
