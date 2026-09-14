@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { Suspense, type ReactNode } from "react";
-import { Badge, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
+import { Badge, BrandMark, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
 import { StudioSidebar } from "./_shell/studio-sidebar";
 import { DemoProviders } from "../../lib/demo/providers";
 
@@ -42,19 +44,33 @@ function machineSessionId(): string | null {
   return session.trim();
 }
 
+/** Resolved once per render, on the server. */
+function wordmarkPresent(): boolean {
+  return existsSync(join(process.cwd(), "public", "brand", "drop-wordmark.svg"));
+}
+
 export default function StudioLayout({ children }: { children: ReactNode }) {
+  const hasWordmark = wordmarkPresent();
+
   const machineSession = machineSessionId();
 
   return (
     <DemoProviders machineSessionId={machineSession}>
       <SidebarProvider>
         <Suspense fallback={null}>
-          <StudioSidebar />
+          <StudioSidebar hasWordmark={hasWordmark} />
         </Suspense>
         <SidebarInset>
           <header className="drop-material flex h-14 items-center gap-2 border-b border-border px-4">
             <SidebarTrigger aria-label="نمایش یا پنهان‌کردن منو" />
-            <p className="text-sm text-muted-foreground">دراپ او اس — ماژول استودیو</p>
+            {/*
+              The mark, then what this module is. Resolved on the SERVER — the
+              wordmark either exists in `public/brand/` or it does not, and
+              asking the browser to find that out means a 404 in every visitor's
+              console (see `public/brand/README.md`).
+            */}
+            <BrandMark hasWordmark={hasWordmark} className="text-sm" />
+            <span className="text-sm text-muted-foreground">ماژول استودیو</span>
             {/*
               The ONE demo marker (ADR-0020 D6). The brief removed the repeated
               per-surface simulation notices; this is what keeps 18 §12 true

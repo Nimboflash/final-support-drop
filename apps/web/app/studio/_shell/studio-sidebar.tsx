@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
 import {
+  BrandMark,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -32,7 +33,7 @@ import { SECONDARY_NAV, STUDIO_NAV, isNavItemActive } from "./studio-nav";
  * screen-reader user had no navigation landmark to jump to, and no test noticed
  * because nothing had queried the landmark before.
  */
-export function StudioSidebar() {
+export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
   const pathname = usePathname();
   /*
     The project filter has to survive a move between destinations. It is the
@@ -47,7 +48,14 @@ export function StudioSidebar() {
   return (
     <Sidebar side="right" collapsible="icon">
       <SidebarHeader>
-        <p className="px-2 py-1 text-lg font-bold tracking-tight">DROP OS</p>
+        {/*
+          The sidebar carries the mark alone. «OS» was doing no work beside a
+          nav that is entirely this product — and the wordmark is the primary
+          identifier (Brand DNA §538), not a wordmark-plus-suffix.
+        */}
+        <div className="px-2 py-1">
+          <BrandMark hasWordmark={hasWordmark} className="text-lg" />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>

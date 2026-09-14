@@ -186,7 +186,11 @@ test.describe("/studio shell (AC-P1.9)", () => {
     test(`shell holds and snapshots at ${bp.name} (${bp.width}x${bp.height})`, async ({ page }) => {
       await page.setViewportSize({ width: bp.width, height: bp.height });
       await page.goto("/studio");
-      await expect(page.getByText("دراپ او اس — ماژول استودیو")).toBeVisible();
+      // The shell has rendered when its mark has. Waiting on a literal string
+      // made this a copy test: it broke when «دراپ او اس» became the actual
+      // wordmark, which is a change to the header, not to whether the shell
+      // holds at this width.
+      await expect(page.getByTestId("brand-mark").first()).toBeVisible();
       // Wait for the surface's own content so the baseline is stable.
       await expect(page.getByTestId("project-card").first()).toBeVisible();
       await expect(page).toHaveScreenshot(`studio-shell-${bp.name}.png`, { fullPage: false });
