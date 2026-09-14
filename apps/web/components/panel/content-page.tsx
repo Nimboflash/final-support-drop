@@ -155,8 +155,8 @@ export function ContentPage({ world }: { world: PanelSnapshot }) {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">محتوا</h1>
+      <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
+        <h1 className="text-3xl font-bold tracking-tight">محتوا</h1>
         <ProjectSelector world={world} />
       </header>
 

@@ -122,7 +122,7 @@ export function EnginePage({ world }: { world: PanelSnapshot }) {
       <div className={isMobile ? "space-y-4" : "grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"}>
         <GraphCanvas graph={graph} onSelect={setSelected} />
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold">مرحله‌ها</h2>
+          <h2 className="text-lg font-semibold">مرحله‌ها</h2>
           <p className="text-xs text-muted-foreground">
             این فهرست معادل دسترس‌پذیر نمودار است و با صفحه‌کلید کار می‌کند.
           </p>
@@ -145,9 +145,9 @@ function EngineHeader({
   lastSyncedAt?: string;
 }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
+    <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Engine</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Engine</h1>
         {lastSyncedAt === undefined ? null : (
           <p className="text-xs text-muted-foreground">
             {/*
