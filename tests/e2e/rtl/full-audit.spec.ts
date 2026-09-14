@@ -234,13 +234,24 @@ test.describe("primary actions actually change state", () => {
     expect(filtered).toBeGreaterThan(0);
   });
 
-  test("a scenario can be selected from settings", async ({ page }) => {
-    await page.goto("/studio/settings", { waitUntil: "networkidle" });
-    const options = page.getByTestId("scenario-option");
-    expect(await options.count()).toBeGreaterThan(20);
-    await options.filter({ hasText: "S05" }).first().click();
-    await page.waitForURL("**/studio/settings?scenario=S05");
+  /*
+    The settings picker was deleted, and this test moved with it rather than
+    losing what it guarded.
+
+    Brief §7 asks for the mock data and its states to be KEPT for testing
+    scenarios, and doc 18 §7.2 requires the scenarios to exist. Neither asks for
+    a chooser on a product surface — twenty-four English names and codes were a
+    convenience this build added, on the one page an owner visits to do a real
+    thing. The MECHANISM is what was recorded, so the mechanism is what is
+    asserted: a scenario is selected by URL, and the panel says which one it is
+    showing.
+  */
+  test("a scenario is selected by URL, and the panel says which one", async ({ page }) => {
+    await page.goto("/studio/settings?scenario=S05", { waitUntil: "networkidle" });
     await expect(page.getByTestId("active-scenario")).toContainText("S05");
+
+    await page.goto("/studio/settings", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("active-scenario")).toContainText("BASE");
   });
 
   test("the selected scenario changes the world", async ({ page }) => {

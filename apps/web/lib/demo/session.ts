@@ -1,6 +1,5 @@
 import {
   BASE_WORLD_ID,
-  SCENARIOS,
   createDemoPersistence,
   createFixedClock,
   loadScenario,
@@ -179,32 +178,4 @@ function createMockSession(scenarioId: string): DemoSession {
     hydration: stored.outcome,
     machineSessionId: null,
   };
-}
-
-/**
- * The scenario catalogue, re-exported for the settings surface.
- *
- * Surfaces must not import `@drop/mock-data` — the ESLint zone forbids it, and
- * the point of that ban is that a component never depends on fixture SHAPES.
- * A read-only list of scenario ids and descriptions is demo METADATA the
- * settings page legitimately shows, so it crosses here, at the composition
- * root, rather than by widening the zone.
- */
-/** Shown for the un-narrowed base world in the scenario picker. */
-export const BASE_WORLD_LABEL_FA = "جهان پایهٔ نمایشی";
-
-export interface ScenarioSummary {
-  readonly id: string;
-  readonly name: string;
-  readonly setup: string;
-  readonly acceptanceId: string;
-}
-
-export function scenarioCatalogue(): readonly ScenarioSummary[] {
-  return SCENARIOS.map((scenario) => ({
-    id: scenario.id,
-    name: scenario.name,
-    setup: scenario.setup,
-    acceptanceId: scenario.acceptanceId,
-  }));
 }
