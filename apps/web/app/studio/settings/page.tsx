@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@drop/ui";
+import { ThemeControl } from "../../../components/panel/theme-control";
 import { ProviderKeyCard } from "../../../components/panel/provider-key-card";
 import { useDemoSession } from "../../../lib/demo/providers";
 
@@ -37,6 +38,19 @@ export default function Page() {
 
       {/* The one thing on this page a person comes here to DO, first. */}
       <ProviderKeyCard />
+
+      <Card className="drop-material gap-3">
+        <CardHeader>
+          <CardTitle className="text-base">ظاهر</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">
+            پنل روی تیره ساخته شده، اما روشن هم کار می‌کند. می‌توانید یکی را انتخاب کنید یا بگذارید
+            از سیستم پیروی کند.
+          </p>
+          <ThemeControl />
+        </CardContent>
+      </Card>
 
       <Card className="drop-material gap-3">
         <CardHeader>
