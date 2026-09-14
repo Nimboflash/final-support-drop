@@ -57,7 +57,32 @@ def _mock_service() -> SessionService:
     return SessionService(settings, MockBackend())
 
 
+def _load_service_env() -> None:
+    """Put `services/concept-portfolio/.env` into the environment.
+
+    The service calls `load_dotenv()` with no path, which searches from the
+    PROCESS's working directory — and this launcher runs from the repository
+    root, where there is no `.env` and where one would not be gitignored
+    anyway (`.gitignore` covers exactly the service's own path). So the file
+    the panel writes would never be found.
+
+    Read here instead, and never with `override`: a variable already exported
+    into the environment is a deliberate act by whoever started this, and it
+    outranks a file.
+    """
+    env_path = Path(__file__).resolve().parent.parent / "services" / "concept-portfolio" / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        trimmed = line.strip()
+        if not trimmed or trimmed.startswith("#") or "=" not in trimmed:
+            continue
+        name, _, value = trimmed.partition("=")
+        os.environ.setdefault(name.strip(), value.strip())
+
+
 def main() -> None:
+    _load_service_env()
     backend = os.getenv("DROP_BACKEND", "openrouter").strip().lower()
     if backend == "mock":
         # Rebound on the module, so every route resolves it at call time.
@@ -65,7 +90,12 @@ def main() -> None:
 
     host = os.getenv("DROP_MACHINE_HOST", "127.0.0.1")
     port = int(os.getenv("DROP_MACHINE_PORT", "8000"))
-    print(f"concept-portfolio on http://{host}:{port} (backend={backend})", flush=True)
+    # Whether a credential is present, never what it is.
+    credential = "set" if os.getenv("OPENROUTER_API_KEY") else "absent"
+    print(
+        f"concept-portfolio on http://{host}:{port} (backend={backend}, credential={credential})",
+        flush=True,
+    )
     uvicorn.run(api_mod.app, host=host, port=port, log_level="info")
 
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@drop/ui";
+import { ProviderKeyCard } from "../../../components/panel/provider-key-card";
 import { useDemoSession } from "../../../lib/demo/providers";
 import { BASE_WORLD_LABEL_FA, scenarioCatalogue } from "../../../lib/demo/session";
 
@@ -132,45 +133,7 @@ export default function Page() {
         </CardContent>
       </Card>
 
-      <Card className="gap-3">
-        <CardHeader>
-          <CardTitle className="text-base">وضعیت اتصال</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {/*
-            This card's entire job is to state what is and is not connected, so
-            it is the first thing that becomes a lie when something is. Every
-            sentence here inverts with the mode; none of them is a constant.
-          */}
-          {live ? (
-            <>
-              <p>
-                <Badge variant="outline" data-testid="connection-state">
-                  متصل
-                </Badge>{" "}
-                این صفحه یک جلسهٔ زندهٔ ساخت کانسپت و پژوهش را می‌خواند. تصمیم‌ها هنوز از اینجا
-                ثبت نمی‌شوند.
-              </p>
-              <p className="text-muted-foreground">
-                نشانی سرویس فقط روی سرور نگهداری می‌شود و هرگز به مرورگر نمی‌رسد.
-              </p>
-            </>
-          ) : (
-            <>
-              <p>
-                <Badge variant="outline" data-testid="connection-state">
-                  متصل نیست
-                </Badge>{" "}
-                ماشین‌های ۰۱ تا ۰۵ در این نسخه ساخته نشده‌اند و از طریق آداپتور بعداً وصل
-                می‌شوند.
-              </p>
-              <p className="text-muted-foreground">
-                این پنل هیچ کلید API‌ای نگه نمی‌دارد و به هیچ ارائه‌دهنده‌ای وصل نمی‌شود.
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <ProviderKeyCard />
     </div>
   );
 }
