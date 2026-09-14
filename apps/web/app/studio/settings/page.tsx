@@ -42,9 +42,21 @@ export default function Page() {
 
       <Card className="drop-material gap-3">
         <CardHeader>
-          <CardTitle className="text-base">جهان نمایشی</CardTitle>
+          <CardTitle className="text-base">دادهٔ نمونه برای بررسی</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
+          {/*
+            The owner asked what «جهان نمایشی» even was — a fair question, and
+            the honest answer is that the card was named after the thing the
+            code calls it. The scenarios are the twenty-four recorded review
+            situations; a person cannot be expected to infer that from an
+            English name and a number. One sentence, saying what it is FOR.
+          */}
+          <p className="text-muted-foreground">
+            پنل با دادهٔ نمونه کار می‌کند تا بدون ماشین هم بشود آن را بررسی کرد. هر ردیف پایین یک
+            وضعیت مشخص را می‌سازد — مثلاً وقتی کانسپتی کنار گذاشته شده یا ساخت خروجی شکست خورده —
+            تا ببینید پنل در آن وضعیت چه نشان می‌دهد. روی کار واقعی شما اثری ندارد.
+          </p>
           {session.hydration === "UNUSABLE" ? (
             <p
               role="alert"
