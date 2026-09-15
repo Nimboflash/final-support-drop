@@ -263,7 +263,19 @@
   --drop-danger: #d1687b; /* DERIVED — L* 57.0, C 44.2, hue 11.7°; 4.75:1 on a card, 5.33:1 on the page */
   --destructive: var(--drop-danger);
   --destructive-foreground: var(--drop-charcoal);
-  --drop-graphite: #606263; /* DERIVED — Aluminium 48.5% over Charcoal; 3.06:1, the minimum a control boundary may be */
+  /*
+    Solved against the CARD, not the page — and the difference is the defect.
+
+    48.5% reached exactly 3.06:1 on `--background`, which looked like it cleared
+    the bar by a hair. But almost no field in this panel sits on the page: every
+    input, textarea and select in the studio is inside a Card, where the same
+    value measured 2.72:1 and failed. The boundary was derived against the one
+    surface it is rarely drawn on.
+
+    53% clears the stricter of the two, so it clears both: 3.02:1 on a card,
+    3.40:1 on the page.
+  */
+  --drop-graphite: #67696b; /* DERIVED — Aluminium 53% over Charcoal; 3.02:1 on a card, 3.40:1 on the page */
   --input: var(--drop-graphite);
   /* Aluminium's own usage note names it "secondary text and neutral accents",
      which is precisely this role — so dark reads the approved colour directly

@@ -65,6 +65,9 @@
   /* The scrim behind every sheet and dialog. It was Tailwind's own `black`
      until the theme claimed it — see theme.css. */
   --color-overlay: var(--overlay);
+  /* The scrim behind every sheet and dialog. It was Tailwind's own `black`
+     until the theme claimed it — see theme.css. */
+  --color-overlay: var(--overlay);
   --color-node-surface: var(--node-surface);
   --color-edge-stroke: var(--edge-stroke);
   --color-table-header-bg: var(--table-header-bg);
@@ -79,7 +82,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground font-sans;

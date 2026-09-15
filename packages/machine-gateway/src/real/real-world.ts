@@ -326,14 +326,56 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
             retryable: false,
           });
         }
+
+        /*
+          Two machine calls, and the order of the checks below is what stops
+          them half-applying.
+
+          `approve_concept` is free and succeeds unconditionally;
+          `portfolio/build` is paid and refuses over an existing portfolio. Run
+          blind, selecting a SECOND concept therefore did both things wrong at
+          once: the approval landed, the build was refused, and the machine was
+          left pointing at a concept whose research had never been made — while
+          the panel said to try again, which could only fail the same way.
+
+          So the state is read first and the refusal happens BEFORE anything is
+          written. Nothing here half-applies.
+        */
+        const rounds = session.concept_rounds[session.concept_rounds.length - 1];
+        const machineConceptId = rounds?.concepts[index]?.concept_id ?? null;
+        const alreadyApproved =
+          machineConceptId !== null && session.approved_concept_id === machineConceptId;
+
+        if (session.portfolio !== null && !alreadyApproved) {
+          // Switching concepts means paying for a second portfolio over the
+          // first. That is a deliberate purchase, not a side effect of a click.
+          throw new GatewayError(
+            "INVALID_STATE_TRANSITION",
+            "INVALID_STATE_TRANSITION: this session already has research built for another concept",
+            { retryable: false },
+          );
+        }
+
         const base = {
           expectedRounds: session.concept_rounds.length,
           expectedStatus: session.status,
         };
-        const afterApprove = await client.approveConcept(options.sessionId, {
-          ...base,
-          conceptIndex: index,
-        });
+
+        /*
+          The approval is SKIPPED when it is already recorded, which is what
+          makes a failed build recoverable.
+
+          A build can fail on its own — the model call is the part that can time
+          out or come back unparseable — and when it did, the concept was left
+          approved with no research, and pressing the only button that builds
+          one re-ran the approval and hit the guard above. The session was
+          stranded with no way forward. Now the same press retries just the half
+          that failed.
+        */
+        const afterApprove = alreadyApproved
+          ? session
+          : await client.approveConcept(options.sessionId, { ...base, conceptIndex: index });
+
         await client.buildPortfolio(options.sessionId, {
           expectedRounds: afterApprove.concept_rounds.length,
           expectedStatus: afterApprove.status,

@@ -181,12 +181,36 @@ export function outputsFor(world: PanelSnapshot): readonly OutputView[] {
     const snapshot = world.packages.find((p) => p.projectId === project.id);
     const entry = world.calendar.find((c) => c.projectId === project.id);
 
+    /*
+      Readiness is a fact about the REVIEW, not about whether an assembly
+      exists — and conflating the two made the panel say the opposite of what
+      was true.
+
+      `snapshot !== undefined ? "approved"` was written when a package only ever
+      appeared after content had been approved, so its existence implied the
+      review. That stopped being true the moment the machine's portfolio was
+      projected as a package: the machine builds it in one call, before anyone
+      has looked at anything. The card then read «تأییدشده» over a sheet saying
+      «هنوز محتوایی تأیید نشده», and «ارسال به تقویم» went live on an output
+      containing nothing.
+
+      So the ladder asks about the review first. A plan with nothing REQUIRED —
+      which is every machine session — still needs one approval before there is
+      an output at all: zero approved items is not a finished output, it is an
+      empty one.
+    */
+    const approvedIds = new Set(
+      items.filter((item) => contentStateOf(item) === "approved").map((item) => item.id),
+    );
+    const requiredMet = project.outputPlan.requiredContentIds.every((id) => approvedIds.has(id));
+    const reviewed = requiredMet && approvedIds.size > 0;
+
     const state: OutputState =
       entry !== undefined && entry.date !== null
         ? "scheduled"
-        : snapshot !== undefined
+        : reviewed && snapshot !== undefined
           ? "approved"
-          : approved === items.length && items.length > 0
+          : reviewed
             ? "ready_for_approval"
             : "assembling";
 

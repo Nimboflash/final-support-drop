@@ -89,6 +89,14 @@ export function ConceptDetail({
   const displayed = concept.pendingRevisionId ?? concept.activeVersionId;
   const active = versions.find((v) => v.id === displayed) ?? versions[versions.length - 1];
   const state = conceptStateOf(concept);
+  /*
+    Whether the research this concept was selected FOR actually exists.
+
+    The machine builds content only from an approved concept, so an approved
+    concept with no content is a build that did not finish — the one state the
+    panel previously had no way out of.
+  */
+  const hasContent = world.content.some((item) => item.conceptId === concept.id);
   const target = { type: "CONCEPT" as const, id: concept.id, versionId: concept.activeVersionId };
   // Captured once: the closures below run after a render in which `concept`
   // is narrowed, and TypeScript cannot see that through the callback.
@@ -220,9 +228,21 @@ export function ConceptDetail({
         </div>
 
         <div className="mt-auto flex flex-wrap gap-2 border-t p-4" data-testid="concept-actions">
+          {/*
+            «انتخاب» is two machine calls — record the choice, then build the
+            research from it — and only the second can fail on its own. When it
+            did, the concept sat «انتخاب‌شده» with no content under it and this
+            button was disabled on exactly that state, so the one control that
+            builds research refused to build any. The session had no way
+            forward.
+
+            So the disable asks whether the WORK landed, not whether the
+            decision did. A selected concept with nothing under it is an
+            unfinished job, and pressing this retries the half that failed.
+          */}
           <Button
             data-testid="select-concept"
-            disabled={review.isPending || state === "selected"}
+            disabled={review.isPending || (state === "selected" && hasContent)}
             onClick={() =>
               review.mutate(
                 {
@@ -237,7 +257,7 @@ export function ConceptDetail({
               )
             }
           >
-            انتخاب برای تولید محتوا
+            {state === "selected" && !hasContent ? "ساخت دوبارهٔ محتوا" : "انتخاب برای تولید محتوا"}
           </Button>
           <Button
             variant="ghost"

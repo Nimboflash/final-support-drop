@@ -21,7 +21,7 @@ function ScrollArea({
         // WCAG 2.1.1: a scrollable region must be keyboard-operable even when
         // its content has no focusable children (axe: scrollable-region-focusable).
         tabIndex={0}
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-1"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

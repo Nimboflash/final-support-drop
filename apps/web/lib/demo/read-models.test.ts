@@ -150,3 +150,51 @@ describe("an output is the approved content, not all of it", () => {
     expect(withUnapproved!.totalCount).toBeGreaterThan(withUnapproved!.approvedCount);
   });
 });
+
+describe("an output's state follows the review, not the assembly", () => {
+  /*
+    `snapshot !== undefined ? "approved"` was written when a package only ever
+    appeared AFTER content was approved, so its existence implied the review.
+    Projecting the machine's portfolio as a package broke that implication: the
+    machine builds it in one call, before anyone has looked at anything. The
+    card then read «تأییدشده» over a sheet saying «هنوز محتوایی تأیید نشده», and
+    «ارسال به تقویم» went live on an output containing nothing at all.
+  */
+  it("never calls an output approved while nothing in it is", () => {
+    const world = loadScenario(BASE_WORLD_ID).snapshot;
+    for (const output of outputsFor(world)) {
+      if (output.state === "approved" || output.state === "scheduled") {
+        expect(
+          output.contentIds.length,
+          `${output.conceptId} reads ${output.state} with nothing approved in it`,
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("holds an unscheduled output with no approvals at «در حال تکمیل», so it cannot be sent", () => {
+    /*
+      `assembling` is what disables «ارسال به تقویم», so an output nobody has
+      reviewed must land there.
+
+      Already-SCHEDULED outputs are excluded, and that is not a loophole: a date
+      is a fact about the calendar rather than about the review, and an entry
+      that exists was necessarily created from an output that could be sent. An
+      output cannot arrive at a date without passing through this rung.
+    */
+    const world = loadScenario(BASE_WORLD_ID).snapshot;
+    const bare = outputsFor({
+      ...world,
+      content: world.content.map((item) => ({ ...item, reviewStatus: "IN_REVIEW" as const })),
+    });
+    const unscheduled = bare.filter((output) => output.scheduledDate === null);
+    expect(unscheduled.length, "the base world must contain an unscheduled output").toBeGreaterThan(
+      0,
+    );
+    for (const output of unscheduled) {
+      expect(output.state, `${output.conceptId} is sendable with nothing approved`).toBe(
+        "assembling",
+      );
+    }
+  });
+});

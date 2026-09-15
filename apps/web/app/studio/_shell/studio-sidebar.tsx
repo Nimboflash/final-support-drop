@@ -77,6 +77,16 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
                       <SidebarMenuButton
                         asChild
                         isActive={active}
+                        /*
+                          The rail is `collapsible="icon"`, and collapsed it
+                          showed six bare icons with no names — a keyboard user
+                          got nothing at all, because focusing an icon surfaced
+                          no label anywhere. `SidebarMenuButton` has carried a
+                          `tooltip` prop the whole time and nothing passed one,
+                          so the component rendered its no-tooltip branch and
+                          the collapse quietly removed the navigation's meaning.
+                        */
+                        tooltip={item.label}
                         // The active destination is the one place the brand accent
                         // tints a surface (ADR-0019 D14). Position is never the
                         // only cue: aria-current carries it too.

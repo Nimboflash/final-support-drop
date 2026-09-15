@@ -138,6 +138,11 @@ const PAIRINGS: readonly Pairing[] = [
 
   // Boundaries: seen, never read.
   { where: "control boundary — --input on the page", fg: "--input", on: "--background", target: SEEN_AS_A_BOUNDARY },
+  // Added because the light theme's outline Button had no measured boundary at
+  // all: it drew a bare `border`, which resolves to --border (1.87:1 on the
+  // page), while every other control used --input. Measuring the token on both
+  // surfaces is what makes "use the derived control boundary" checkable.
+  { where: "control boundary — --input on a card", fg: "--input", on: "--card", target: SEEN_AS_A_BOUNDARY },
   { where: "focus ring — --ring on the page", fg: "--ring", on: "--background", target: SEEN_AS_A_BOUNDARY },
   { where: "focus ring — --ring on a card", fg: "--ring", on: "--card", target: SEEN_AS_A_BOUNDARY },
   { where: "state border — border-warning on a card", fg: "--warning", on: "--card", target: SEEN_AS_A_BOUNDARY },
@@ -238,7 +243,7 @@ describe("theme contrast (WCAG 2.2 AA, 09 §3)", () => {
    * A FILL may still be diluted: `bg-warning/10` is checked above, where what
    * matters is the text on top rather than the tint itself.
    */
-  it("no state border is diluted with an alpha", () => {
+  it("no state border or focus ring is diluted with an alpha", () => {
     const roots = [
       join(__dirname, "..", "..", "apps", "web"),
       join(__dirname, "..", "..", "packages", "ui", "src"),
@@ -255,7 +260,24 @@ describe("theme contrast (WCAG 2.2 AA, 09 §3)", () => {
         }
         if (!/\.tsx?$/.test(entry.name)) continue;
         for (const m of readFileSync(full, "utf8").matchAll(
-          /\bborder-(?:[se]-)?(selected|success|warning|destructive|attention)\/\d+/g,
+          /*
+            Two shapes, and the second was the one nobody could see.
+
+            A state BORDER thinned with an alpha cannot reach 3:1 — the original
+            rule. A FOCUS RING thinned the same way is worse, because on the
+            borderless button variants it is the only indicator there is, and
+            every control in the kit carried `ring-ring/50`: 2.16:1 on a dark
+            card, against the 3:1 this same file asserts `--ring` reaches at full
+            strength. A guard that measured the token while ignoring how the
+            token was rendered was measuring the wrong thing.
+
+            `ring-destructive/20` is deliberately NOT matched. That is a halo
+            behind a full-strength `aria-invalid:border-destructive` — the border
+            is the indicator and the wash is decoration. A rule that could not
+            tell those apart would force a change that makes invalid fields
+            louder without making anything more legible.
+          */
+          /\b(?:border-(?:[se]-)?(?:selected|success|warning|destructive|attention)|(?:ring|outline)-ring)\/\d+/g,
         )) {
           offenders.push(`${full}: ${m[0]}`);
         }
