@@ -139,7 +139,17 @@ export interface OutputView {
   readonly titleFa: string;
   readonly projectTitleFa: string;
   readonly state: OutputState;
+  /**
+   * What the output IS — the approved content, and only that.
+   *
+   * Not every content item under the concept. An output is the thing that gets
+   * published, so listing the unapproved alongside it was showing a person a
+   * set they had not agreed to and calling it their output. The counts below
+   * still run over EVERY item, because "three still need a source" is only
+   * meaningful against the whole.
+   */
   readonly contentIds: readonly string[];
+  /** Over all of the concept's content, not over `contentIds`. */
   readonly approvedCount: number;
   readonly totalCount: number;
   /** Plain-language statement of what is missing, or null when nothing is. */
@@ -186,7 +196,11 @@ export function outputsFor(world: PanelSnapshot): readonly OutputView[] {
       titleFa: version?.titleFa ?? "کانسپت بدون عنوان",
       projectTitleFa: project.titleFa,
       state,
-      contentIds: items.map((i) => i.id),
+      // Approved only. The docblock above this interface has always said an
+      // output is "the assembled set of one concept's APPROVED content"; the
+      // code took every item regardless, so an output opened mid-review listed
+      // everything the machine had produced as though it were the deliverable.
+      contentIds: items.filter((i) => contentStateOf(i) === "approved").map((i) => i.id),
       approvedCount: approved,
       totalCount: items.length,
       blockerFa: blockerFor(states),

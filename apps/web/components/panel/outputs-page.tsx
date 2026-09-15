@@ -15,6 +15,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  toPersianDigits,
   useIsMobile,
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
@@ -185,6 +186,26 @@ function OutputDetail({
         </SheetHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-2">
+          {/*
+            Named, because the list is a SUBSET and an unlabelled one reads as
+            "everything there is". The count beside it is the honest pair: what
+            is in the output, out of what the concept produced.
+          */}
+          <div className="drop-rule flex items-baseline justify-between gap-2 pb-1">
+            <h3 className="text-sm font-medium">محتواهای تأییدشده</h3>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {toPersianDigits(String(output.approvedCount))} از{" "}
+              {toPersianDigits(String(output.totalCount))}
+            </span>
+          </div>
+
+          {items.length === 0 ? (
+            <p data-testid="output-empty" className="text-sm text-muted-foreground">
+              هنوز محتوایی تأیید نشده، پس این خروجی چیزی برای نشان‌دادن ندارد. در «محتوا»
+              هر مورد را بررسی و تأیید کنید.
+            </p>
+          ) : null}
+
           <ul className="space-y-2" data-testid="output-materials">
             {items.map((item) => {
               const version = world.contentVersions.find((v) => v.id === item.activeVersionId);

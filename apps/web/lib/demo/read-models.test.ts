@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { loadScenario } from "@drop/mock-data";
+import { BASE_WORLD_ID, loadScenario } from "@drop/mock-data";
 import {
   attentionRows,
   openReviewCount,
   readinessFor,
   unscheduledEntries,
 } from "./read-models";
+import { contentStateOf, outputsFor } from "./presentation";
 
 /**
  * Ticket P4, component seam — the read models, exercised against real scenario
@@ -105,5 +106,47 @@ describe("the unscheduled tray is PLANNED with a null date (ADR-0019 D7)", () =>
       expect(["PLANNED", "CONFIRMED", "DONE", "CANCELLED"]).toContain(entry.status);
     }
     for (const entry of unscheduledEntries(world)) expect(entry.date).toBeNull();
+  });
+});
+
+describe("an output is the approved content, not all of it", () => {
+  /*
+    `OutputView`'s own docblock has always said an output is "the assembled set
+    of one concept's APPROVED content". The code took every item under the
+    concept regardless of its review state, so an output opened part-way through
+    a review listed everything the machine had produced as though it were the
+    deliverable — a set the person had not agreed to, presented as theirs.
+
+    The counts are the deliberate exception and stay over the WHOLE set: "۲ از ۱۸"
+    only means something against everything the concept produced.
+  */
+  const world = loadScenario(BASE_WORLD_ID).snapshot;
+
+  it("lists only approved content as the output's materials", () => {
+    for (const output of outputsFor(world)) {
+      const items = world.content.filter((item) => output.contentIds.includes(item.id));
+      expect(items.length, "an output must not be empty of the thing it counts").toBe(
+        output.contentIds.length,
+      );
+      for (const item of items) {
+        expect(
+          contentStateOf(item),
+          `${item.id} is in an output while it is ${contentStateOf(item)}`,
+        ).toBe("approved");
+      }
+    }
+  });
+
+  it("still counts approved-of-total over every item, so the blocker reads true", () => {
+    const withUnapproved = outputsFor(world).find(
+      (output) => output.approvedCount < output.totalCount,
+    );
+    expect(
+      withUnapproved,
+      "the base world must contain a part-reviewed concept for this to mean anything",
+    ).toBeDefined();
+    // The materials shrink to the approved set; the denominator does not.
+    expect(withUnapproved!.contentIds.length).toBe(withUnapproved!.approvedCount);
+    expect(withUnapproved!.totalCount).toBeGreaterThan(withUnapproved!.approvedCount);
   });
 });
