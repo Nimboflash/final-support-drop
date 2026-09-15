@@ -450,8 +450,26 @@ export const packageSnapshotSchema = z
     contentVersionIds: z.array(idSchema).min(1, "PACKAGE_REQUIRES_A_CONTENT_VERSION"),
     files: z.array(packageFileSchema).min(1, "PACKAGE_REQUIRES_AT_LEAST_ONE_FILE"),
     createdAt: instantSchema,
-    /** V2 04 §1 — every demo row is labelled; nothing claims real research. */
-    isMock: z.literal(true),
+    /**
+     * V2 04 §1 — every demo row is labelled; nothing claims real research.
+     *
+     * A BOOLEAN rather than `z.literal(true)`, and the widening serves the rule
+     * rather than relaxing it. The literal was written when only mock data
+     * existed, so "is this mock" had one answer and pinning it cost nothing.
+     * The machine build produces genuine research, and under the literal the
+     * only way to express a real output was to assert it was a mock — the exact
+     * claim the rule exists to prevent, inverted.
+     *
+     * The alternative was emitting no package at all, which is what the machine
+     * projection did while this was open (ADR-0021, OD-2). That is honest and
+     * unusable: a calendar entry must point at a package version, so a real
+     * session could never be scheduled, and the work dead-ended one step from
+     * the end.
+     *
+     * So the flag now says which it is. Everything seeded stays `true`; only a
+     * projection of real machine output may say `false`.
+     */
+    isMock: z.boolean(),
   })
   .strict();
 export type PackageSnapshot = z.infer<typeof packageSnapshotSchema>;

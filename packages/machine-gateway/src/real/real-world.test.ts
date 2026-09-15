@@ -166,7 +166,6 @@ describe("what the machine cannot do still refuses, and says something true", ()
     ["addComment", () => world.panelCommandGateway.addComment({} as never)],
     ["selectConcepts", () => world.panelCommandGateway.selectConcepts({} as never)],
     ["amendOutputPlan", () => world.panelCommandGateway.amendOutputPlan({} as never)],
-    ["updateCalendar", () => world.panelCommandGateway.updateCalendar({} as never)],
     ["updateCalendarPackage", () => world.panelCommandGateway.updateCalendarPackage({} as never)],
     ["subscribe", () => world.panelCommandGateway.subscribe(() => {})],
     ["submitApproval", () => world.machineGateway.submitApproval({} as never)],
@@ -201,6 +200,18 @@ describe("what the machine cannot do still refuses, and says something true", ()
         outcome: "REJECTED",
         target: { type: "CONCEPT", id: "mc-x", versionId: "mc-x-v1" },
       } as never),
+    ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
+  });
+
+  it("scheduling refuses only when there is nowhere to keep the date", async () => {
+    /*
+      The machine has no calendar, so a date is the panel's to keep — and a
+      world built without somewhere to keep it must say so rather than accept
+      the date and lose it. A world WITH a store schedules; that is covered in
+      the notes suite below.
+    */
+    await expect(
+      world.panelCommandGateway.updateCalendar({ entry: { id: "cal-1" } } as never),
     ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
   });
 
@@ -295,6 +306,80 @@ describe("reviewing machine content, which the machine itself cannot record", ()
         target: { type: "CONTENT", id: item!.id, versionId: item!.activeVersionId },
       } as never),
     ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
+  });
+
+  it("keeps a chosen date and shows it on the next snapshot", async () => {
+    // The last step of the work. Without somewhere to keep this, a person could
+    // approve their content, watch the output assemble, and then have nowhere
+    // to put it.
+    const store = memoryReviewStore();
+    const world = worldOver(portReturning(OK), store);
+    const before = await world.panelCommandGateway.getSnapshot();
+    expect(before.calendar, "the machine itself keeps no calendar").toEqual([]);
+
+    const entry = {
+      id: "cal-mpk-1",
+      projectId: before.projects[0]!.id,
+      packageFamilyId: "mpk-1",
+      packageVersionId: "mpk-1-v1",
+      titleFa: "خروجی آزمایشی",
+      status: "PLANNED" as const,
+      date: null,
+      endDate: null,
+      startsAt: null,
+      timezone: "Asia/Tehran" as const,
+      ownerId: "actor-guardian",
+      noteFa: "",
+      rowVersion: 0,
+    };
+    await world.panelCommandGateway.updateCalendar({
+      commandId: "c-cal",
+      idempotencyKey: "idem-c-cal",
+      entry,
+    } as never);
+
+    const after = await world.panelCommandGateway.getSnapshot();
+    expect(after.calendar).toHaveLength(1);
+    expect(after.calendar[0]!.id).toBe("cal-mpk-1");
+  });
+
+  it("keeps decisions and dates in the same store without losing either", async () => {
+    // One key holds both, so writing one must not clear the other.
+    const store = memoryReviewStore();
+    const world = worldOver(portReturning(OK), store);
+    const snapshot = await world.panelCommandGateway.getSnapshot();
+    const item = snapshot.content[0]!;
+
+    await world.review.reviewItem({
+      commandId: "c-a",
+      idempotencyKey: "idem-c-a",
+      outcome: "APPROVED",
+      reasonFa: null,
+      target: { type: "CONTENT", id: item.id, versionId: item.activeVersionId },
+    } as never);
+    await world.panelCommandGateway.updateCalendar({
+      commandId: "c-b",
+      idempotencyKey: "idem-c-b",
+      entry: {
+        id: "cal-x",
+        projectId: snapshot.projects[0]!.id,
+        packageFamilyId: "mpk-1",
+        packageVersionId: "mpk-1-v1",
+        titleFa: "خروجی",
+        status: "PLANNED" as const,
+        date: null,
+        endDate: null,
+        startsAt: null,
+        timezone: "Asia/Tehran" as const,
+        ownerId: "actor-guardian",
+        noteFa: "",
+        rowVersion: 0,
+      },
+    } as never);
+
+    const after = await world.panelCommandGateway.getSnapshot();
+    expect(after.calendar).toHaveLength(1);
+    expect(after.content.find((row) => row.id === item.id)?.reviewStatus).toBe("APPROVED");
   });
 
   it("survives a corrupt store by reading as undecided", async () => {

@@ -10,8 +10,9 @@ import type { MachineHttpPort } from "./machine-http-port";
 import { createMachineClient, isMachineSessionId, type MachineClient } from "./machine-client";
 import type { PanelWorld } from "./panel-world";
 import {
-  applyReviewLog,
-  readReviewLog,
+  applyNotes,
+  readNotes,
+  writeCalendarEntry,
   writeReviewDecision,
   type MachineReviewPort,
 } from "./review-store";
@@ -180,7 +181,7 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
         // the PERSON said is laid over it here, in the layer that knows one has
         // been here at all.
         if (options.review === undefined) return projected;
-        return applyReviewLog(projected, readReviewLog(options.review, options.sessionId));
+        return applyNotes(projected, readNotes(options.review, options.sessionId));
       },
 
       /*
@@ -205,7 +206,21 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
       addComment: () => refuse("add a comment"),
       selectConcepts: () => refuse("select concepts"),
       amendOutputPlan: () => refuse("amend the output plan"),
-      updateCalendar: () => refuse("update the calendar"),
+      /*
+        A date is the panel's to keep, because the machine has no calendar.
+
+        Its five calls say nothing about when anything is published, and the
+        projection emits no entry for exactly that reason. Refusing here as well
+        left the work a step short of done: a person could approve their content,
+        watch the output assemble, and then have nowhere to put it. So the entry
+        is written beside the session's review decisions and laid back over the
+        next snapshot, the same way and for the same reason.
+      */
+      async updateCalendar(command): Promise<CommandReceipt> {
+        if (options.review === undefined) refuse("update the calendar");
+        writeCalendarEntry(options.review, options.sessionId, command.entry);
+        return accepted(command, options.now());
+      },
       updateCalendarPackage: () => refuse("update a calendar output"),
       // Rejects rather than throws, matching the mock: an async member that
       // throws synchronously is a different failure mode for the caller.

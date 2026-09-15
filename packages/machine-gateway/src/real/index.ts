@@ -20,4 +20,5 @@ export type {
   MachineReviewDecision,
   MachineReviewOutcome,
   MachineReviewLog,
+  MachineSessionNotes,
 } from "./review-store";

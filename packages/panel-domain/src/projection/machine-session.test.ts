@@ -237,14 +237,52 @@ describe("the portfolio, and what does not survive the mapping", () => {
 });
 
 describe("what the projection refuses to fabricate", () => {
-  it("emits no package and no calendar entry", () => {
-    // `packageSnapshotSchema` pins `isMock: z.literal(true)`, so a genuine
-    // machine package cannot be expressed without claiming to be a mock, and a
-    // calendar entry needs a package version to point at. Emitting nothing is
-    // the honest option (ADR-0021, OD-2).
+  it("projects the portfolio as a package, labelled as the real thing it is", () => {
+    /*
+      This used to assert the opposite, and the reason was real while it stood:
+      `packageSnapshotSchema` pinned `isMock: z.literal(true)`, so a genuine
+      machine package could not be expressed without claiming to be a mock.
+      Emitting nothing was the honest option — and it stranded a real session
+      one step from the end, because a calendar entry must point at a package
+      version, so nothing could ever be scheduled.
+
+      OD-2 is ruled: the flag is a boolean, and a real output says `false`. The
+      package is not assembled here either — `build_portfolio` produces exactly
+      one artifact per session and this is that artifact, projected.
+    */
     const snapshot = projectMachineSession(loadSession(), OPTIONS);
-    expect(snapshot.packages).toEqual([]);
-    expect(snapshot.calendar).toEqual([]);
+    expect(snapshot.packages).toHaveLength(1);
+    const built = snapshot.packages[0]!;
+    expect(built.isMock, "real machine research must not claim to be a mock").toBe(false);
+    expect(built.projectId).toBe(snapshot.projects[0]!.id);
+    // Every id it points at must resolve, or the output detail renders nothing.
+    const versionIds = new Set(snapshot.contentVersions.map((v) => v.id));
+    for (const id of built.contentVersionIds) {
+      expect(versionIds.has(id), `${id} is not a content version in this snapshot`).toBe(true);
+    }
+    const conceptVersionIds = new Set(snapshot.conceptVersions.map((v) => v.id));
+    for (const id of built.conceptVersionIds) {
+      expect(conceptVersionIds.has(id), `${id} is not a concept version here`).toBe(true);
+    }
+  });
+
+  it("emits no calendar entry, because the machine has no calendar", () => {
+    // A package is something the machine BUILT. A date is something a person
+    // chooses, and the machine records none — so the panel owns that, and the
+    // projection must not invent one.
+    expect(projectMachineSession(loadSession(), OPTIONS).calendar).toEqual([]);
+  });
+
+  it("marks every content item optional, because a portfolio is a menu", () => {
+    /*
+      `requiredContentIds` used to list all of them, and the panel reads that as
+      "nothing is assembled until every one is approved". The machine has no
+      reject, so the only way to satisfy it was to approve material the person
+      did not want — a demand that could not be met honestly.
+    */
+    const plan = projectMachineSession(loadSession(), OPTIONS).projects[0]!.outputPlan;
+    expect(plan.requiredContentIds).toEqual([]);
+    expect(plan.optionalContentIds.length).toBeGreaterThan(0);
   });
 
   it("claims no feedback lineage the machine never recorded", () => {

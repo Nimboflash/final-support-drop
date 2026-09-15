@@ -1,4 +1,8 @@
-import { panelSnapshotSchema, type PanelSnapshot } from "../schemas/panel-product";
+import {
+  panelSnapshotSchema,
+  type PackageSnapshot,
+  type PanelSnapshot,
+} from "../schemas/panel-product";
 import type {
   MachineConceptCard,
   MachineRecommendation,
@@ -134,6 +138,74 @@ function activeVersionOf(
  * The result is parsed by `panelSnapshotSchema` before it is returned, so a
  * mapping error is a loud failure here rather than a broken surface later.
  */
+/**
+ * The machine's portfolio, projected as the output it is.
+ *
+ * `build_portfolio` produces exactly one artifact per session and the panel
+ * calls that artifact an output, so the mapping is one-to-one rather than
+ * anything assembled here. A session without a portfolio has nothing built yet
+ * and emits nothing.
+ *
+ * `isMock: false` is the whole point of OD-2 being ruled: this is real research
+ * from a real model call, and the flag exists so nothing MISTAKES mock material
+ * for real. Saying `true` here to satisfy a literal would have been the exact
+ * claim the rule was written to prevent.
+ *
+ * `files` carries the machine's own final report, which is the file a person
+ * would actually want out of this. Its bytes are not re-read here — the
+ * projection is pure and transport-free — so the entry names the report and its
+ * type, and the export path supplies the content.
+ */
+function portfolioPackage(
+  sid: string,
+  session: MachineSession,
+  concepts: readonly { readonly id: string; readonly activeVersionId: string }[],
+  content: readonly { readonly id: string; readonly activeVersionId: string }[],
+  now: string,
+): readonly PackageSnapshot[] {
+  if (session.portfolio === null) return [];
+  // A package must carry at least one concept version and one content version.
+  // Both are guaranteed the moment a portfolio exists — the machine refuses to
+  // build one without an approved concept — but a projection reads what it was
+  // given rather than trusting an invariant it cannot enforce.
+  const approved = session.approved_concept_id;
+  const conceptVersionIds =
+    approved === null
+      ? concepts.slice(0, 1).map((c) => c.activeVersionId)
+      : concepts.filter((c) => c.id === conceptId(sid, approved)).map((c) => c.activeVersionId);
+  if (conceptVersionIds.length === 0 || content.length === 0) return [];
+
+  const familyId = `mpk-${safe(sid)}`;
+  return [
+    {
+      id: `${familyId}-v1`,
+      familyId,
+      projectId: projectId(sid),
+      version: 1,
+      planRevision: 1,
+      // CURRENT: this is the live assembly of the session. STALE and HISTORICAL
+      // describe a package a newer one has superseded, and the machine keeps
+      // exactly one portfolio per session, so neither can arise here.
+      status: "CURRENT" as const,
+      conceptVersionIds,
+      contentVersionIds: content.map((item) => item.activeVersionId),
+      /*
+        One file, naming the machine's own final report.
+
+        `body` is empty and `contentVersionId` is null deliberately. This
+        projection is pure and transport-free — it is handed a parsed session,
+        never a filesystem — and the report lives in the machine's run
+        directory, which only the service can read. The entry records that the
+        report EXISTS and what it is called; anything that needs its bytes must
+        go and get them.
+      */
+      files: [{ path: "final_report.md", contentVersionId: null, body: "" }],
+      createdAt: now,
+      isMock: false,
+    },
+  ];
+}
+
 export function projectMachineSession(
   session: MachineSession,
   options: MachineProjectionOptions,
@@ -289,10 +361,27 @@ export function projectMachineSession(
         outputPlan: {
           revision: 1,
           includedConceptIds: approvedConceptId === null ? [] : [approvedConceptId],
-          // Content ITEM ids, not version ids: the package join builds
-          // `n:content-review:${id}` from these.
-          requiredContentIds: content.map((item) => item.id),
-          optionalContentIds: [],
+          /*
+            Nothing a machine portfolio contains is REQUIRED, and calling it all
+            required is what stranded the work one step from the end.
+
+            `build_portfolio` returns research — music, films, artworks,
+            readings — as a menu for a person to draw from. The panel's plan
+            model reads `requiredContentIds` as "the output is not assembled
+            until every one of these is approved", so declaring all eighteen
+            required demanded approval of every item before anything could be
+            published. And there is no way to say "this one is not needed": the
+            machine has no reject, so the demand was unsatisfiable except by
+            approving material the person did not want in their output.
+
+            Optional is the truthful reading. What gets approved is what goes in;
+            what does not is simply left out.
+
+            Content ITEM ids, not version ids: the package join builds
+            `n:content-review:${id}` from these.
+          */
+          requiredContentIds: [],
+          optionalContentIds: content.map((item) => item.id),
         },
         targetDate: null,
         createdAt: now,
@@ -332,13 +421,19 @@ export function projectMachineSession(
     comments: [],
     decisions: [],
     /*
-      Empty, and not because there is nothing to say. `packageSnapshotSchema`
-      pins `isMock: z.literal(true)`, so a genuine machine package cannot be
-      expressed without claiming to be a mock — and a calendar entry requires a
-      package version to point at. Emitting nothing is the honest option;
-      widening that literal is an open decision (ADR-0021, OD-2).
+      The machine's `portfolio` IS the assembled output, so it is projected as
+      one — this is not synthesis, it is the one artifact `build_portfolio`
+      actually produces.
+
+      It used to be empty, and the recorded reason was real: `packageSnapshotSchema`
+      pinned `isMock: z.literal(true)`, so a genuine machine package could not be
+      expressed without claiming to be a mock, and a calendar entry must point at
+      a package version. That literal is now a boolean (OD-2, ruled by the owner),
+      so a real output can say what it is — `isMock: false` — and be scheduled.
+
+      Absent a portfolio there is nothing assembled and nothing to emit.
     */
-    packages: [],
+    packages: portfolioPackage(sid, session, concepts, content, now),
     calendar: [],
   };
 
