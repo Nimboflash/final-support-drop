@@ -97,7 +97,7 @@ export function ActivityPage({ world }: { world: PanelSnapshot }) {
       ) : (
         <ul className="space-y-2" data-testid="activity-list">
           {rows.map((row) => (
-            <li key={row.id} className="rounded-md border bg-card p-3 text-sm">
+            <li key={row.id} className="drop-material rounded-md border bg-card p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline">{row.kindFa}</Badge>
                 <span className="font-medium">{row.subjectFa}</span>

@@ -71,7 +71,7 @@ function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
       data-testid="graph-node"
       data-node-class={node.nodeClass}
       data-state={node.state}
-      className={`h-full w-full overflow-hidden rounded-md border-2 bg-card p-3 text-start ${NODE_STATE_TONE[node.state]}`}
+      className={`drop-material h-full w-full overflow-hidden rounded-md border-2 bg-card p-3 text-start ${NODE_STATE_TONE[node.state]}`}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} style={HANDLE_STYLE} />
       <p className="truncate text-sm font-medium"><bdi dir="auto">{node.labelFa}</bdi></p>

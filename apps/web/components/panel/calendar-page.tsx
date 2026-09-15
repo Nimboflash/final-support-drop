@@ -176,7 +176,7 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
           ) : (
             <ul className="space-y-2" data-testid="unscheduled-tray">
               {unscheduled.map((entry) => (
-                <li key={entry.id} className="rounded-md border bg-card p-3 text-sm">
+                <li key={entry.id} className="drop-material rounded-md border bg-card p-3 text-sm">
                   <p className="font-medium"><ContentText>{entry.titleFa}</ContentText></p>
                   <p className="pb-2 text-muted-foreground">
                     {materialsSummaryFa(world, entry)}
@@ -364,7 +364,7 @@ function AgendaView({
               type="button"
               data-testid="calendar-event"
               onClick={() => onOpen(entry.id)}
-              className="flex w-full flex-wrap items-center justify-between gap-3 rounded-md border bg-card p-3 text-start"
+              className="drop-material flex w-full flex-wrap items-center justify-between gap-3 rounded-md border bg-card p-3 text-start"
             >
               <span className="font-medium"><ContentText>{entry.titleFa}</ContentText></span>
               <span className="text-sm text-muted-foreground">{formatDayFa(entry.date!)}</span>

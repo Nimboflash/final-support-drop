@@ -40,9 +40,27 @@
   --drop-oxide: #8f382d; /* APPROVED — Oxide Red */
   --drop-acid: #c8ff32; /* APPROVED — Acid Lime */
 
-  /* Derived neutrals — cool, never warm (V2 02 §1 forbids a sepia palette). */
+  /*
+    Derived neutrals — cool, never warm (V2 02 §1 forbids a sepia palette).
+
+    Every neutral in this file is now the brand's own Aluminium laid over
+    Charcoal (dark) or the brand's Charcoal laid over Paper (light), at an alpha
+    SOLVED for a contrast target rather than chosen by eye:
+
+        muted      1.16:1 against the ground
+        secondary  1.32:1
+        accent     1.50:1   (the hover step)
+        input      3.06:1   (the minimum a control boundary may be)
+
+    They read DERIVED rather than PROVISIONAL because they are no longer
+    arbitrary: they follow from approved colours and a stated target, so they
+    can be checked rather than merely accepted. Two things they fix outright —
+    `--secondary` and `--muted` were the SAME grey in dark, which is two
+    semantic roles collapsed into one and why every chip, card and tint looked
+    alike; and `--border` was declared twice, the first value dead.
+  */
   --drop-steel: #5f6368; /* PROVISIONAL — secondary text on light surfaces */
-  --drop-graphite: #8a9096; /* PROVISIONAL — light-theme control boundary, 3:1 */
+  --drop-graphite: #8c8c8c; /* DERIVED — Charcoal 46% over Paper; 3.08:1, a real control boundary */
 
   --drop-lens-accent: var(--drop-oxide); /* THE single Lens accent (ADR-0010 D10) */
 
@@ -60,12 +78,12 @@
   --popover-foreground: var(--drop-charcoal);
   --primary: var(--drop-charcoal);
   --primary-foreground: var(--drop-paper);
-  --secondary: #eaeaea; /* PROVISIONAL */
+  --secondary: #d7d7d7; /* DERIVED — Charcoal 13% over Paper, 1.32:1 on the ground */
   --secondary-foreground: var(--drop-charcoal);
-  --muted: #ededed; /* PROVISIONAL */
+  --muted: #e4e4e4; /* DERIVED — Charcoal 7.3% over Paper, 1.17:1 */
   --muted-foreground: var(--drop-steel);
   /* neutral hover/active tint — deliberately NOT the brand accent (ADR-0019 D14) */
-  --accent: #e4e4e4; /* PROVISIONAL */
+  --accent: #cacaca; /* DERIVED — Charcoal 18.7% over Paper, 1.50:1 */
   --accent-foreground: var(--drop-charcoal);
   /* brand selection — the one place the Lens accent tints a surface */
   --selected: var(--drop-lens-accent);
@@ -125,6 +143,7 @@
   --hairline: rgba(18, 18, 18, 0.1);
   --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%);
   --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --shadow-raised: 0 1px 2px rgba(18, 18, 18, 0.07);
 }
 
 /*
@@ -134,7 +153,17 @@
 */
 .drop-material {
   background-image: var(--sheen);
-  box-shadow: var(--edge-highlight);
+  /*
+    BOTH, composed — and this is a defect being fixed, not a flourish.
+
+    This rule used to set `box-shadow: var(--edge-highlight)` alone, and
+    `.drop-material` beats a Tailwind utility, so every Card in the panel had
+    its `shadow-sm` silently deleted the moment it gained "material". Measured:
+    a project card computed to `rgba(255,255,255,0.75) 0 1px 0 inset` and
+    nothing else. The cards lost the depth they had before the material was
+    added to give them depth.
+  */
+  box-shadow: var(--edge-highlight), var(--shadow-raised);
 }
 
 /* A single aluminium hairline — the deck rules its tables with exactly this. */
@@ -152,11 +181,11 @@
   --popover-foreground: var(--drop-paper);
   --primary: var(--drop-paper);
   --primary-foreground: var(--drop-charcoal);
-  --secondary: #242424; /* PROVISIONAL — raised one step above Logo Charcoal */
+  --secondary: #2b2b2b; /* DERIVED — Aluminium 15.2% over Charcoal, 1.32:1 on the ground */
   --secondary-foreground: var(--drop-paper);
-  --muted: #242424; /* PROVISIONAL */
+  --muted: #202121; /* DERIVED — Aluminium 8.8% over Charcoal, 1.16:1 */
   --muted-foreground: var(--drop-aluminium);
-  --accent: #2b2b2b; /* PROVISIONAL — neutral hover tint, not the brand accent */
+  --accent: #333434; /* DERIVED — Aluminium 20.4% over Charcoal, 1.50:1. The neutral hover tint, not the brand accent. */
   --accent-foreground: var(--drop-paper);
   /*
     Oxide Red lightened for Charcoal. The brand value itself is 2.47:1 here and
@@ -168,8 +197,7 @@
   --selected-foreground: var(--drop-charcoal);
   --destructive: #c25043; /* PROVISIONAL */
   --destructive-foreground: var(--drop-charcoal);
-  --border: #2e3033; /* PROVISIONAL — quiet divider */
-  --input: #6b7075; /* PROVISIONAL — control boundary, 3:1 on Charcoal */
+  --input: #606263; /* DERIVED — Aluminium 48.5% over Charcoal; 3.06:1, the minimum a control boundary may be */
   --ring: var(--drop-lens-accent);
   --success: #7fa886; /* PROVISIONAL */
   --warning: #c89141; /* PROVISIONAL */
@@ -191,6 +219,9 @@
     rgba(179, 182, 185, 0) 100%
   );
   --edge-highlight: inset 0 1px 0 rgba(179, 182, 185, 0.22);
+  /* On near-black a cast shadow barely reads; the sheen and the hairline do
+     most of the separating, so this only has to stop an edge floating. */
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.45);
   /* Dividers become aluminium hairlines rather than an untinted grey. */
   --border: var(--hairline);
 }
