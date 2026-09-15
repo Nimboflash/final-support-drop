@@ -15,3 +15,9 @@ export {
 } from "./machine-client";
 export type { PanelWorld, PanelWorldPolicy } from "./panel-world";
 export { createRealWorld, type RealWorld, type RealWorldOptions } from "./real-world";
+export type {
+  MachineReviewPort,
+  MachineReviewDecision,
+  MachineReviewOutcome,
+  MachineReviewLog,
+} from "./review-store";

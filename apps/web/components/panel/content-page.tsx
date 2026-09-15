@@ -360,21 +360,23 @@ function ContentDetail({
   const review = useReviewItem();
   const revision = useRequestRevision();
   /*
-    The machine records no decision about an individual content item, and
-    pretending otherwise is what this fixes.
+    One of these two controls can act here and the other cannot, and the first
+    attempt at this got both wrong in turn.
 
-    Its whole write surface is five calls — create a session, generate concepts,
-    refine them, approve ONE concept, build the portfolio — and the portfolio
-    arrives complete, in one shot. There is no "approve this track" and no
-    "rewrite this paragraph" to call. So «تأیید محتوا» in REAL mode sent a
-    review command whose target id was a content id, the real world looked for a
-    concept with that id, found none, and the sheet answered «ثبت این فرمان
-    ممکن نشد» — after the click, with nothing explaining why.
+    The machine's whole write surface is five calls — create a session, generate
+    concepts, refine them, approve ONE concept, build the portfolio — and the
+    portfolio arrives complete, in one shot. So «تأیید محتوا» first FAILED after
+    the click (it sent a content id where the real world looked for a concept),
+    and was then disabled outright. Disabling it was the worse mistake: an
+    output assembles when its content is approved, so with nothing approvable
+    the work dead-ends at content, every item stuck on «آماده بررسی» forever.
 
-    ADR-0020 D11 says an affordance must act. These two cannot act here, so they
-    say so BEFORE the press instead of failing after it.
+    Approving is the PERSON's decision, not the machine's, and it is now
+    recorded beside the session and laid back over the next snapshot. What
+    genuinely cannot happen is a REWRITE: «نیاز به تغییر» promises the item
+    comes back changed, and the machine has no call that changes one.
   */
-  const machineCannotReview = useDemoSession().mode === "REAL";
+  const machineCannotRewrite = useDemoSession().mode === "REAL";
   const [note, setNote] = useState("");
   const [source, setSource] = useState("");
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -502,13 +504,14 @@ function ContentDetail({
             </p>
           ) : null}
 
-          {machineCannotReview ? (
+          {machineCannotRewrite ? (
             <p
-              data-testid="machine-review-unavailable"
+              data-testid="machine-rewrite-unavailable"
               className="rounded-md border border-warning bg-warning/10 p-3 text-sm"
             >
-              این محتوا را ماشین در یک مرحله ساخته و تصمیم جداگانه‌ای برای هر مورد ثبت
-              نمی‌کند. برای تغییر، به کانسپت برگردید و آن را دوباره بسازید.
+              تأیید شما همین‌جا ثبت می‌شود. اما ماشین این محتوا را در یک مرحله ساخته و
+              نمی‌تواند تک‌تک موارد را بازنویسی کند؛ برای تغییر، به کانسپت برگردید و آن را
+              دوباره بسازید.
             </p>
           ) : null}
         </div>
@@ -518,13 +521,7 @@ function ContentDetail({
             data-testid="approve-content"
             // Approval is unavailable only while a source is genuinely missing,
             // and the reason is stated beside it rather than left to a tooltip.
-            disabled={
-              machineCannotReview ||
-              needsSource ||
-              failed ||
-              review.isPending ||
-              state === "approved"
-            }
+            disabled={needsSource || failed || review.isPending || state === "approved"}
             onClick={() =>
               review.mutate(
                 {
@@ -544,7 +541,7 @@ function ContentDetail({
           <Button
             variant="outline"
             data-testid="request-content-change"
-            disabled={machineCannotReview || note.trim() === "" || revision.isPending}
+            disabled={machineCannotRewrite || note.trim() === "" || revision.isPending}
             onClick={() => {
               // The DECISION is recorded first and durably (ADR-0019 D4): a
               // change request IS a review outcome, and if the rewrite below

@@ -14,6 +14,7 @@ import {
 } from "@drop/machine-gateway";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { createBrowserMachinePort } from "../machine/browser-machine-port";
+import { createBrowserReviewStore } from "../machine/browser-review-store";
 import { createBrowserStoragePort } from "./browser-ports";
 
 /**
@@ -128,6 +129,16 @@ export function createDemoSession(options: DemoSessionOptions = {}): DemoSession
         actually judge it. See docs/handoff/P10-machine-wiring.md.
       */
       text: { toFa: (value: string) => value, toEn: (value: string) => value },
+      /*
+        The one thing about a machine session the PANEL owns.
+
+        The machine builds its portfolio in one shot and records no per-item
+        decision, so "I have looked at this track and it is fine" has nowhere
+        to live on its side. It lives here instead — which is what lets an
+        output assemble and the work reach a calendar, rather than dead-ending
+        at content with every item permanently «آماده بررسی».
+      */
+      review: createBrowserReviewStore(),
     });
 
     return {

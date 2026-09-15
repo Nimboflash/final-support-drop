@@ -9,6 +9,12 @@ import { GatewayError, gatewayErrors } from "../errors";
 import type { MachineHttpPort } from "./machine-http-port";
 import { createMachineClient, isMachineSessionId, type MachineClient } from "./machine-client";
 import type { PanelWorld } from "./panel-world";
+import {
+  applyReviewLog,
+  readReviewLog,
+  writeReviewDecision,
+  type MachineReviewPort,
+} from "./review-store";
 
 /**
  * A live world over a concept-portfolio session (ticket P10; writes are slice 2).
@@ -57,6 +63,14 @@ export interface RealWorldOptions {
    * that decision belongs at the composition root where a person can see it.
    */
   readonly text: MachineTextRenderer;
+  /**
+   * Where the person's own review of machine content is kept.
+   *
+   * Optional, because a world without one is still a correct read-only world —
+   * it simply cannot record that someone looked at a track and said yes. When
+   * absent, content review refuses with a reason rather than pretending.
+   */
+  readonly review?: MachineReviewPort;
 }
 
 export interface RealWorld extends PanelWorld {
@@ -156,12 +170,17 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
           reads as "just now" for everything, because the machine genuinely
           does not persist when anything happened.
         */
-        return projectMachineSession(session, {
+        const projected = projectMachineSession(session, {
           now: options.now(),
           workspaceId: options.workspaceId,
           ownerId: options.ownerId,
           text: options.text,
         });
+        // The projection stays a pure function of what the machine said. What
+        // the PERSON said is laid over it here, in the layer that knows one has
+        // been here at all.
+        if (options.review === undefined) return projected;
+        return applyReviewLog(projected, readReviewLog(options.review, options.sessionId));
       },
 
       /*
@@ -237,6 +256,53 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
     */
     review: {
       async reviewItem(command): Promise<CommandReceipt> {
+        /*
+          Two different decisions wearing one name, and telling them apart is
+          what this whole method is for.
+
+          A decision about CONTENT is the person's own. The machine has no call
+          to make for it — the portfolio is built in one shot — so it is
+          recorded beside the session and laid back over the next snapshot. That
+          is not a lesser kind of approval: it is what assembles the output and
+          lets the work reach a calendar.
+
+          A decision about a CONCEPT is a decision the machine acts on, so it
+          travels: approve, then build the research the projection turns into
+          content.
+        */
+        /*
+          Read defensively even though the signature says it cannot be absent.
+          The whole point of this layer's error model is that a raw `TypeError`
+          never escapes into the query layer — one does not carry a reason, so
+          `states.tsx` cannot reach its degraded branch and the surface is wiped
+          instead of banner-ed. A malformed command is a schema failure, and it
+          says so.
+        */
+        const targetType: unknown = (command.target as { type?: unknown } | undefined)?.type;
+        if (targetType === undefined) {
+          throw new GatewayError(
+            "SCHEMA_VALIDATION_FAILED",
+            "SCHEMA_VALIDATION_FAILED: a review command must name a target",
+            { retryable: false },
+          );
+        }
+
+        if (targetType === "CONTENT") {
+          if (options.review === undefined) refuse("record a decision about this content");
+          if (command.outcome === "REJECTED") {
+            // The machine has nothing to discard and the panel has nothing to
+            // put in its place, so a rejection here would record a state
+            // nothing can leave.
+            refuse("reject machine content");
+          }
+          writeReviewDecision(options.review, options.sessionId, command.target.id, {
+            outcome: command.outcome === "APPROVED" ? "APPROVED" : "CHANGES_REQUESTED",
+            reasonFa: command.reasonFa,
+            decidedAt: options.now(),
+          });
+          return accepted(command, options.now());
+        }
+
         if (command.outcome !== "APPROVED") refuse("record that decision on the machine");
         const session = await client.session(options.sessionId);
         const index = conceptIndexFor(session, command.target.id);

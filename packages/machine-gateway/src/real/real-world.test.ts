@@ -3,6 +3,7 @@ import { panelSnapshotSchema } from "@drop/panel-domain";
 import { machineSession as MACHINE_SESSION } from "@drop/panel-domain/fixtures";
 import { GatewayError, isGatewayError } from "../errors";
 import type { MachineHttpPort, MachineHttpResult } from "./machine-http-port";
+import type { MachineReviewPort } from "./review-store";
 import { createRealWorld } from "./real-world";
 
 /**
@@ -36,7 +37,7 @@ function portReturning(result: MachineHttpResult): MachineHttpPort {
   };
 }
 
-function worldOver(port: MachineHttpPort) {
+function worldOver(port: MachineHttpPort, review?: MachineReviewPort) {
   return createRealWorld({
     sessionId: SESSION_ID,
     port,
@@ -46,7 +47,19 @@ function worldOver(port: MachineHttpPort) {
     // The identity renderer, matching the composition root: ADR-0021 D7 is open
     // and this adapter must not quietly decide it.
     text: { toFa: (value: string) => value, toEn: (value: string) => value },
+    review,
   });
+}
+
+/** An in-memory review store, so a decision can be made and then read back. */
+function memoryReviewStore(): MachineReviewPort {
+  const held = new Map<string, string>();
+  return {
+    read: (sessionId) => held.get(sessionId) ?? null,
+    write: (sessionId, payload) => {
+      held.set(sessionId, payload);
+    },
+  };
 }
 
 const OK = { status: 200, body: MACHINE_SESSION as unknown };
@@ -180,12 +193,28 @@ describe("what the machine cannot do still refuses, and says something true", ()
     ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
   });
 
-  it("a review decision other than approval refuses, because the machine records none", async () => {
-    // `approve_concept` is the machine's only review verb. There is no reject
-    // and no changes-requested, so the panel must not pretend to record one.
+  it("rejecting a CONCEPT refuses, because the machine records no such decision", async () => {
+    // `approve_concept` is the machine's only review verb for a concept. There
+    // is no reject and no changes-requested, so the panel must not pretend.
     await expect(
-      world.review.reviewItem({ outcome: "REJECTED" } as never),
+      world.review.reviewItem({
+        outcome: "REJECTED",
+        target: { type: "CONCEPT", id: "mc-x", versionId: "mc-x-v1" },
+      } as never),
     ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
+  });
+
+  it("a review command with no target is a schema failure, never a raw TypeError", async () => {
+    /*
+      A `TypeError` escaping this layer is not a cosmetic difference. Only a
+      GatewayError carries a reason, and `states.tsx` reaches its degraded
+      branch — content kept on screen under a banner — for a GatewayError alone.
+      Anything else falls through to the generic error state and WIPES the
+      surface the person was working on.
+    */
+    await expect(world.review.reviewItem({ outcome: "APPROVED" } as never)).rejects.toMatchObject({
+      reason: "SCHEMA_VALIDATION_FAILED",
+    });
   });
 
   it("exportPackage rejects rather than throwing, matching the mock", async () => {
@@ -197,3 +226,82 @@ describe("what the machine cannot do still refuses, and says something true", ()
   });
 });
 
+describe("reviewing machine content, which the machine itself cannot record", () => {
+  /*
+    The machine builds its portfolio in ONE call and has no per-item write, so
+    "I have read this track and it is fine" has nowhere to live on its side.
+    That is not a reason to refuse the decision — an output assembles when its
+    content is approved, so refusing it strands the work at content with every
+    item permanently «آماده بررسی». The decision is the person's, and it is kept
+    beside the session.
+  */
+  it("records an approval and shows it on the next snapshot", async () => {
+    const store = memoryReviewStore();
+    const world = worldOver(portReturning(OK), store);
+
+    const before = await world.panelCommandGateway.getSnapshot();
+    const item = before.content[0];
+    expect(item, "the fixture must carry content to review").toBeDefined();
+    expect(item!.reviewStatus).not.toBe("APPROVED");
+
+    await world.review.reviewItem({
+      commandId: "c-1",
+      idempotencyKey: "idem-c-1",
+      outcome: "APPROVED",
+      reasonFa: "محتوا تأیید شد.",
+      target: { type: "CONTENT", id: item!.id, versionId: item!.activeVersionId },
+    } as never);
+
+    const after = await world.panelCommandGateway.getSnapshot();
+    const reviewed = after.content.find((row) => row.id === item!.id);
+    expect(reviewed?.reviewStatus).toBe("APPROVED");
+    // Both axes, or `contentStateOf` reads it as approved-but-stale and the
+    // output never assembles.
+    expect(reviewed?.freshness).toBe("CURRENT");
+  });
+
+  it("leaves every other item untouched", async () => {
+    const store = memoryReviewStore();
+    const world = worldOver(portReturning(OK), store);
+    const before = await world.panelCommandGateway.getSnapshot();
+    const [first, second] = before.content;
+    expect(second, "needs at least two content rows").toBeDefined();
+
+    await world.review.reviewItem({
+      commandId: "c-2",
+      idempotencyKey: "idem-c-2",
+      outcome: "APPROVED",
+      reasonFa: null,
+      target: { type: "CONTENT", id: first!.id, versionId: first!.activeVersionId },
+    } as never);
+
+    const after = await world.panelCommandGateway.getSnapshot();
+    const other = after.content.find((row) => row.id === second!.id);
+    expect(other?.reviewStatus).toBe(second!.reviewStatus);
+  });
+
+  it("refuses when there is nowhere to record it, rather than dropping it", async () => {
+    // A world built without a review store is still a correct read-only world.
+    // What it must not do is accept the decision and quietly lose it.
+    const world = worldOver(portReturning(OK));
+    const snapshot = await world.panelCommandGateway.getSnapshot();
+    const item = snapshot.content[0];
+    await expect(
+      world.review.reviewItem({
+        commandId: "c-3",
+        idempotencyKey: "idem-c-3",
+        outcome: "APPROVED",
+        reasonFa: null,
+        target: { type: "CONTENT", id: item!.id, versionId: item!.activeVersionId },
+      } as never),
+    ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
+  });
+
+  it("survives a corrupt store by reading as undecided", async () => {
+    // Stored state is untrusted input. A hand-edited key must not throw on a
+    // surface someone is trying to use.
+    const broken: MachineReviewPort = { read: () => "{not json", write: () => undefined };
+    const snapshot = await worldOver(portReturning(OK), broken).panelCommandGateway.getSnapshot();
+    expect(() => panelSnapshotSchema.parse(snapshot)).not.toThrow();
+  });
+});
