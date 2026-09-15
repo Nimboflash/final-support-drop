@@ -181,7 +181,7 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
         // the PERSON said is laid over it here, in the layer that knows one has
         // been here at all.
         if (options.review === undefined) return projected;
-        return applyNotes(projected, readNotes(options.review, options.sessionId));
+        return applyNotes(projected, await readNotes(options.review, options.sessionId));
       },
 
       /*
@@ -218,7 +218,7 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
       */
       async updateCalendar(command): Promise<CommandReceipt> {
         if (options.review === undefined) refuse("update the calendar");
-        writeCalendarEntry(options.review, options.sessionId, command.entry);
+        await writeCalendarEntry(options.review, options.sessionId, command.entry);
         return accepted(command, options.now());
       },
       updateCalendarPackage: () => refuse("update a calendar output"),
@@ -310,7 +310,7 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
             // nothing can leave.
             refuse("reject machine content");
           }
-          writeReviewDecision(options.review, options.sessionId, command.target.id, {
+          await writeReviewDecision(options.review, options.sessionId, command.target.id, {
             outcome: command.outcome === "APPROVED" ? "APPROVED" : "CHANGES_REQUESTED",
             reasonFa: command.reasonFa,
             decidedAt: options.now(),

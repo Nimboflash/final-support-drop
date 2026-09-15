@@ -32,10 +32,22 @@ import type { PanelCalendarEntry, PanelSnapshot } from "@drop/panel-domain";
  * DECISIONS and DATES — never a snapshot — under its own key.
  */
 
-/** The transport seam, exactly as `DemoStoragePort` is for the demo world. */
+/**
+ * The transport seam.
+ *
+ * ASYNC, because the answer is not in this process. It began as a synchronous
+ * `localStorage` pair, which made the decisions per-browser and per-device — a
+ * person who approved content on one machine found none of it on the next, and
+ * the only honest thing the setup guide could say was "they do not follow you".
+ *
+ * The notes now live beside the session they are about, in the machine's own
+ * run directory, written through a route this app owns. That is where a
+ * decision about a session belongs: it travels with the session, survives a
+ * cleared browser, and is visible to anything else reading that run.
+ */
 export interface MachineReviewPort {
-  read(sessionId: string): string | null;
-  write(sessionId: string, payload: string): void;
+  read(sessionId: string): Promise<string | null>;
+  write(sessionId: string, payload: string): Promise<void>;
 }
 
 export type MachineReviewOutcome = "APPROVED" | "CHANGES_REQUESTED";
@@ -67,8 +79,11 @@ const EMPTY_NOTES: MachineSessionNotes = { reviews: {}, calendar: {} };
  * from an older shape, or a quota-truncated string must read as "no decisions
  * yet" rather than throw on a surface a person is trying to use.
  */
-export function readNotes(port: MachineReviewPort, sessionId: string): MachineSessionNotes {
-  const raw = port.read(sessionId);
+export async function readNotes(
+  port: MachineReviewPort,
+  sessionId: string,
+): Promise<MachineSessionNotes> {
+  const raw = await port.read(sessionId);
   if (raw === null) return EMPTY_NOTES;
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -121,31 +136,31 @@ function readReviewsFrom(value: unknown): MachineReviewLog {
   }
 }
 
-export function writeReviewDecision(
+export async function writeReviewDecision(
   port: MachineReviewPort,
   sessionId: string,
   contentId: string,
   decision: MachineReviewDecision,
-): void {
-  const notes = readNotes(port, sessionId);
+): Promise<void> {
+  const notes = await readNotes(port, sessionId);
   const next: MachineSessionNotes = {
     ...notes,
     reviews: { ...notes.reviews, [contentId]: decision },
   };
-  port.write(sessionId, JSON.stringify(next));
+  await port.write(sessionId, JSON.stringify(next));
 }
 
-export function writeCalendarEntry(
+export async function writeCalendarEntry(
   port: MachineReviewPort,
   sessionId: string,
   entry: PanelCalendarEntry,
-): void {
-  const notes = readNotes(port, sessionId);
+): Promise<void> {
+  const notes = await readNotes(port, sessionId);
   const next: MachineSessionNotes = {
     ...notes,
     calendar: { ...notes.calendar, [entry.id]: entry },
   };
-  port.write(sessionId, JSON.stringify(next));
+  await port.write(sessionId, JSON.stringify(next));
 }
 
 /**

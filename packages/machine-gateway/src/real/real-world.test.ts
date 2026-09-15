@@ -55,9 +55,10 @@ function worldOver(port: MachineHttpPort, review?: MachineReviewPort) {
 function memoryReviewStore(): MachineReviewPort {
   const held = new Map<string, string>();
   return {
-    read: (sessionId) => held.get(sessionId) ?? null,
+    read: (sessionId) => Promise.resolve(held.get(sessionId) ?? null),
     write: (sessionId, payload) => {
       held.set(sessionId, payload);
+      return Promise.resolve();
     },
   };
 }
@@ -385,7 +386,10 @@ describe("reviewing machine content, which the machine itself cannot record", ()
   it("survives a corrupt store by reading as undecided", async () => {
     // Stored state is untrusted input. A hand-edited key must not throw on a
     // surface someone is trying to use.
-    const broken: MachineReviewPort = { read: () => "{not json", write: () => undefined };
+    const broken: MachineReviewPort = {
+      read: () => Promise.resolve("{not json"),
+      write: () => Promise.resolve(),
+    };
     const snapshot = await worldOver(portReturning(OK), broken).panelCommandGateway.getSnapshot();
     expect(() => panelSnapshotSchema.parse(snapshot)).not.toThrow();
   });

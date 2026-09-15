@@ -1,52 +1,101 @@
 import type { MachineReviewPort } from "@drop/machine-gateway";
 
 /**
- * Where a person's review of machine content is kept in the browser.
+ * The client half of the panel's notes about a machine session.
  *
- * A SEPARATE key from the demo world's, and namespaced per session. The demo
- * key holds a whole snapshot stamped with the MOCK discriminator, and
- * `demo-persistence.ts` validates only that field on the way back in — so one
- * machine write into it would make the demo world resume from machine data
- * forever after. This holds decisions, under its own key, one entry per
- * machine session, and the two can never be confused for each other.
+ * It reads and writes through `/api/machine/notes/<session>`, which keeps the
+ * file beside the session in the machine's own run directory. That is the whole
+ * point of this module existing in its current form: the notes used to live in
+ * `localStorage`, which made a person's approvals per-browser and per-device —
+ * approve your content on one machine and none of it is there on the next.
  *
- * Per session because a decision is about a particular run's content. Carrying
- * one session's approvals into another would silently mark items approved that
- * nobody has looked at.
+ * The old key is still READ, once, and carried up. Someone who reviewed content
+ * before this existed must not lose those decisions to an upgrade they did not
+ * ask for.
  */
-const PREFIX = "drop-machine-review-v1:";
 
-/**
- * `localStorage` throws in some contexts (private modes, disabled site data),
- * and a panel must not white-screen because storage is unavailable. Every
- * access is guarded, and a failure reads as "no decisions recorded" — which
- * degrades to exactly the behaviour before this existed.
- */
-function safeStorage(): Storage | null {
+/** Sent on every write so a cross-origin page cannot forge one. See the route. */
+const WRITE_HEADERS = {
+  accept: "application/json",
+  "content-type": "application/json",
+  "x-drop-machine-write": "1",
+} as const;
+
+/** The key the notes lived under while they were per-browser. */
+const LEGACY_PREFIX = "drop-machine-review-v1:";
+
+function legacyRead(sessionId: string): string | null {
   try {
     if (typeof window === "undefined") return null;
-    return window.localStorage;
+    return window.localStorage.getItem(LEGACY_PREFIX + sessionId);
   } catch {
+    // Private mode, disabled site data, or no storage at all. There is simply
+    // nothing to migrate, which is the common case and not an error.
     return null;
+  }
+}
+
+function legacyClear(sessionId: string): void {
+  try {
+    window.localStorage.removeItem(LEGACY_PREFIX + sessionId);
+  } catch {
+    // Leaving it behind is harmless: the server copy wins from here on, and a
+    // second migration would find the same decisions already recorded.
   }
 }
 
 export function createBrowserReviewStore(): MachineReviewPort {
   return {
-    read(sessionId: string) {
+    async read(sessionId: string): Promise<string | null> {
+      let stored: string | null = null;
       try {
-        return safeStorage()?.getItem(PREFIX + sessionId) ?? null;
+        const response = await fetch(
+          "/api/machine/notes/" + encodeURIComponent(sessionId),
+          { headers: { accept: "application/json" }, cache: "no-store" },
+        );
+        if (response.ok) {
+          const body: unknown = await response.json();
+          const notes =
+            typeof body === "object" && body !== null
+              ? (body as Record<string, unknown>).notes
+              : null;
+          stored = typeof notes === "string" ? notes : null;
+        }
       } catch {
-        return null;
+        // Offline, or the panel is not pointed at a machine. Fall through to
+        // whatever the browser still holds rather than losing the overlay.
+        stored = null;
       }
-    },
-    write(sessionId: string, payload: string) {
+
+      if (stored !== null) return stored;
+
+      // Nothing on the server. If this browser holds decisions from before the
+      // notes were durable, carry them up ONCE and then let the server own them.
+      const legacy = legacyRead(sessionId);
+      if (legacy === null) return null;
       try {
-        safeStorage()?.setItem(PREFIX + sessionId, payload);
+        await this.write(sessionId, legacy);
+        legacyClear(sessionId);
       } catch {
-        // A full or unavailable store must not break the review. The decision
-        // is lost on reload, which is visible and recoverable; a thrown error
-        // in a click handler is neither.
+        // The migration can wait for the next read. Returning the legacy value
+        // means the person still sees their decisions in the meantime.
+      }
+      return legacy;
+    },
+
+    async write(sessionId: string, payload: string): Promise<void> {
+      const response = await fetch("/api/machine/notes/" + encodeURIComponent(sessionId), {
+        method: "PUT",
+        headers: WRITE_HEADERS,
+        body: JSON.stringify({ notes: payload }),
+        cache: "no-store",
+        redirect: "error",
+      });
+      if (!response.ok) {
+        // Loud, not silent. A decision the person made and the panel then
+        // dropped is worse than an error they can see and retry — the whole
+        // reason this moved off `localStorage` was decisions going missing.
+        throw new Error("NOTES_WRITE_FAILED");
       }
     },
   };
