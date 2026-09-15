@@ -183,7 +183,6 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
                   </p>
                   <Button
                     size="sm"
-                    variant="outline"
                     data-testid="set-date"
                     onClick={() => {
                       openEntryFocused(entry.id);

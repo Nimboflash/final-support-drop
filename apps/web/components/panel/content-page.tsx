@@ -461,7 +461,6 @@ function ContentDetail({
               ) : (
                 <Button
                   size="sm"
-                  variant="outline"
                   data-testid="add-source"
                   onClick={() => setSourceOpen(true)}
                 >

@@ -139,7 +139,7 @@ function OutputCard({ output, onOpen }: { output: OutputView; onOpen: () => void
         <p className="text-muted-foreground" data-testid="output-summary">
           {output.blockerFa ?? "همهٔ محتواها تأیید شده‌اند."}
         </p>
-        <Button size="sm" variant="outline" onClick={onOpen} data-testid="open-output">
+        <Button size="sm" onClick={onOpen} data-testid="open-output">
           بررسی خروجی
         </Button>
       </CardContent>
