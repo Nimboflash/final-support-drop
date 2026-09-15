@@ -46,4 +46,8 @@ services/concept-portfolio/.env
 # must not depend on remembering to add a line here.
 .env
 .env.*
-!.env.example
+# ...but never the templates. `!.env.example` alone covered exactly one file
+# and silently swallowed every other, including `apps/web/.env.local.example` —
+# so the one artifact that tells a fresh clone how to configure itself was the
+# one thing that could not travel with it.
+!*.example
