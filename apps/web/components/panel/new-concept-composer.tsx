@@ -21,8 +21,9 @@ import {
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { ALL_PROJECTS, useSelectedProject } from "./project-selector";
-import { commandErrorFa, useGenerateConcepts } from "../../lib/demo/commands";
+import { commandErrorFa } from "../../lib/demo/commands";
 import { useDemoSession } from "../../lib/demo/providers";
+import { startMachineSession } from "../../lib/machine/start-session";
 
 /**
  * The composer (ADR-0020, brief §6 step 1).
@@ -66,7 +67,8 @@ export function NewConceptComposer({
   const [phase, setPhase] = useState<"COMPOSE" | "WORKING">("COMPOSE");
   /** Whether this press reaches a real machine, or explains that it does not. */
   const live = useDemoSession().mode === "REAL";
-  const generate = useGenerateConcepts();
+  const [machineError, setMachineError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
 
   function addLink() {
     const value = link.trim();
@@ -82,9 +84,24 @@ export function NewConceptComposer({
   function start() {
     setPhase("WORKING");
     // In MOCK mode there is nothing to ask: generation belongs to the machine,
-    // and the panel adds nothing it did not receive (ADR-0019 D2). In REAL mode
-    // there IS something to ask, and this is the press that asks it.
-    if (live) generate.mutate();
+    // and the panel adds nothing it did not receive (ADR-0019 D2).
+    if (!live) return;
+
+    // In REAL mode the brief is the whole point, and it only reaches the
+    // machine through session creation — `generate_concepts` takes no body and
+    // reads the brief off the session. So a new brief is a new session.
+    setWorking(true);
+    setMachineError(null);
+    startMachineSession(brief.trim())
+      .then(() => {
+        // A full navigation, not a router push: the provider lives in the
+        // LAYOUT and would not remount, leaving the panel on the old session.
+        window.location.assign("/studio/concepts");
+      })
+      .catch((error: unknown) => {
+        setMachineError(commandErrorFa(error));
+        setWorking(false);
+      });
   }
 
   function close(next: boolean) {
@@ -129,13 +146,11 @@ export function NewConceptComposer({
             {live ? (
               <>
                 <p className="text-sm" data-testid="composer-live-working">
-                  {generate.isPending
+                  {working
                     ? "ماشین در حال ساخت کانسپت‌هاست. این کار ممکن است چند ده ثانیه طول بکشد."
-                    : generate.isError
-                      ? commandErrorFa(generate.error)
-                      : "کانسپت‌ها ساخته شدند."}
+                    : (machineError ?? "کانسپت‌ها ساخته شدند.")}
                 </p>
-                {generate.isPending ? null : (
+                {working ? null : (
                   <div className="flex flex-wrap justify-center gap-2">
                     <Button size="sm" asChild data-testid="composer-go-to-concepts">
                       <a href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</a>

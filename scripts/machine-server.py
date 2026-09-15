@@ -37,7 +37,9 @@ backend outranks an inference. The banner says which one is running, every time.
 from __future__ import annotations
 
 import os
+import socket
 import sys
+import time
 from pathlib import Path
 
 SERVICE_SRC = Path(__file__).resolve().parent.parent / "services" / "concept-portfolio" / "src"
@@ -103,7 +105,63 @@ def _chosen_backend() -> str:
     return "openrouter" if os.getenv("OPENROUTER_API_KEY") else "mock"
 
 
+def _stop_previous(port: int) -> None:
+    """Free the port from an earlier run of THIS script, and say so.
+
+    The credential is read once, at startup (`_load_service_env` below), so
+    "paste a key in the panel, then restart the machine" is the normal loop —
+    and a launcher that answers `[Errno 48] address already in use` at exactly
+    that moment is a launcher that makes the normal loop look broken. Uvicorn's
+    message does not mention the key, so the natural reading is "something is
+    wrong with the server" rather than "your old one is still holding the port".
+
+    Only processes running this same file are stopped, matched on the script
+    path rather than on the port: whatever else is listening on 8000 belongs to
+    someone else and is not ours to kill.
+    """
+    import signal
+    import subprocess
+
+    marker = "scripts/machine-server.py"
+    try:
+        listing = subprocess.run(
+            ["ps", "-eo", "pid=,command="], capture_output=True, text=True, timeout=5
+        ).stdout
+    except Exception:
+        return
+
+    mine = os.getpid()
+    for line in listing.splitlines():
+        stripped = line.strip()
+        pid_text, _, command = stripped.partition(" ")
+        if marker not in command:
+            continue
+        try:
+            pid = int(pid_text)
+        except ValueError:
+            continue
+        if pid == mine:
+            continue
+        try:
+            os.kill(pid, signal.SIGTERM)
+            print(f"stopped the previous machine (pid {pid})", flush=True)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            print(f"  note: a machine is running as another user (pid {pid}); not stopping it.", flush=True)
+
+    # SIGTERM is not instant; uvicorn unwinds its socket on the way out.
+    for _ in range(40):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.2)
+            if probe.connect_ex(("127.0.0.1", port)) != 0:
+                return
+        time.sleep(0.1)
+
+
 def main() -> None:
+    port_for_stop = int(os.getenv("DROP_MACHINE_PORT", "8000"))
+    _stop_previous(port_for_stop)
     _load_service_env()
     backend = _chosen_backend()
     if backend == "mock":

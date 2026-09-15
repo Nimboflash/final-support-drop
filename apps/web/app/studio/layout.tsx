@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { Badge, BrandMark, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
 import { StudioSidebar } from "./_shell/studio-sidebar";
@@ -42,21 +43,42 @@ export const dynamic = "force-dynamic";
 /** The machine's own id form, `uuid4().hex` truncated to twelve. */
 const SESSION_ID = /^[a-f0-9]{12}$/;
 
+/** The cookie the panel sets when a session is started from the UI. */
+const MACHINE_SESSION_COOKIE = "drop_machine_session";
+
 /**
- * Which world this render is showing, resolved on the server (ADR-0021 D5).
+ * Which world this render is showing, resolved on the server (ADR-0021 D5,
+ * amended by slice 2).
  *
- * BOTH variables are required. A session id with no base URL would enter a mode
- * whose every read fails, and a base URL with no session id has nothing to
- * show; either alone is a misconfiguration rather than an intention. Neither
- * value reaches the client: only the session id is passed down, and the address
- * of the machine stays on the server (AC-P10.1).
+ * `DROP_MACHINE_BASE_URL` still decides the MODE, and still never reaches the
+ * client: the address of the machine stays on the server (AC-P10.1).
+ *
+ * What changed is where the session id comes from. It used to be an
+ * environment variable and nothing else, which meant the panel could only ever
+ * show a session someone had configured by hand before starting the server —
+ * fine for reading one, useless for starting one. A cookie set by
+ * `/api/machine/current` now overrides it, with the variable as the default.
+ *
+ * A COOKIE rather than a query parameter, for the three reasons ADR-0021 D5
+ * recorded against `?session=`: the sidebar's links carry no query, so the mode
+ * vanished on the first click; this provider is mounted in the LAYOUT, which
+ * does not remount on a client navigation, so the URL and the world disagreed;
+ * and the server pass has no `window`, so SSR built a different world than the
+ * client. A cookie is readable HERE, during this render, which is what makes
+ * all three go away at once.
  */
-function machineSessionId(): string | null {
+async function machineSessionId(): Promise<string | null> {
   const base = process.env.DROP_MACHINE_BASE_URL;
-  const session = process.env.DROP_MACHINE_SESSION_ID;
   if (typeof base !== "string" || base.trim() === "") return null;
-  if (typeof session !== "string" || !SESSION_ID.test(session.trim())) return null;
-  return session.trim();
+
+  const chosen = (await cookies()).get(MACHINE_SESSION_COOKIE)?.value;
+  if (typeof chosen === "string" && SESSION_ID.test(chosen)) return chosen;
+
+  const configured = process.env.DROP_MACHINE_SESSION_ID;
+  if (typeof configured === "string" && SESSION_ID.test(configured.trim())) {
+    return configured.trim();
+  }
+  return null;
 }
 
 /** Resolved once per render, on the server. */
@@ -64,10 +86,10 @@ function wordmarkPresent(): boolean {
   return existsSync(join(process.cwd(), "public", "brand", "drop-wordmark.svg"));
 }
 
-export default function StudioLayout({ children }: { children: ReactNode }) {
+export default async function StudioLayout({ children }: { children: ReactNode }) {
   const hasWordmark = wordmarkPresent();
 
-  const machineSession = machineSessionId();
+  const machineSession = await machineSessionId();
 
   return (
     <DemoProviders machineSessionId={machineSession}>
