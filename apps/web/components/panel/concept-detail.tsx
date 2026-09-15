@@ -184,7 +184,7 @@ export function ConceptDetail({
               {sent.map((text, index) => (
                 <li
                   key={`sent-${String(index)}`}
-                  className="rounded-md border border-selected/50 bg-selected/5 p-2 text-sm leading-7"
+                  className="rounded-md border border-selected bg-selected/5 p-2 text-sm leading-7"
                 >
                   {text}
                 </li>

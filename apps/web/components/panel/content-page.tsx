@@ -108,8 +108,8 @@ const STATE_TONE: Record<ContentState, string> = {
   draft: "border-border",
   needs_input: "border-warning",
   failed: "border-destructive",
-  ready_for_review: "border-selected/50",
-  approved: "border-success/60",
+  ready_for_review: "border-selected",
+  approved: "border-success",
 };
 
 /**

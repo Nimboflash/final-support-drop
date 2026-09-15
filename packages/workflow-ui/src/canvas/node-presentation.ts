@@ -70,7 +70,7 @@ export const NODE_STATE_TONE: Readonly<Record<NodeState, string>> = {
   PENDING: "border-border text-muted-foreground",
   RUNNING: "border-selected",
   AWAITING_REVIEW: "border-attention",
-  DONE: "border-success/60",
+  DONE: "border-success",
   BLOCKED: "border-warning",
   REJECTED: "border-destructive",
 };

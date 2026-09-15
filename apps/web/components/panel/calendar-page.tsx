@@ -321,7 +321,7 @@ function DayCellView({
               data-testid="calendar-event"
               onClick={() => onOpenEntry(entry.id)}
               // Colour marks the project; the text is what states the meaning.
-              className="w-full truncate rounded border border-selected/40 bg-selected/10 px-1 py-0.5 text-start text-xs"
+              className="w-full truncate rounded border border-selected bg-selected/10 px-1 py-0.5 text-start text-xs"
             >
               <ContentText>{entry.titleFa}</ContentText>
             </button>

@@ -135,9 +135,9 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
 
 const STATE_TONE: Record<ConceptState, string> = {
   generating: "border-border",
-  new: "border-selected/50",
+  new: "border-selected",
   improving: "border-warning",
-  selected: "border-success/60",
+  selected: "border-success",
   // NOT `opacity-70`. Dimming the whole card drags every piece of text inside
   // it below the AA contrast minimum — the description measured 3.16:1 — and
   // "faded" is a colour-only cue anyway. The state badge says the word.

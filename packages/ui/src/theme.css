@@ -3,12 +3,16 @@
  * Three layers: primitive → semantic → component.
  *
  * The four DROP colors in layer 1 are APPROVED by the owner (ADR-0019 D14, from
- * V2 02 §1) and close doc 15 §12's visual-identity gate in part. Derived
- * neutrals and the functional colors remain PROVISIONAL. Replacement happens
- * here and in visual snapshots only — no component file may declare a color
- * literal, and the static scan enforces it.
+ * V2 02 §1) and close doc 15 §12's visual-identity gate in part. Every other
+ * value here is now DERIVED — it follows from an approved colour and a stated
+ * target, or it is solved for the contrast its role actually needs — so it can
+ * be checked rather than merely accepted. `tests/repo/theme-contrast.test.ts`
+ * does the checking, in both themes, for every pairing the panel renders.
+ * Replacement happens here and in visual snapshots only — no component file may
+ * declare a color literal, and the static scan enforces it.
  *
- * Dark is the primary workspace (Charcoal); light is for preview sheets.
+ * Dark is the primary workspace (Charcoal); light is a real workspace too, not
+ * a preview sheet, and is held to the same targets.
  *
  * Exactly ONE brand accent token, `--drop-lens-accent` (ADR-0010 D10, not
  * amended). It carries focus, selection and active navigation. It is NOT
@@ -59,22 +63,65 @@
     semantic roles collapsed into one and why every chip, card and tint looked
     alike; and `--border` was declared twice, the first value dead.
   */
-  --drop-steel: #5f6368; /* PROVISIONAL — secondary text on light surfaces */
+  /*
+    Secondary text on light surfaces. DERIVED — Charcoal #121212 at 70.5% over
+    Paper #f5f5f5, the same Charcoal-over-Paper solve that produced --secondary
+    (13%), --muted (7.3%) and --accent (18.7%). It replaces an eyeballed
+    #5f6368, which carried a blue cast that came from nowhere in the brand and
+    read 5.55:1 on the page where this reads 6.84:1.
+  */
+  --drop-steel: #555555; /* DERIVED — Charcoal 70.5% over Paper; 6.84:1 on the page, 7.46:1 on a card */
   --drop-graphite: #8c8c8c; /* DERIVED — Charcoal 46% over Paper; 3.08:1, a real control boundary */
 
   --drop-lens-accent: var(--drop-oxide); /* THE single Lens accent (ADR-0010 D10) */
 
-  /* functional colors — system state, not brand (09 §3) — all PROVISIONAL */
-  --drop-success: #3f6a4a; /* PROVISIONAL */
-  --drop-warning: #8a5b0f; /* PROVISIONAL */
-  --drop-danger: #a03024; /* PROVISIONAL */
+  /*
+    The functional family — system state, NOT brand (09 §3, which says these
+    "may coexist with the Lens accent because they convey system state" and asks
+    that they stay "restrained, icon/label-supported and excluded from
+    decorative layouts").
+
+    The brand book is silent on them, so they cannot be derived FROM an approved
+    colour the way the neutrals are. They are derived the other way instead, and
+    this is the rule all three obey:
+
+      solved for the contrast its role actually needs, at the lowest chroma that
+      gets there, in a hue far enough from both brand accents that a state can
+      never be mistaken for the brand speaking.
+
+    The hue distances, measured in CIELAB, are the checkable part —
+    Acid Lime sits at 117.1°, Oxide Red at 35.3°:
+
+      success  149.3°  — 32.2° from Acid, 114.0° from Oxide
+      warning   74.2°  — 42.9° from Acid,  38.9° from Oxide (between them, near
+                         enough to neither)
+      danger    12.2°  — 23.1° from Oxide, and 27.8° from the dark Lens tone
+
+    Danger is the one that moved. It had been #a03024 at hue 36.4° — one degree
+    off Oxide and, once lightened enough to be legible on Charcoal, landing on
+    #d76152 against the dark Lens accent's #d9694f: the same colour. Focus and
+    failure cannot be the same colour. Rotating to crimson is what buys the
+    separation, and holding chroma at 44.2 keeps it under the Lens accent's own,
+    so a state never out-shouts the brand.
+  */
+  --drop-success: #3f6a4a; /* DERIVED — solved for 3:1 as a 1px border on every surface it borders */
+  --drop-warning: #8a5b0f; /* DERIVED — solved for 4.5:1 as text on a card, which is its strictest role */
+  --drop-danger: #97344a; /* DERIVED — L* 37.0, C 44.2, hue 12.2°; 7.23:1 on a card */
 
   /* ---------- layer 2: semantic (light theme — preview sheets) ---------- */
   --background: var(--drop-paper);
   --foreground: var(--drop-charcoal);
-  --card: #ffffff; /* PROVISIONAL */
+  /*
+    The ceiling of the light ramp. Pure white is 1.09:1 against Paper, so the
+    card is NOT separated by fill — it is separated by --border and the
+    material's shadow, exactly as the dark card is separated by its sheen and
+    lit edge rather than by its six points of grey. Achromatic by choice: every
+    functional tint composites onto this surface, and a tinted card would push
+    those composites somewhere warm.
+  */
+  --card: #ffffff; /* DERIVED — the light ramp's ceiling; separation is carried by --border, not by fill */
   --card-foreground: var(--drop-charcoal);
-  --popover: #ffffff; /* PROVISIONAL */
+  --popover: #ffffff; /* DERIVED — the same ceiling; a popover is a card that floats */
   --popover-foreground: var(--drop-charcoal);
   --primary: var(--drop-charcoal);
   --primary-foreground: var(--drop-paper);
@@ -140,6 +187,15 @@
 
     Every value is Aluminium `#b3b6b9` at low alpha. Nothing new is introduced.
   */
+  /*
+    The scrim behind every sheet, dialog and drawer. It existed as Tailwind's
+    `bg-black/50` in four components — a fifth colour with no token, no theme
+    entry and no approval, and invisible to the colour-literal scan because
+    `black` is a utility name rather than a hex. It is Charcoal, like everything
+    else that recedes here.
+  */
+  --overlay: rgba(18, 18, 18, 0.5);
+
   --hairline: rgba(18, 18, 18, 0.1);
   --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%);
   --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
@@ -195,12 +251,31 @@
   --drop-lens-accent: #d9694f;
   --selected: var(--drop-lens-accent);
   --selected-foreground: var(--drop-charcoal);
-  --destructive: #c25043; /* PROVISIONAL */
+  /*
+    The same crimson, lifted for Charcoal exactly the way Oxide is lifted to
+    #d9694f: hue and chroma held (12.2° / 44.2), only L* moves, 37.0 → 57.0. The
+    value it replaces was #c25043, which read 3.59:1 as text on a card — a
+    straight AA failure on `text-destructive`, which is the colour the panel
+    uses for the six `role="alert"` messages a person can least afford to miss.
+    It was never caught because axe only measures what is painted, and an error
+    message is painted only when something has already gone wrong.
+  */
+  --drop-danger: #d1687b; /* DERIVED — L* 57.0, C 44.2, hue 11.7°; 4.75:1 on a card, 5.33:1 on the page */
+  --destructive: var(--drop-danger);
   --destructive-foreground: var(--drop-charcoal);
-  --input: #606263; /* DERIVED — Aluminium 48.5% over Charcoal; 3.06:1, the minimum a control boundary may be */
+  --drop-graphite: #606263; /* DERIVED — Aluminium 48.5% over Charcoal; 3.06:1, the minimum a control boundary may be */
+  --input: var(--drop-graphite);
+  /* Aluminium's own usage note names it "secondary text and neutral accents",
+     which is precisely this role — so dark reads the approved colour directly
+     rather than solving for a second grey. */
+  --drop-steel: var(--drop-aluminium);
   --ring: var(--drop-lens-accent);
-  --success: #7fa886; /* PROVISIONAL */
-  --warning: #c89141; /* PROVISIONAL */
+  /* Restated on the PRIMITIVE, not just the semantic, so layer 1 does not keep
+     its light value inside a dark scope — the drift --input still had. */
+  --drop-success: #7fa886; /* DERIVED — 6.23:1 as a 1px border on a card, 7.00:1 on the page */
+  --success: var(--drop-success);
+  --drop-warning: #c89141; /* DERIVED — 6.02:1 as text on a card, its strictest role */
+  --warning: var(--drop-warning);
   --attention: var(--drop-acid);
   --attention-foreground: var(--drop-charcoal);
   --edge-stroke: var(--drop-aluminium);
@@ -211,6 +286,9 @@
     grey and reads as one flat plane. The sheen and the lit edge are what make
     a card a card.
   */
+  /* Charcoal is already the ground here, so the scrim goes deeper than it. */
+  --overlay: rgba(0, 0, 0, 0.65);
+
   --hairline: rgba(179, 182, 185, 0.16);
   --sheen: linear-gradient(
     180deg,

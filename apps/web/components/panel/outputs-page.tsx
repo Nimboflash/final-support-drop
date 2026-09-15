@@ -44,9 +44,9 @@ import {
  */
 const STATE_TONE: Record<OutputState, string> = {
   assembling: "border-border",
-  ready_for_approval: "border-selected/60",
-  approved: "border-success/60",
-  scheduled: "border-success/60",
+  ready_for_approval: "border-selected",
+  approved: "border-success",
+  scheduled: "border-success",
 };
 
 export function OutputsPage({ world }: { world: PanelSnapshot }) {

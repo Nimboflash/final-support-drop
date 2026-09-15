@@ -62,6 +62,9 @@
   /* ADR-0022 — the acid attention signal; a token is useless until it is mapped. */
   --color-attention: var(--attention);
   --color-attention-foreground: var(--attention-foreground);
+  /* The scrim behind every sheet and dialog. It was Tailwind's own `black`
+     until the theme claimed it — see theme.css. */
+  --color-overlay: var(--overlay);
   --color-node-surface: var(--node-surface);
   --color-edge-stroke: var(--edge-stroke);
   --color-table-header-bg: var(--table-header-bg);
