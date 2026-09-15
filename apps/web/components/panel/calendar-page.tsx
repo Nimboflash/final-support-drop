@@ -111,8 +111,6 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
         >
         <section className="space-y-3">
           <CalendarToolbar
-            view={view}
-            onViewChange={setView}
             titleFa={view === "week" ? weekTitleFa(anchor) : monthTitleFa(anchor)}
             onPrev={() => setAnchor(view === "week" ? shiftWeek(anchor, -1) : shiftMonth(anchor, -1))}
             onNext={() => setAnchor(view === "week" ? shiftWeek(anchor, 1) : shiftMonth(anchor, 1))}
@@ -218,15 +216,11 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
 }
 
 function CalendarToolbar({
-  view,
-  onViewChange,
   titleFa,
   onPrev,
   onNext,
   onToday,
 }: {
-  view: View;
-  onViewChange: (next: View) => void;
   titleFa: string;
   onPrev: () => void;
   onNext: () => void;

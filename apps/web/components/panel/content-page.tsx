@@ -16,9 +16,6 @@ import {
   Badge,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   ContentText,
   EmptyState,
   Input,
@@ -243,7 +240,6 @@ export function ContentPage({ world }: { world: PanelSnapshot }) {
                             <ContentCard
                               item={item}
                               world={world}
-                              showKind={false}
                               onOpen={() => {
                                 detailFocus.remember();
                                 setLastOpened(item.id);
@@ -285,13 +281,10 @@ function ContentCard({
   item,
   world,
   onOpen,
-  showKind = true,
 }: {
   item: ContentItem;
   world: PanelSnapshot;
   onOpen: () => void;
-  /** False inside a section that already names the kind. */
-  showKind?: boolean;
 }) {
   const version = world.contentVersions.find((v) => v.id === item.activeVersionId);
   const state = contentStateOf(item);

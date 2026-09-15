@@ -1,7 +1,6 @@
 import type {
   CommandEnvelope,
   CommandReceipt,
-  OutputPlan,
   PackageExport,
   PanelCalendarEntry,
   PanelEvent,

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Badge, BrandMark, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
 import { StudioSidebar } from "./_shell/studio-sidebar";
 import { DemoProviders } from "../../lib/demo/providers";
@@ -18,6 +18,21 @@ import { DemoProviders } from "../../lib/demo/providers";
  * client component calling `useSearchParams` at LAYOUT level suspends and never
  * resolves in dev — the panel sat on its loading fallback forever while
  * production rendered fine. A boundary here would only hide that again.
+ *
+ * `StudioSidebar` has no boundary either, and that is the same rule reaching a
+ * different conclusion rather than an exception to it. It DOES call
+ * `useSearchParams`, because the project filter has to be in the rail's hrefs
+ * for the filter to survive a move between destinations (ADR-0020 D2). Wrapped
+ * in `<Suspense fallback={null}>` it suspended on the client's first hydration
+ * pass, so React threw away the server's sidebar and regenerated it — a
+ * "Hydration failed" error on every single page load, and the primary
+ * navigation getting no server render at all. Unwrapped there is nothing to
+ * fall back TO, so the client hydrates the markup the server sent.
+ *
+ * What makes that safe here is the `force-dynamic` above: every `/studio` route
+ * builds as Dynamic, and it is static prerendering — not layouts — that makes
+ * `useSearchParams` demand a boundary. A page that is statically rendered still
+ * needs one, which is why the page-level boundaries stay.
  */
 
 // Request-time rendering, so the machine configuration below is read from the
@@ -57,9 +72,7 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
   return (
     <DemoProviders machineSessionId={machineSession}>
       <SidebarProvider>
-        <Suspense fallback={null}>
-          <StudioSidebar hasWordmark={hasWordmark} />
-        </Suspense>
+        <StudioSidebar hasWordmark={hasWordmark} />
         <SidebarInset>
           <header className="drop-material flex h-14 items-center gap-2 border-b border-border px-4">
             <SidebarTrigger aria-label="نمایش یا پنهان‌کردن منو" />

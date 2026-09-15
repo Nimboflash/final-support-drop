@@ -6,9 +6,6 @@ import {
   Badge,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   ContentText,
   EmptyState,
   PersianCalendarDate,
@@ -20,7 +17,6 @@ import { useReturnFocus } from "./use-return-focus";
 import {
   ALL_PROJECTS,
   ProjectSelector,
-  filterByProject,
   useSelectedProject,
 } from "./project-selector";
 import {

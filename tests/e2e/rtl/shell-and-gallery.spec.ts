@@ -171,6 +171,39 @@ test.describe("/studio shell (AC-P1.9)", () => {
     await expect(page.getByTestId("project-selector")).toBeVisible();
   });
 
+  test("the project filter survives a move between destinations (ADR-0020 D2)", async ({ page }) => {
+    // The mechanism the project PAGE was replaced with, and the one thing that
+    // makes "a project is a filter" true rather than merely stated. The rail
+    // built bare `href`s, so choosing a project on «کانسپت‌ها» and pressing
+    // «محتوا» silently dropped it: the person then saw every project's content
+    // with no way to know why. Nothing asserted it, so nothing caught it.
+    await page.goto("/studio/concepts?project=p1");
+    const nav = page.getByRole("navigation");
+    const content = nav.getByRole("link", { name: "محتوا", exact: true });
+    await expect(content).toHaveAttribute("href", "/studio/content?project=p1");
+    await content.click();
+    await page.waitForURL("**/studio/content?project=p1");
+    await expect(page.getByTestId("project-selector")).toBeVisible();
+  });
+
+  test("an unfiltered rail carries nothing (ADR-0020 D2)", async ({ page }) => {
+    // The other half of the same rule: carrying a filter must not mean
+    // inventing one. With no project chosen the destinations stay bare, so a
+    // link copied out of the rail is the destination itself.
+    await page.goto("/studio");
+    const nav = page.getByRole("navigation");
+    for (const [label, href] of [
+      ["کانسپت‌ها", "/studio/concepts"],
+      ["محتوا", "/studio/content"],
+      ["تقویم", "/studio/calendar"],
+    ] as const) {
+      await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute(
+        "href",
+        href,
+      );
+    }
+  });
+
   test("each retired project tab folds into a work unit", async ({ page }) => {
     for (const [tab, to] of PROJECT_TAB_REDIRECTS) {
       await page.goto(`/studio/projects/p1/${tab}`);

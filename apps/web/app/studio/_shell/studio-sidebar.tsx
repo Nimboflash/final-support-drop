@@ -41,6 +41,13 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
     it away on every click: choose a project on «کانسپت‌ها», press «محتوا», and
     the filter silently vanished. The person then sees every project's content
     and has no way to know why.
+
+    `carry` was written and then never called, so that paragraph described the
+    live behaviour rather than the fixed one for as long as it stood. Nothing
+    caught it: no test asserted a carried href, and an unused local was not an
+    error. Both gaps are closed — `tsconfig.base.json` sets `noUnusedLocals`,
+    and shell-and-gallery.spec.ts asserts the rail both carries the filter and
+    does not invent one.
   */
   const project = useSearchParams().get("project");
   const carry = (href: string) => (project === null ? href : `${href}?project=${project}`);
@@ -76,7 +83,7 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
                         className={active ? "border-e-2 border-e-selected font-medium" : undefined}
                       >
                         <Link
-                          href={item.href}
+                          href={carry(item.href)}
                           aria-current={active ? "page" : undefined}
                           title={item.answersFa}
                         >

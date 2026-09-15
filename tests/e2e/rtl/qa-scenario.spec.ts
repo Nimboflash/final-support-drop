@@ -194,11 +194,22 @@ for (const vp of VIEWPORTS) {
       await expect(page.getByTestId("output-detail")).not.toContainText(/بستهٔ?\s/);
 
       /* -- 14./15. approved output reaches the calendar's undated tray ----- */
-      // Only an assembled output can be sent, and the sheet says so when it
-      // cannot be. Close it and take one that can.
+      // Only an ASSEMBLED output can be sent, and assembling one is machine
+      // work the panel refuses to simulate (ADR-0019 D2). So the output this
+      // scenario just filled reaches «آماده تأیید» and honestly stops there.
+      //
+      // This step used to reach straight past it to an assembled output — and
+      // silently took one belonging to a DIFFERENT project, because the rail
+      // was dropping the project filter on every click. With the filter
+      // carried (ADR-0020 D2) that borrowing is visible, so the widening is
+      // now performed rather than assumed: the selector goes back to «همه
+      // پروژه‌ها», which is exactly what a person looking for something
+      // sendable would do.
       if (await page.getByTestId("send-blocked-reason").isVisible().catch(() => false)) {
         await page.keyboard.press("Escape");
         await expect(page.getByTestId("output-detail")).toBeHidden();
+        await page.getByTestId("project-selector").click();
+        await page.getByRole("option", { name: "همه پروژه‌ها" }).click();
         const ready = page.locator('[data-testid="output-card"][data-state="approved"]').first();
         await expect(ready).toBeVisible();
         await ready.getByTestId("open-output").click();

@@ -5,9 +5,7 @@ import {
   GENERATION_JOB_STATES,
   OUTPUT_TYPES,
   PACKAGE_STATUSES,
-  PANEL_PROJECT_TYPES,
   PRODUCT_STAGES,
-  REFERENCE_KINDS,
   REVIEW_STATUSES,
 } from "../vocabulary/index";
 import { programSchema, weeklyLensSchema } from "./panel-entities";

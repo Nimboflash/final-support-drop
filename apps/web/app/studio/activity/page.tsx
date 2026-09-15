@@ -8,8 +8,13 @@ import { usePanelSnapshot } from "../../../lib/demo/queries";
 
 /**
  * `useSearchParams` needs a Suspense boundary at PAGE level in the app router.
- * It must never be used at layout level: there it suspends and never resolves
- * in dev, which once left the whole panel on its loading state.
+ *
+ * At LAYOUT level a boundary is the wrong answer, not merely unnecessary: the
+ * boundary is what breaks, because it renders its fallback on the client's
+ * first hydration pass and discards everything the server sent under it. The
+ * shell's own comment records what that cost. So the rule is per-level — a
+ * boundary here, none there — and `apps/web/app/studio/layout.tsx` is where the
+ * reasoning lives.
  */
 export default function Page() {
   return (
