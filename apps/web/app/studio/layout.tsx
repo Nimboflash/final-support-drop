@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { Badge, BrandMark, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
 import { StudioSidebar } from "./_shell/studio-sidebar";
+import { MachineActivity } from "../../components/panel/machine-activity";
 import { DemoProviders } from "../../lib/demo/providers";
 
 /**
@@ -117,9 +118,17 @@ export default async function StudioLayout({ children }: { children: ReactNode }
               the false claim the marker exists to prevent. One marker, one
               testid, and the sentence changes with the world.
             */}
-            <Badge variant="outline" className="ms-auto" data-testid="demo-marker">
-              {machineSession === null ? "حالت نمایشی" : "دادهٔ زندهٔ ماشین"}
-            </Badge>
+            <div className="ms-auto flex items-center gap-2">
+              {/*
+                What the machine is doing, beside what world this is. The two
+                belong together: the marker says whether anything real is on
+                screen, and this says whether it is changing right now.
+              */}
+              <MachineActivity />
+              <Badge variant="outline" data-testid="demo-marker">
+                {machineSession === null ? "حالت نمایشی" : "دادهٔ زندهٔ ماشین"}
+              </Badge>
+            </div>
           </header>
           {/*
             A div, not a `<main>`: `SidebarInset` already renders the document's

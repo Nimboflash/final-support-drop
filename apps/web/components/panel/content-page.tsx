@@ -38,6 +38,7 @@ import {
 } from "./project-selector";
 import { useReturnFocus } from "./use-return-focus";
 import { commandErrorFa, useRequestRevision, useReviewItem } from "../../lib/demo/commands";
+import { useDemoSession } from "../../lib/demo/providers";
 import {
   CONTENT_STATE_ACTION_FA,
   CONTENT_STATE_LABEL_FA,
@@ -358,6 +359,22 @@ function ContentDetail({
   const isMobile = useIsMobile();
   const review = useReviewItem();
   const revision = useRequestRevision();
+  /*
+    The machine records no decision about an individual content item, and
+    pretending otherwise is what this fixes.
+
+    Its whole write surface is five calls — create a session, generate concepts,
+    refine them, approve ONE concept, build the portfolio — and the portfolio
+    arrives complete, in one shot. There is no "approve this track" and no
+    "rewrite this paragraph" to call. So «تأیید محتوا» in REAL mode sent a
+    review command whose target id was a content id, the real world looked for a
+    concept with that id, found none, and the sheet answered «ثبت این فرمان
+    ممکن نشد» — after the click, with nothing explaining why.
+
+    ADR-0020 D11 says an affordance must act. These two cannot act here, so they
+    say so BEFORE the press instead of failing after it.
+  */
+  const machineCannotReview = useDemoSession().mode === "REAL";
   const [note, setNote] = useState("");
   const [source, setSource] = useState("");
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -484,6 +501,16 @@ function ContentDetail({
               {commandErrorFa(review.error ?? revision.error)}
             </p>
           ) : null}
+
+          {machineCannotReview ? (
+            <p
+              data-testid="machine-review-unavailable"
+              className="rounded-md border border-warning bg-warning/10 p-3 text-sm"
+            >
+              این محتوا را ماشین در یک مرحله ساخته و تصمیم جداگانه‌ای برای هر مورد ثبت
+              نمی‌کند. برای تغییر، به کانسپت برگردید و آن را دوباره بسازید.
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-auto flex flex-wrap gap-2 border-t p-4">
@@ -491,7 +518,13 @@ function ContentDetail({
             data-testid="approve-content"
             // Approval is unavailable only while a source is genuinely missing,
             // and the reason is stated beside it rather than left to a tooltip.
-            disabled={needsSource || failed || review.isPending || state === "approved"}
+            disabled={
+              machineCannotReview ||
+              needsSource ||
+              failed ||
+              review.isPending ||
+              state === "approved"
+            }
             onClick={() =>
               review.mutate(
                 {
@@ -511,7 +544,7 @@ function ContentDetail({
           <Button
             variant="outline"
             data-testid="request-content-change"
-            disabled={note.trim() === "" || revision.isPending}
+            disabled={machineCannotReview || note.trim() === "" || revision.isPending}
             onClick={() => {
               // The DECISION is recorded first and durably (ADR-0019 D4): a
               // change request IS a review outcome, and if the rewrite below
