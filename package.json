@@ -2,7 +2,7 @@
   "name": "drop-os",
   "private": true,
   "version": "0.0.1",
-  "description": "DROP Studio OS — versioned creative operating system (Release 0)",
+  "description": "DROP Studio OS \u2014 versioned creative operating system (Release 0)",
   "engines": {
     "node": ">=24"
   },
@@ -17,7 +17,7 @@
     "test:machine": "node scripts/run-machine-tests.mjs",
     "build": "pnpm -r run build",
     "machine:install": "python3 -m venv services/concept-portfolio/.venv && services/concept-portfolio/.venv/bin/pip install -q -r services/concept-portfolio/requirements.txt",
-    "machine:up": "DROP_BACKEND=${DROP_BACKEND:-mock} services/concept-portfolio/.venv/bin/python scripts/machine-server.py"
+    "machine:up": "services/concept-portfolio/.venv/bin/python scripts/machine-server.py"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

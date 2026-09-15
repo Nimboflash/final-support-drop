@@ -104,6 +104,40 @@ export function useReviewItem(): UseMutationResult<unknown, Error, ReviewInput> 
   });
 }
 
+/**
+ * «تولید کانسپت‌ها» — asking the machine for concepts (ticket P10, slice 2).
+ *
+ * `createProject` rather than a new gateway member, because from the panel's
+ * side that is what happens: a session with nothing in it becomes a project
+ * with concepts. The machine has exactly one project per session, so the press
+ * fills the one that already exists rather than adding a second.
+ *
+ * SPENDS. The mutation layer's `retry: false` is not what protects that — the
+ * real world constructs every write error with `retryable: false` explicitly,
+ * because a default in another file is not a defence you can point at.
+ */
+export function useGenerateConcepts(): UseMutationResult<unknown, Error, void> {
+  const session = useDemoSession();
+  const envelope = useEnvelope();
+  const invalidate = useInvalidateWorld();
+
+  return useMutation({
+    mutationFn: () => {
+      const commandId = nextCommandId("generate");
+      return Promise.resolve(
+        session.world.panelCommandGateway.createProject({
+          ...envelope(commandId),
+          // The machine takes the brief from the session it was created with,
+          // so nothing here describes a project: the shape satisfies the
+          // gateway's signature and the real world ignores it.
+          project: {} as never,
+        }),
+      );
+    },
+    onSuccess: invalidate,
+  });
+}
+
 export interface RevisionInput {
   readonly target: Target;
   readonly feedbackFa: string;

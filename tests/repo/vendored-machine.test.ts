@@ -33,7 +33,26 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const SERVICE = join(ROOT, "services/concept-portfolio");
 
 /** Generated at runtime or by the toolchain; never part of the artefact. */
-const NOT_VENDORED = new Set([".venv", "__pycache__", ".pytest_cache", "drop_runs"]);
+/**
+ * Not the owner's source, and therefore not evidence of a modification.
+ *
+ * `.venv`, `__pycache__`, `.pytest_cache` and `drop_runs` are all machine
+ * OUTPUT. `.env` is the same kind of thing from the other direction: it is the
+ * credential file the panel's own key route WRITES, at 0600, by design
+ * (ADR-0024) — it is gitignored, it holds no code, and its absence is the
+ * normal state of a fresh clone. Counting it as an added file made the guard
+ * fail the moment the feature it guards alongside was used once.
+ *
+ * The rule this guard actually enforces is unchanged: not one byte of the
+ * owner's PYTHON may differ. The manifest still pins every file that is theirs.
+ */
+const NOT_VENDORED = new Set([
+  ".venv",
+  "__pycache__",
+  ".pytest_cache",
+  "drop_runs",
+  ".env",
+]);
 
 const MANIFEST = JSON.parse(
   readFileSync(join(import.meta.dirname, "vendored-machine.manifest.json"), "utf8"),

@@ -36,3 +36,14 @@ __pycache__/
 # sample; `drop_runs/` is whatever this machine has produced locally.
 drop_runs/
 services/concept-portfolio/.env
+
+# Every env file, everywhere — not just the one the panel writes.
+#
+# This used to name `services/concept-portfolio/.env` and nothing else, which
+# covered the file the provider-key route creates and left every other way of
+# holding a credential exposed: `apps/web/.env.local` is what Next reads on
+# `next dev`, and a key pasted there would have been committed. A credential
+# must not depend on remembering to add a line here.
+.env
+.env.*
+!.env.example

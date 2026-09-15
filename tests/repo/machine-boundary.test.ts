@@ -50,21 +50,74 @@ describe("the proxy exists and is the only way to the machine", () => {
     expect(source).toContain('export const dynamic = "force-dynamic"');
   });
 
-  it("exports GET and no verb that could mutate or spend", () => {
+  it("exports exactly GET and POST, and OPTIONS is not among them", () => {
     /*
       Five of the service's seven routes are POSTs that cost money, and
       `concepts/generate` takes NO request body — which makes it a CORS simple
       request that any open page could fire cross-origin with `mode: "no-cors"`.
-      Slice 1 is read-only, and the way that is enforced is that no other verb
-      is exported: Next answers 405 for a verb a route handler does not define.
+
+      Slice 1 answered that by exporting no verb but GET. Slice 2 needs writes,
+      so the answer moved into the route (a write has no bodyless shape; see its
+      docblock) and this became an exact ALLOW-LIST rather than a ban on POST.
+
+      The allow-list is the point. Deleting the POST case would also have
+      stopped pinning OPTIONS — and an unexported OPTIONS is precisely what
+      makes a cross-origin preflight fail, because Next answers it with `Allow`
+      and no `Access-Control-Allow-Origin`, which is not an affirmative
+      preflight, so the browser never sends the forged write. The two halves of
+      the defence have to stay pinned together.
     */
     const code = codeOnly(read(ROUTE));
-    expect(code).toMatch(/export\s+async\s+function\s+GET\b/);
-    for (const verb of ["POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]) {
+    const exported = [...code.matchAll(/export\s+async\s+function\s+([A-Z]+)\b/g)].map(
+      (match) => match[1],
+    );
+    expect(exported.sort(), "the machine proxy's verb set is closed").toEqual(["GET", "POST"]);
+    for (const verb of ["PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]) {
       expect(code, `${verb} must not be exported from the machine proxy`).not.toMatch(
         new RegExp(`export\\s+(async\\s+)?function\\s+${verb}\\b`),
       );
     }
+  });
+
+  it("no write can be a CORS simple request", () => {
+    /*
+      The structural half of rule 2. A simple request is one a browser sends
+      cross-origin with no preflight; it cannot carry a custom header, and its
+      content-type is limited to three values that do not include JSON. So a
+      write that REQUIRES both cannot be forged from another origin — the
+      browser asks permission first and is refused.
+
+      Checked here rather than left to the docblock because the failure is
+      silent: dropping either requirement leaves every test green and re-opens
+      the exact attack the route was written against.
+    */
+    // Raw source, not `codeOnly`: these ARE string literals, and codeOnly
+    // exists to blank string literals so prose cannot satisfy a rule. The
+    // structural half below is what runs against stripped code.
+    const source = read(ROUTE);
+    expect(source, "a write must require the custom header").toContain("x-drop-machine-write");
+    expect(source, "a write must require a JSON content-type").toContain("application/json");
+    expect(source, "a write must check sec-fetch-site").toContain("sec-fetch-site");
+    expect(source, "a write must check origin").toContain('headers.get("origin")');
+    // Every one fails closed, so the checks are a conjunction with no early
+    // success: the function returns false on each miss and true only at the end.
+    expect(codeOnly(source)).toMatch(/function\s+sameOriginWrite/);
+  });
+
+  it("names no scheme-and-slashes literal, which would blind every other check", () => {
+    /*
+      Not style — self-defence, and it was earned. `codeOnly()` strips line
+      comments BEFORE string literals, so a `//` inside a string reads as the
+      start of a comment: it eats the rest of that line, leaves every quote
+      after it unbalanced, and the string-literal pass then pairs the WRONG
+      quotes and deletes whole functions. A same-origin check written as a
+      concatenated scheme did exactly that here — `export async function POST`
+      vanished from the guard's view while the file on disk was fine.
+
+      A guard that silently stops seeing the thing it guards is worse than no
+      guard. The route parses origins instead, and this keeps it that way.
+    */
+    expect(codeOnly(read(ROUTE))).not.toMatch(/https?:\/\//);
   });
 
   it("validates the session id before it can reach a path", () => {

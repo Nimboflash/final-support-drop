@@ -21,6 +21,8 @@ import {
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { ALL_PROJECTS, useSelectedProject } from "./project-selector";
+import { commandErrorFa, useGenerateConcepts } from "../../lib/demo/commands";
+import { useDemoSession } from "../../lib/demo/providers";
 
 /**
  * The composer (ADR-0020, brief §6 step 1).
@@ -62,6 +64,9 @@ export function NewConceptComposer({
   const [link, setLink] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [phase, setPhase] = useState<"COMPOSE" | "WORKING">("COMPOSE");
+  /** Whether this press reaches a real machine, or explains that it does not. */
+  const live = useDemoSession().mode === "REAL";
+  const generate = useGenerateConcepts();
 
   function addLink() {
     const value = link.trim();
@@ -75,9 +80,11 @@ export function NewConceptComposer({
   }
 
   function start() {
-    // Generation belongs to the machine build; the panel shows an honest
-    // working state and adds nothing it did not receive.
     setPhase("WORKING");
+    // In MOCK mode there is nothing to ask: generation belongs to the machine,
+    // and the panel adds nothing it did not receive (ADR-0019 D2). In REAL mode
+    // there IS something to ask, and this is the press that asks it.
+    if (live) generate.mutate();
   }
 
   function close(next: boolean) {
@@ -104,28 +111,59 @@ export function NewConceptComposer({
 
         {phase === "WORKING" ? (
           /*
-            Three "working…" lines printed at once implied work that is not
-            happening. Concept generation belongs to the machine build, which is
-            not connected here, and the panel cannot invent cards it did not
-            receive (ADR-0019 D2). So this says so plainly and, rather than
-            leaving the person on a dead dialog, takes them to the concepts of
-            the project they chose.
+            Two different truths, and the panel must not tell the wrong one.
+
+            In MOCK mode nothing is generated: three "working…" lines printed at
+            once implied work that is not happening, and the panel cannot invent
+            cards it did not receive (ADR-0019 D2). So it says so, and takes the
+            person to the concepts that do exist rather than leaving them on a
+            dead dialog.
+
+            In REAL mode the machine really is working, it takes tens of seconds,
+            and it is spending the owner's budget while it does. That deserves a
+            different sentence and no action beside it — closing the dialog does
+            not stop the call, and the surfaces behind it re-read every ten
+            seconds, so the result arrives on its own.
           */
           <div className="space-y-3 py-6 text-center" data-testid="composer-working">
-            <p className="text-sm">
-              ساخت کانسپت در این نسخهٔ نمایشی انجام نمی‌شود.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              کانسپت‌های موجود این پروژه را ببینید.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button size="sm" asChild data-testid="composer-go-to-concepts">
-                <a href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</a>
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => close(false)}>
-                بستن
-              </Button>
-            </div>
+            {live ? (
+              <>
+                <p className="text-sm" data-testid="composer-live-working">
+                  {generate.isPending
+                    ? "ماشین در حال ساخت کانسپت‌هاست. این کار ممکن است چند ده ثانیه طول بکشد."
+                    : generate.isError
+                      ? commandErrorFa(generate.error)
+                      : "کانسپت‌ها ساخته شدند."}
+                </p>
+                {generate.isPending ? null : (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button size="sm" asChild data-testid="composer-go-to-concepts">
+                      <a href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</a>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => close(false)}>
+                      بستن
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-sm">
+                  ساخت کانسپت در این نسخهٔ نمایشی انجام نمی‌شود.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  کانسپت‌های موجود این پروژه را ببینید.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button size="sm" asChild data-testid="composer-go-to-concepts">
+                    <a href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</a>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => close(false)}>
+                    بستن
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

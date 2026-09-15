@@ -17,9 +17,23 @@ import { createRealWorld } from "./real-world";
 const SESSION_ID = "c18c18e12aea";
 const NOW = "2026-09-10T09:00:00Z";
 
-/** A port that answers each call from a script, so failures are reproducible. */
+/**
+ * A port that answers each call from a script, so failures are reproducible.
+ *
+ * Every write answers with the same result as the read. That is enough for the
+ * cases here, which are about how a STATUS becomes a reason; a write's own
+ * behaviour is proven against the real service in `tests/integration/`.
+ */
 function portReturning(result: MachineHttpResult): MachineHttpPort {
-  return { getSession: () => Promise.resolve(result) };
+  const answer = (): Promise<MachineHttpResult> => Promise.resolve(result);
+  return {
+    getSession: answer,
+    createSession: answer,
+    generateConcepts: answer,
+    respondToConcepts: answer,
+    approveConcept: answer,
+    buildPortfolio: answer,
+  };
 }
 
 function worldOver(port: MachineHttpPort) {
@@ -114,30 +128,35 @@ describe("what the adapter does when the machine does not cooperate", () => {
   });
 });
 
-describe("every write refuses, and says something true while refusing", () => {
+describe("what the machine cannot do still refuses, and says something true", () => {
   /*
-    UNAUTHORIZED, not MACHINE_SYSTEM_DISCONNECTED. `commandErrorFa` renders the
-    latter as "the machine system is not connected", which in this mode is
-    false — it IS connected, we just read a session out of it. The world
-    declares `policy.forbidden`, so the acting role is VIEWER, and "you are not
-    permitted with your current role" is then simply true.
+    The refusals that REMAIN are about the machine's surface rather than about
+    permission, and slice 2 is what makes that distinction load-bearing. The
+    world used to declare `policy.forbidden`, which made every refusal read as
+    «با نقش فعلی، اجازهٔ این کار را ندارید» — true when nothing could be written
+    at all. It is false now: generate, refine, approve and build all work.
+
+    So the policy is open, and what is left refused is the set of things the
+    machine genuinely has no notion of. It has no calendar, no comments, no
+    output plan and no event stream. UNAUTHORIZED is still the closest of the
+    eight recorded reasons — ADR-0021 D6 forbids inventing a ninth — and it is
+    still the honest answer to "can I do this here": no, and not because of who
+    you are.
   */
   const world = worldOver(portReturning(OK));
 
-  it("acts as a read-only role, so the panel's own copy is accurate", () => {
-    expect(world.policy.forbidden).toBe(true);
+  it("no longer claims the person may not act, because now they may", () => {
+    expect(world.policy.forbidden).toBe(false);
   });
 
   it.each([
-    ["createProject", () => world.panelCommandGateway.createProject({} as never)],
     ["addComment", () => world.panelCommandGateway.addComment({} as never)],
     ["selectConcepts", () => world.panelCommandGateway.selectConcepts({} as never)],
     ["amendOutputPlan", () => world.panelCommandGateway.amendOutputPlan({} as never)],
     ["updateCalendar", () => world.panelCommandGateway.updateCalendar({} as never)],
     ["updateCalendarPackage", () => world.panelCommandGateway.updateCalendarPackage({} as never)],
     ["subscribe", () => world.panelCommandGateway.subscribe(() => {})],
-    ["requestRevision", () => world.revisionGateway.requestRevision({} as never)],
-    ["reviewItem", () => world.review.reviewItem({} as never)],
+    ["submitApproval", () => world.machineGateway.submitApproval({} as never)],
   ])("%s refuses with a typed error rather than a plausible success", (_name, call) => {
     let thrown: unknown;
     try {
@@ -147,6 +166,26 @@ describe("every write refuses, and says something true while refusing", () => {
     }
     expect(isGatewayError(thrown)).toBe(true);
     expect((thrown as GatewayError).reason).toBe("UNAUTHORIZED");
+  });
+
+  it("a revision route the machine cannot serve refuses rather than guessing", async () => {
+    /*
+      Only the CONCEPT route maps. The machine builds content and outputs in one
+      shot from an approved concept and cannot revise either in place, so a
+      content revision has nothing to call — and silently doing nothing, or
+      quietly refining the concept instead, would both be worse than refusing.
+    */
+    await expect(
+      world.revisionGateway.requestRevision({ route: "CONTENT_REVISION" } as never),
+    ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
+  });
+
+  it("a review decision other than approval refuses, because the machine records none", async () => {
+    // `approve_concept` is the machine's only review verb. There is no reject
+    // and no changes-requested, so the panel must not pretend to record one.
+    await expect(
+      world.review.reviewItem({ outcome: "REJECTED" } as never),
+    ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
   });
 
   it("exportPackage rejects rather than throwing, matching the mock", async () => {

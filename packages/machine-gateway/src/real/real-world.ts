@@ -1,5 +1,7 @@
 import {
   projectMachineSession,
+  type CommandReceipt,
+  type MachineSession,
   type PanelSnapshot,
   type MachineTextRenderer,
 } from "@drop/panel-domain";
@@ -9,9 +11,13 @@ import { createMachineClient, isMachineSessionId, type MachineClient } from "./m
 import type { PanelWorld } from "./panel-world";
 
 /**
- * A read-only world over a live concept-portfolio session (ticket P10, slice 1).
+ * A live world over a concept-portfolio session (ticket P10; writes are slice 2).
  *
- * `getSnapshot()` reads the machine and projects it. Every write refuses.
+ * `getSnapshot()` reads the machine and projects it. FOUR writes now reach it —
+ * generate, refine, approve and build — and everything else still refuses,
+ * because the machine genuinely has no notion of those things: it has no
+ * calendar, no comments, no output plan and no second project. A refusal here
+ * is a statement about the machine's surface, not about permission.
  *
  * The refusal is `UNAUTHORIZED`, and the reason it is not
  * `MACHINE_SYSTEM_DISCONNECTED` matters. `commandErrorFa` renders that one as
@@ -22,9 +28,13 @@ import type { PanelWorld } from "./panel-world";
  * and THAT is true, because this world declares `policy.forbidden`, so
  * `useEnvelope` (`apps/web/lib/demo/commands.ts:53-54`) acts as `VIEWER`.
  *
- * The mode is a read-only role, and every sentence the panel says about it is
- * accurate. Inventing a ninth `GatewayErrorReason` would have been the other
- * way to get an honest sentence, and ADR-0021 D6 forbids widening a closed set.
+ * That reasoning still holds for the five members that stay refused. What
+ * changed is that it no longer describes the world as a whole: `policy.forbidden`
+ * is gone, because a world where the person CAN generate, refine, approve and
+ * build is not one where «با نقش فعلی، اجازهٔ این کار را ندارید» is true.
+ *
+ * Inventing a ninth `GatewayErrorReason` would have been the other way to get an
+ * honest sentence, and ADR-0021 D6 forbids widening a closed set.
  */
 export interface RealWorldOptions {
   /** The machine session this world shows. Validated before any call. */
@@ -60,6 +70,61 @@ function refuse(action: string): never {
   throw gatewayErrors.unauthorized(action);
 }
 
+/**
+ * What the proxy checks the caller's belief against.
+ *
+ * Read immediately before every write, from the same client the reads use, so
+ * a write always carries the caller's most recent view rather than whatever a
+ * React render happened to close over. The proxy re-reads under its own lock
+ * and refuses on a mismatch; this only makes the common case succeed.
+ */
+async function precondition(
+  client: MachineClient,
+  sessionId: string,
+): Promise<{ expectedRounds: number; expectedStatus: string }> {
+  const session = await client.session(sessionId);
+  return { expectedRounds: session.concept_rounds.length, expectedStatus: session.status };
+}
+
+/**
+ * Turns a panel concept id back into a POSITION in the latest round.
+ *
+ * Positions, never ids, because `concept_id` is minted by the MODEL and carries
+ * no pattern and no uniqueness guarantee — so it is not a value that may be put
+ * into a URL. The projection builds panel ids as
+ * `mc-<session>-<machineConceptId>` with every character outside
+ * `[A-Za-z0-9_-]` replaced, and this reverses that by rebuilding each
+ * candidate's id and comparing, rather than by parsing — parsing would have to
+ * guess where a session id ends and a mangled concept id begins.
+ */
+function conceptIndexFor(
+  session: MachineSession,
+  panelConceptId: string,
+): number | null {
+  const rounds = session.concept_rounds;
+  const latest = rounds[rounds.length - 1];
+  if (latest === undefined) return null;
+  const safe = (value: string): string => value.replace(/[^A-Za-z0-9_-]/g, "-");
+  const prefix = "mc-" + safe(session.session_id) + "-";
+  for (let index = 0; index < latest.concepts.length; index += 1) {
+    if (prefix + safe(latest.concepts[index]!.concept_id) === panelConceptId) return index;
+  }
+  return null;
+}
+
+/** Every write answers with the same accepted receipt shape. */
+function accepted(command: { commandId: string; idempotencyKey: string }, now: string): CommandReceipt {
+  return {
+    commandId: command.commandId,
+    accepted: true,
+    status: "SUCCEEDED",
+    correlationId: command.commandId,
+    occurredAt: now,
+    origin: "REAL",
+    idempotencyKey: command.idempotencyKey,
+  };
+}
+
 export function createRealWorld(options: RealWorldOptions): RealWorld {
   if (!isMachineSessionId(options.sessionId)) {
     throw new GatewayError(
@@ -75,9 +140,10 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
     sessionId: options.sessionId,
     client,
 
-    // Read-only, and the panel is told so rather than left to discover it by
-    // watching commands fail.
-    policy: { forbidden: true },
+    // The machine has no authentication and no roles: there is exactly one
+    // actor and it may do everything the service exposes. The refusals below
+    // are about what the MACHINE has, not about who the caller is.
+    policy: { forbidden: false, disconnected: false },
 
     panelCommandGateway: {
       async getSnapshot(): Promise<PanelSnapshot> {
@@ -98,7 +164,25 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
         });
       },
 
-      createProject: () => refuse("create a project"),
+      /*
+        «تولید کانسپت‌ها» — the composer's one press.
+
+        It is `createProject` rather than a new gateway member because from the
+        panel's side that IS what happens: a session with no concepts becomes a
+        project with concepts in it. The machine has exactly one project per
+        session (the projection mints `ms-<session>`), so there is nothing to
+        create beside it; what the press does is fill the one that exists.
+
+        SPENDS. Every guard that stops it spending twice lives at the proxy,
+        where two tabs and a reload can all be seen; this only supplies the
+        caller's view of the session so the proxy has something to check.
+      */
+      async createProject(command): Promise<CommandReceipt> {
+        const input = await precondition(client, options.sessionId);
+        await client.generateConcepts(options.sessionId, input);
+        return accepted(command, options.now());
+      },
+
       addComment: () => refuse("add a comment"),
       selectConcepts: () => refuse("select concepts"),
       amendOutputPlan: () => refuse("amend the output plan"),
@@ -110,8 +194,80 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
       subscribe: () => refuse("subscribe to panel events"),
     },
 
-    revisionGateway: { requestRevision: () => refuse("request a revision") },
-    review: { reviewItem: () => refuse("record a review decision") },
+    /*
+      «بهبود کانسپت» — the assistant thread.
+
+      Maps to `concepts/respond` with action `refine`, carrying the one concept
+      the person is looking at as the liked one. `regenerate` is deliberately
+      unreachable: it throws the round away and pays for a replacement, and no
+      panel control should be able to do that by accident.
+
+      Only the CONCEPT routes map. A revision request against content or an
+      output has nothing to call — the machine builds those in one shot from an
+      approved concept and cannot revise them in place.
+    */
+    revisionGateway: {
+      async requestRevision(command): Promise<CommandReceipt> {
+        if (command.route !== "CONCEPT_REVISION") refuse("revise this on the machine");
+        const session = await client.session(options.sessionId);
+        const index = conceptIndexFor(session, command.target.id);
+        const input = {
+          expectedRounds: session.concept_rounds.length,
+          expectedStatus: session.status,
+          feedback: command.feedbackFa,
+          likedConceptIndexes: index === null ? [] : [index],
+        };
+        await client.respondToConcepts(options.sessionId, input);
+        return accepted(command, options.now());
+      },
+    },
+
+    /*
+      «انتخاب برای تولید محتوا» — approving a concept.
+
+      Two machine calls behind one decision, and the chaining is what finally
+      makes the label true: `approve_concept` alone only records the choice,
+      and it is `portfolio/build` that produces the research the projection
+      turns into content. A person who approved and saw nothing appear would be
+      right to think the button had failed.
+
+      The build is attempted only after the approval is recorded. If it fails,
+      the approval stands — it is durable and free — and the person can try the
+      build again rather than losing the decision.
+    */
+    review: {
+      async reviewItem(command): Promise<CommandReceipt> {
+        if (command.outcome !== "APPROVED") refuse("record that decision on the machine");
+        const session = await client.session(options.sessionId);
+        const index = conceptIndexFor(session, command.target.id);
+        if (index === null) {
+          throw new GatewayError("UNKNOWN_ID", "UNKNOWN_ID: no such concept in the latest round", {
+            retryable: false,
+          });
+        }
+        const base = {
+          expectedRounds: session.concept_rounds.length,
+          expectedStatus: session.status,
+        };
+        const afterApprove = await client.approveConcept(options.sessionId, {
+          ...base,
+          conceptIndex: index,
+        });
+        await client.buildPortfolio(options.sessionId, {
+          expectedRounds: afterApprove.concept_rounds.length,
+          expectedStatus: afterApprove.status,
+        });
+        return accepted(command, options.now());
+      },
+    },
+
+    /*
+      Still refused, and not as an oversight. ADR-0013 D1 makes the approval
+      endpoint the one write path for approvals, and in REAL mode that path is
+      `review.reviewItem` above. A second construction site for an
+      `ApprovalCommand` here would be a second way to approve — which is the
+      thing `tests/repo/panel-contract-invariants.test.ts` exists to prevent.
+    */
     machineGateway: { submitApproval: () => refuse("submit an approval") },
   };
 }

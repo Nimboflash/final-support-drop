@@ -22,8 +22,16 @@ Two things follow from that, and this file is where both are solved:
    `_service()`, so FastAPI's own `/openapi.json` answers without touching
    configuration, without creating a session and without spending a token.
 
-`DROP_BACKEND=mock` selects the deterministic backend. Anything else leaves the
-service exactly as its authors wrote it, real credential and all.
+Which backend runs is decided by whether a credential is PRESENT, not by a
+default that has to be remembered. `pnpm machine:up` used to force
+`DROP_BACKEND=mock`, so pasting a real OpenRouter key into the panel changed
+nothing: the run still came back with the deterministic backend's three fixed
+concepts and OpenRouter was never called. A key that is configured and silently
+unused is worse than no key at all, because the output looks like it worked.
+
+So: a key in the environment means the real backend, no key means the mock one,
+and `DROP_BACKEND` set explicitly overrides both — because an operator naming a
+backend outranks an inference. The banner says which one is running, every time.
 """
 
 from __future__ import annotations
@@ -81,9 +89,23 @@ def _load_service_env() -> None:
         os.environ.setdefault(name.strip(), value.strip())
 
 
+def _chosen_backend() -> str:
+    """`DROP_BACKEND` if set, else real when a credential exists, else mock.
+
+    Inferred rather than defaulted, because both defaults are wrong somewhere:
+    defaulting to mock silently ignores a key the user just pasted, and
+    defaulting to real makes the service unstartable for anyone without one
+    (`Settings.from_env()` raises on a missing key).
+    """
+    explicit = os.getenv("DROP_BACKEND", "").strip().lower()
+    if explicit:
+        return explicit
+    return "openrouter" if os.getenv("OPENROUTER_API_KEY") else "mock"
+
+
 def main() -> None:
     _load_service_env()
-    backend = os.getenv("DROP_BACKEND", "openrouter").strip().lower()
+    backend = _chosen_backend()
     if backend == "mock":
         # Rebound on the module, so every route resolves it at call time.
         api_mod._service = _mock_service  # noqa: SLF001
@@ -96,6 +118,18 @@ def main() -> None:
         f"concept-portfolio on http://{host}:{port} (backend={backend}, credential={credential})",
         flush=True,
     )
+    if backend == "mock" and credential == "set":
+        # The one combination that looks like it is working and is not.
+        print(
+            "  note: DROP_BACKEND=mock is set, so the configured key will NOT be used.",
+            flush=True,
+        )
+    if backend != "mock" and credential == "absent":
+        print(
+            "  note: no OPENROUTER_API_KEY. Paste one in the panel (تنظیمات) and restart this,"
+            " or set DROP_BACKEND=mock to run without spending.",
+            flush=True,
+        )
     uvicorn.run(api_mod.app, host=host, port=port, log_level="info")
 
 

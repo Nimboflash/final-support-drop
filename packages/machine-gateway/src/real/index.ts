@@ -1,5 +1,12 @@
 // Ticket P10 slice 1 — the real adapter, alongside the mock (ADR-0021 D4).
-export type { MachineHttpPort, MachineHttpResult } from "./machine-http-port";
+export type {
+  MachineApproveInput,
+  MachineBuildInput,
+  MachineHttpPort,
+  MachineHttpResult,
+  MachineRespondInput,
+  MachineWritePrecondition,
+} from "./machine-http-port";
 export {
   createMachineClient,
   isMachineSessionId,
