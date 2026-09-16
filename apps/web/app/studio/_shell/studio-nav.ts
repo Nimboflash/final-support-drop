@@ -63,7 +63,7 @@ export const STUDIO_NAV: readonly StudioNavItem[] = [
     label: "Engine",
     href: "/studio/engine",
     icon: Cpu,
-    answersFa: "هر پروژه اکنون در کدام بخش جریان کار قرار دارد؟",
+    answersFa: "این پروژه اکنون در کدام بخش جریان کار قرار دارد؟",
   },
 ] as const;
 

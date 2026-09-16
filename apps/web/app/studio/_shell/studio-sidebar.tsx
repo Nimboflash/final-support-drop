@@ -90,7 +90,18 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
                         // The active destination is the one place the brand accent
                         // tints a surface (ADR-0019 D14). Position is never the
                         // only cue: aria-current carries it too.
-                        className={active ? "border-e-2 border-e-selected font-medium" : undefined}
+                        /*
+                          The tint is the brand accent's, not the hover tint's.
+                          `sidebarMenuButtonVariants` paints hover, press and
+                          active with one token, so the destination you are ON
+                          looked like the one under your pointer. The accent
+                          stripe already marks it; the ground now agrees.
+                        */
+                        className={
+                          active
+                            ? "border-e-2 border-e-selected font-medium data-[active=true]:bg-selected/10 data-[active=true]:hover:bg-selected/15"
+                            : undefined
+                        }
                       >
                         <Link
                           href={carry(item.href)}
@@ -122,9 +133,14 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="left" align="end">
+                {/*
+                  Carried, like the primary rail. These were bare hrefs, so
+                  «تاریخچه» — which honours the filter — arrived unfiltered,
+                  and from there every rail link went back to being bare too.
+                */}
                 {SECONDARY_NAV.map((item) => (
                   <DropdownMenuItem key={item.href} asChild>
-                    <Link href={item.href}>{item.label}</Link>
+                    <Link href={carry(item.href)}>{item.label}</Link>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

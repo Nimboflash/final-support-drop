@@ -5,14 +5,17 @@ import {
   type PanelSnapshot,
   type MachineTextRenderer,
 } from "@drop/panel-domain";
-import { GatewayError, gatewayErrors } from "../errors";
+import { GatewayError, NEXT_ACTIONS } from "../errors";
 import type { MachineHttpPort } from "./machine-http-port";
 import { createMachineClient, isMachineSessionId, type MachineClient } from "./machine-client";
 import type { PanelWorld } from "./panel-world";
 import {
   applyNotes,
+  clearContentReviews,
   readNotes,
   writeCalendarEntry,
+  writeConceptDecision,
+  writeConceptRequest,
   writeReviewDecision,
   type MachineReviewPort,
 } from "./review-store";
@@ -20,28 +23,21 @@ import {
 /**
  * A live world over a concept-portfolio session (ticket P10; writes are slice 2).
  *
- * `getSnapshot()` reads the machine and projects it. FOUR writes now reach it —
- * generate, refine, approve and build — and everything else still refuses,
- * because the machine genuinely has no notion of those things: it has no
- * calendar, no comments, no output plan and no second project. A refusal here
- * is a statement about the machine's surface, not about permission.
+ * `getSnapshot()` reads the machine and projects it. FOUR writes reach the
+ * machine — generate, refine, approve and build — and a further four are the
+ * PANEL's own, kept in the notes beside the session: content review, setting
+ * a concept aside, the request text behind a refinement, and the calendar.
+ * What refuses is what the machine genuinely has no notion of AND the panel
+ * has no honest home for: comments, plan amendments, a second project, an
+ * event stream.
  *
- * The refusal is `UNAUTHORIZED`, and the reason it is not
- * `MACHINE_SYSTEM_DISCONNECTED` matters. `commandErrorFa` renders that one as
- * «ارتباط با سامانهٔ ماشین برقرار نیست» — "the machine system is not
- * connected" — which in this mode is simply false: the machine IS connected,
- * we just read a session out of it. `UNAUTHORIZED` renders as «با نقش فعلی،
- * اجازهٔ این کار را ندارید» — "with the current role you are not permitted" —
- * and THAT is true, because this world declares `policy.forbidden`, so
- * `useEnvelope` (`apps/web/lib/demo/commands.ts:53-54`) acts as `VIEWER`.
- *
- * That reasoning still holds for the five members that stay refused. What
- * changed is that it no longer describes the world as a whole: `policy.forbidden`
- * is gone, because a world where the person CAN generate, refine, approve and
- * build is not one where «با نقش فعلی، اجازهٔ این کار را ندارید» is true.
- *
- * Inventing a ninth `GatewayErrorReason` would have been the other way to get an
- * honest sentence, and ADR-0021 D6 forbids widening a closed set.
+ * Those refusals used to be `UNAUTHORIZED` because of its Persian rendering —
+ * «با نقش فعلی، اجازهٔ این کار را ندارید» — which was true while this world
+ * declared `policy.forbidden` and false from the moment writes landed: the
+ * person may do everything the machine exposes, so a sentence about their ROLE
+ * blamed them for a limit of the machine's. The reason stays `UNAUTHORIZED`
+ * (ADR-0021 D6 forbids a ninth), and `nextPermittedActions` now carries
+ * `UNSUPPORTED_BY_MACHINE`, which `commandErrorFa` renders as what it is.
  */
 export interface RealWorldOptions {
   /** The machine session this world shows. Validated before any call. */
@@ -65,11 +61,11 @@ export interface RealWorldOptions {
    */
   readonly text: MachineTextRenderer;
   /**
-   * Where the person's own review of machine content is kept.
+   * Where the person's own notes about the session are kept.
    *
    * Optional, because a world without one is still a correct read-only world —
    * it simply cannot record that someone looked at a track and said yes. When
-   * absent, content review refuses with a reason rather than pretending.
+   * absent, every panel-side write refuses with a reason rather than pretending.
    */
   readonly review?: MachineReviewPort;
 }
@@ -81,8 +77,28 @@ export interface RealWorld extends PanelWorld {
   readonly client: MachineClient;
 }
 
+/** The machine has no such verb, and the panel has nowhere honest to keep it. */
 function refuse(action: string): never {
-  throw gatewayErrors.unauthorized(action);
+  throw new GatewayError("UNAUTHORIZED", `UNAUTHORIZED: the machine cannot ${action}`, {
+    retryable: false,
+    nextPermittedActions: [NEXT_ACTIONS.UNSUPPORTED_BY_MACHINE],
+  });
+}
+
+/** The panel-side ledger is missing, so a decision would be accepted and lost. */
+function noLedger(action: string): never {
+  throw new GatewayError("UNAUTHORIZED", `UNAUTHORIZED: nowhere to ${action}`, {
+    retryable: false,
+    nextPermittedActions: [NEXT_ACTIONS.UNSUPPORTED_BY_MACHINE],
+  });
+}
+
+function needsReason(): never {
+  throw new GatewayError(
+    "SCHEMA_VALIDATION_FAILED",
+    "SCHEMA_VALIDATION_FAILED: a decision that is not an approval requires a reason (ADR-0013 D2)",
+    { retryable: false, nextPermittedActions: [NEXT_ACTIONS.ADD_A_REASON] },
+  );
 }
 
 /**
@@ -93,11 +109,7 @@ function refuse(action: string): never {
  * React render happened to close over. The proxy re-reads under its own lock
  * and refuses on a mismatch; this only makes the common case succeed.
  */
-async function precondition(
-  client: MachineClient,
-  sessionId: string,
-): Promise<{ expectedRounds: number; expectedStatus: string }> {
-  const session = await client.session(sessionId);
+function preconditionOf(session: MachineSession): { expectedRounds: number; expectedStatus: string } {
   return { expectedRounds: session.concept_rounds.length, expectedStatus: session.status };
 }
 
@@ -112,10 +124,7 @@ async function precondition(
  * candidate's id and comparing, rather than by parsing — parsing would have to
  * guess where a session id ends and a mangled concept id begins.
  */
-function conceptIndexFor(
-  session: MachineSession,
-  panelConceptId: string,
-): number | null {
+function conceptIndexFor(session: MachineSession, panelConceptId: string): number | null {
   const rounds = session.concept_rounds;
   const latest = rounds[rounds.length - 1];
   if (latest === undefined) return null;
@@ -125,6 +134,12 @@ function conceptIndexFor(
     if (prefix + safe(latest.concepts[index]!.concept_id) === panelConceptId) return index;
   }
   return null;
+}
+
+function unknownConcept(): never {
+  throw new GatewayError("UNKNOWN_ID", "UNKNOWN_ID: no such concept in the latest round", {
+    retryable: false,
+  });
 }
 
 /** Every write answers with the same accepted receipt shape. */
@@ -150,9 +165,45 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
   }
 
   const client = createMachineClient(options.port);
+  const sid = options.sessionId;
+
+  /**
+   * Approves a concept if the machine does not already hold it approved, then
+   * builds the research from it.
+   *
+   * `replace` is the one flag that lets the build run over an existing
+   * portfolio. It is passed ONLY by the rebuild route below, which the panel
+   * reaches through an explicit confirmation — because replacing research is
+   * a deliberate purchase, never a side effect of a click.
+   *
+   * The approval is SKIPPED when already recorded, which is what makes a
+   * failed build recoverable: a build can fail on its own (the model call is
+   * the part that can time out or come back unparseable), and re-running the
+   * approval would hit the machine's own guard. Now the same press retries
+   * just the half that failed.
+   */
+  async function approveAndBuild(
+    session: MachineSession,
+    index: number,
+    replace: boolean,
+  ): Promise<void> {
+    const round = session.concept_rounds[session.concept_rounds.length - 1];
+    const machineConceptId = round?.concepts[index]?.concept_id ?? null;
+    const alreadyApproved =
+      machineConceptId !== null && session.approved_concept_id === machineConceptId;
+
+    const afterApprove = alreadyApproved
+      ? session
+      : await client.approveConcept(sid, { ...preconditionOf(session), conceptIndex: index });
+
+    await client.buildPortfolio(sid, {
+      ...preconditionOf(afterApprove),
+      ...(replace ? { replaceExistingPortfolio: true } : {}),
+    });
+  }
 
   return {
-    sessionId: options.sessionId,
+    sessionId: sid,
     client,
 
     // The machine has no authentication and no roles: there is exactly one
@@ -162,7 +213,7 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
 
     panelCommandGateway: {
       async getSnapshot(): Promise<PanelSnapshot> {
-        const session = await client.session(options.sessionId);
+        const session = await client.session(sid);
         /*
           The clock is sampled ONCE per snapshot, not per row. Every timestamp
           in the projection comes from this single instant, so a snapshot is
@@ -181,7 +232,9 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
         // the PERSON said is laid over it here, in the layer that knows one has
         // been here at all.
         if (options.review === undefined) return projected;
-        return applyNotes(projected, await readNotes(options.review, options.sessionId));
+        return applyNotes(projected, await readNotes(options.review, sid), {
+          actorId: options.ownerId,
+        });
       },
 
       /*
@@ -198,14 +251,14 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
         caller's view of the session so the proxy has something to check.
       */
       async createProject(command): Promise<CommandReceipt> {
-        const input = await precondition(client, options.sessionId);
-        await client.generateConcepts(options.sessionId, input);
+        const session = await client.session(sid);
+        await client.generateConcepts(sid, preconditionOf(session));
         return accepted(command, options.now());
       },
 
-      addComment: () => refuse("add a comment"),
-      selectConcepts: () => refuse("select concepts"),
-      amendOutputPlan: () => refuse("amend the output plan"),
+      addComment: () => refuse("keep a comment"),
+      selectConcepts: () => refuse("select several concepts at once"),
+      amendOutputPlan: () => refuse("amend an output plan"),
       /*
         A date is the panel's to keep, because the machine has no calendar.
 
@@ -217,74 +270,84 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
         next snapshot, the same way and for the same reason.
       */
       async updateCalendar(command): Promise<CommandReceipt> {
-        if (options.review === undefined) refuse("update the calendar");
-        await writeCalendarEntry(options.review, options.sessionId, command.entry);
+        if (options.review === undefined) noLedger("keep a date");
+        await writeCalendarEntry(options.review, sid, command.entry);
         return accepted(command, options.now());
       },
-      updateCalendarPackage: () => refuse("update a calendar output"),
+      updateCalendarPackage: () => refuse("change which output a date points at"),
       // Rejects rather than throws, matching the mock: an async member that
       // throws synchronously is a different failure mode for the caller.
-      exportPackage: () => Promise.reject(gatewayErrors.unauthorized("export an output")),
-      subscribe: () => refuse("subscribe to panel events"),
+      exportPackage: () => Promise.reject(gatewayUnsupported("export an output")),
+      subscribe: () => refuse("stream events"),
     },
 
     /*
-      «بهبود کانسپت» — the assistant thread.
+      Two routes reach the machine; two are refused.
 
-      Maps to `concepts/respond` with action `refine`, carrying the one concept
-      the person is looking at as the liked one. `regenerate` is deliberately
-      unreachable: it throws the round away and pays for a replacement, and no
-      panel control should be able to do that by accident.
+        CONCEPT_REVISION   «بهبود کانسپت» — `concepts/respond` with action
+                           `refine`, carrying the one concept the person is
+                           looking at as the liked one. The request text is
+                           then kept in the notes, because the machine writes
+                           it only to its events log and the thread would
+                           otherwise forget it on close.
 
-      Only the CONCEPT routes map. A revision request against content or an
-      output has nothing to call — the machine builds those in one shot from an
-      approved concept and cannot revise them in place.
+        RESEARCH_REFRESH   «بازسازی محتوا» on a CONCEPT — approve it if the
+                           machine does not already hold it approved, then
+                           `portfolio/build` with `replaceExistingPortfolio`.
+                           This is the ONE path that may build over existing
+                           research, and the panel reaches it only through an
+                           explicit confirmation that names the cost. Content
+                           reviews are cleared afterwards, because the tracks
+                           they were about no longer exist.
+
+        CONCEPT_REPLACEMENT is `regenerate` on the machine, which throws the
+        whole round away and pays for a replacement; no panel control should
+        be able to do that by accident. CONTENT_REWRITE has nothing to call —
+        the machine builds content in one shot and cannot revise one item.
     */
     revisionGateway: {
       async requestRevision(command): Promise<CommandReceipt> {
-        if (command.route !== "CONCEPT_REVISION") refuse("revise this on the machine");
-        const session = await client.session(options.sessionId);
-        const index = conceptIndexFor(session, command.target.id);
-        const input = {
-          expectedRounds: session.concept_rounds.length,
-          expectedStatus: session.status,
-          feedback: command.feedbackFa,
-          likedConceptIndexes: index === null ? [] : [index],
-        };
-        await client.respondToConcepts(options.sessionId, input);
-        return accepted(command, options.now());
+        const targetType: unknown = (command.target as { type?: unknown } | undefined)?.type;
+        if (targetType !== "CONCEPT") refuse("revise this in place");
+
+        if (command.route === "CONCEPT_REVISION") {
+          const session = await client.session(sid);
+          const index = conceptIndexFor(session, command.target.id);
+          await client.respondToConcepts(sid, {
+            ...preconditionOf(session),
+            feedback: command.feedbackFa,
+            likedConceptIndexes: index === null ? [] : [index],
+          });
+          if (options.review !== undefined) {
+            await writeConceptRequest(options.review, sid, {
+              conceptId: command.target.id,
+              feedbackFa: command.feedbackFa,
+              at: options.now(),
+            });
+          }
+          return accepted(command, options.now());
+        }
+
+        if (command.route === "RESEARCH_REFRESH") {
+          const session = await client.session(sid);
+          const index = conceptIndexFor(session, command.target.id);
+          if (index === null) unknownConcept();
+          await approveAndBuild(session, index, session.portfolio !== null);
+          if (options.review !== undefined) {
+            await clearContentReviews(options.review, sid);
+            // A concept the person is now building from is not one they set
+            // aside, whatever an older note says.
+            await writeConceptDecision(options.review, sid, command.target.id, null);
+          }
+          return accepted(command, options.now());
+        }
+
+        return refuse("regenerate or rewrite this");
       },
     },
 
-    /*
-      «انتخاب برای تولید محتوا» — approving a concept.
-
-      Two machine calls behind one decision, and the chaining is what finally
-      makes the label true: `approve_concept` alone only records the choice,
-      and it is `portfolio/build` that produces the research the projection
-      turns into content. A person who approved and saw nothing appear would be
-      right to think the button had failed.
-
-      The build is attempted only after the approval is recorded. If it fails,
-      the approval stands — it is durable and free — and the person can try the
-      build again rather than losing the decision.
-    */
     review: {
       async reviewItem(command): Promise<CommandReceipt> {
-        /*
-          Two different decisions wearing one name, and telling them apart is
-          what this whole method is for.
-
-          A decision about CONTENT is the person's own. The machine has no call
-          to make for it — the portfolio is built in one shot — so it is
-          recorded beside the session and laid back over the next snapshot. That
-          is not a lesser kind of approval: it is what assembles the output and
-          lets the work reach a calendar.
-
-          A decision about a CONCEPT is a decision the machine acts on, so it
-          travels: approve, then build the research the projection turns into
-          content.
-        */
         /*
           Read defensively even though the signature says it cannot be absent.
           The whole point of this layer's error model is that a raw `TypeError`
@@ -302,15 +365,23 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
           );
         }
 
+        /*
+          A decision about CONTENT is the person's own. The machine has no call
+          to make for it — the portfolio is built in one shot — so it is
+          recorded beside the session and laid back over the next snapshot. That
+          is not a lesser kind of approval: it is what assembles the output and
+          lets the work reach a calendar.
+        */
         if (targetType === "CONTENT") {
-          if (options.review === undefined) refuse("record a decision about this content");
+          if (options.review === undefined) noLedger("record a decision about this content");
           if (command.outcome === "REJECTED") {
             // The machine has nothing to discard and the panel has nothing to
             // put in its place, so a rejection here would record a state
             // nothing can leave.
-            refuse("reject machine content");
+            refuse("discard one piece of content");
           }
-          await writeReviewDecision(options.review, options.sessionId, command.target.id, {
+          if (command.outcome === "CHANGES_REQUESTED" && command.reasonFa === null) needsReason();
+          await writeReviewDecision(options.review, sid, command.target.id, {
             outcome: command.outcome === "APPROVED" ? "APPROVED" : "CHANGES_REQUESTED",
             reasonFa: command.reasonFa,
             decidedAt: options.now(),
@@ -318,68 +389,96 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
           return accepted(command, options.now());
         }
 
-        if (command.outcome !== "APPROVED") refuse("record that decision on the machine");
-        const session = await client.session(options.sessionId);
-        const index = conceptIndexFor(session, command.target.id);
-        if (index === null) {
-          throw new GatewayError("UNKNOWN_ID", "UNKNOWN_ID: no such concept in the latest round", {
-            retryable: false,
+        /*
+          «کنار گذاشتن» — the person's fact, kept by the panel.
+
+          `approve_concept` is the machine's only review verb for a concept;
+          there is no reject on its side. That used to make this refuse every
+          time, with a sentence blaming the person's role, and left a round's
+          unchosen concepts uncleared forever — the «بررسی کانسپت‌ها» row on
+          the overview could never reach zero. What the machine cannot record,
+          the panel records, exactly as it does for content.
+
+          What it will NOT do is set aside the concept the machine holds
+          approved: that is the one whose research exists, and a note saying
+          otherwise would contradict every content row on screen.
+        */
+        if (command.outcome === "REJECTED") {
+          if (options.review === undefined) noLedger("record that this concept is set aside");
+          const reasonFa = command.reasonFa;
+          if (reasonFa === null || reasonFa.trim() === "") needsReason();
+          const session = await client.session(sid);
+          const index = conceptIndexFor(session, command.target.id);
+          if (index === null) unknownConcept();
+          const machineConceptId =
+            session.concept_rounds[session.concept_rounds.length - 1]?.concepts[index]?.concept_id;
+          if (machineConceptId !== undefined && session.approved_concept_id === machineConceptId) {
+            throw new GatewayError(
+              "INVALID_STATE_TRANSITION",
+              "INVALID_STATE_TRANSITION: the concept the research was built from cannot be set aside",
+              { retryable: false },
+            );
+          }
+          await writeConceptDecision(options.review, sid, command.target.id, {
+            outcome: "REJECTED",
+            reasonFa,
+            decidedAt: options.now(),
           });
+          return accepted(command, options.now());
         }
 
-        /*
-          Two machine calls, and the order of the checks below is what stops
-          them half-applying.
+        if (command.outcome !== "APPROVED") refuse("hold a concept for changes");
 
+        /*
+          «انتخاب برای تولید محتوا» — approving a concept.
+
+          Two machine calls behind one decision, and the chaining is what makes
+          the label true: `approve_concept` alone only records the choice, and
+          it is `portfolio/build` that produces the research the projection
+          turns into content. A person who approved and saw nothing appear
+          would be right to think the button had failed.
+
+          The order of the checks is what stops the pair half-applying.
           `approve_concept` is free and succeeds unconditionally;
           `portfolio/build` is paid and refuses over an existing portfolio. Run
-          blind, selecting a SECOND concept therefore did both things wrong at
-          once: the approval landed, the build was refused, and the machine was
-          left pointing at a concept whose research had never been made — while
-          the panel said to try again, which could only fail the same way.
-
-          So the state is read first and the refusal happens BEFORE anything is
-          written. Nothing here half-applies.
+          blind, selecting a SECOND concept did both things wrong at once: the
+          approval landed, the build was refused, and the machine was left
+          pointing at a concept whose research had never been made — while the
+          projection hung the FIRST concept's research under the second's
+          title. So the state is read first, and the refusal happens BEFORE
+          anything is written.
         */
-        const rounds = session.concept_rounds[session.concept_rounds.length - 1];
-        const machineConceptId = rounds?.concepts[index]?.concept_id ?? null;
+        const session = await client.session(sid);
+        const index = conceptIndexFor(session, command.target.id);
+        if (index === null) unknownConcept();
+
+        const round = session.concept_rounds[session.concept_rounds.length - 1];
+        const machineConceptId = round?.concepts[index]?.concept_id ?? null;
         const alreadyApproved =
           machineConceptId !== null && session.approved_concept_id === machineConceptId;
 
         if (session.portfolio !== null && !alreadyApproved) {
           // Switching concepts means paying for a second portfolio over the
-          // first. That is a deliberate purchase, not a side effect of a click.
+          // first. That is a deliberate purchase, and it has its own route —
+          // RESEARCH_REFRESH — behind a confirmation that names the cost.
           throw new GatewayError(
             "INVALID_STATE_TRANSITION",
             "INVALID_STATE_TRANSITION: this session already has research built for another concept",
-            { retryable: false },
+            { retryable: false, nextPermittedActions: [NEXT_ACTIONS.REPLACE_EXISTING] },
           );
         }
 
-        const base = {
-          expectedRounds: session.concept_rounds.length,
-          expectedStatus: session.status,
-        };
+        if (alreadyApproved && session.portfolio !== null) {
+          // Nothing to do: it is selected and its research exists. Idempotent
+          // rather than refused, so a double press costs nothing and says
+          // nothing alarming.
+          return accepted(command, options.now());
+        }
 
-        /*
-          The approval is SKIPPED when it is already recorded, which is what
-          makes a failed build recoverable.
-
-          A build can fail on its own — the model call is the part that can time
-          out or come back unparseable — and when it did, the concept was left
-          approved with no research, and pressing the only button that builds
-          one re-ran the approval and hit the guard above. The session was
-          stranded with no way forward. Now the same press retries just the half
-          that failed.
-        */
-        const afterApprove = alreadyApproved
-          ? session
-          : await client.approveConcept(options.sessionId, { ...base, conceptIndex: index });
-
-        await client.buildPortfolio(options.sessionId, {
-          expectedRounds: afterApprove.concept_rounds.length,
-          expectedStatus: afterApprove.status,
-        });
+        await approveAndBuild(session, index, false);
+        if (options.review !== undefined) {
+          await writeConceptDecision(options.review, sid, command.target.id, null);
+        }
         return accepted(command, options.now());
       },
     },
@@ -391,6 +490,14 @@ export function createRealWorld(options: RealWorldOptions): RealWorld {
       `ApprovalCommand` here would be a second way to approve — which is the
       thing `tests/repo/panel-contract-invariants.test.ts` exists to prevent.
     */
-    machineGateway: { submitApproval: () => refuse("submit an approval") },
+    machineGateway: { submitApproval: () => refuse("approve outside the review path") },
   };
+}
+
+/** The rejected-promise form of `refuse`, for the one member that must reject. */
+function gatewayUnsupported(action: string): GatewayError {
+  return new GatewayError("UNAUTHORIZED", `UNAUTHORIZED: the machine cannot ${action}`, {
+    retryable: false,
+    nextPermittedActions: [NEXT_ACTIONS.UNSUPPORTED_BY_MACHINE],
+  });
 }

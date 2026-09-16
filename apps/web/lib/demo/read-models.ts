@@ -87,6 +87,8 @@ export function openReviewCount(world: PanelSnapshot, projectId: string): number
  */
 export type AttentionKind =
   | "BLOCKED_REQUIRED"
+  /** A build that did not finish. Not review work: approving it is impossible. */
+  | "BUILD_FAILED"
   | "AWAITING_REVIEW"
   /** An output whose content is all approved and which is waiting to be sent. */
   | "OUTPUT_READY"
@@ -103,6 +105,7 @@ export interface AttentionRow {
 
 const ATTENTION_ORDER: readonly AttentionKind[] = [
   "BLOCKED_REQUIRED",
+  "BUILD_FAILED",
   "AWAITING_REVIEW",
   "OUTPUT_READY",
   "MISSING_SCHEDULE",
@@ -131,11 +134,37 @@ export function attentionRows(world: PanelSnapshot): readonly AttentionRow[] {
       });
     }
 
+    /*
+      A FAILED item is not review work. It used to be counted here on its
+      review status alone, so the row read «یک محتوا به تأیید شما نیاز دارد»
+      and sent the person to a sheet whose approve button was disabled on
+      exactly that item — the one action the row named could not be taken.
+    */
+    const failed = world.content.filter(
+      (c) => c.projectId === project.id && c.generationState === "FAILED",
+    ).length;
+    if (failed > 0) {
+      rows.push({
+        kind: "BUILD_FAILED",
+        projectId: project.id,
+        projectTitleFa: project.titleFa,
+        detailFa:
+          failed === 1
+            ? "ساخت یک محتوا ناتمام ماند."
+            : `ساخت ${toPersianDigits(String(failed))} محتوا ناتمام ماند.`,
+        href: `/studio/content?project=${project.id}`,
+        actionLabelFa: "دیدن محتوا",
+      });
+    }
+
     const openConcepts = world.concepts.filter(
       (c) => c.projectId === project.id && c.reviewStatus === "IN_REVIEW",
     ).length;
     const openContent = world.content.filter(
-      (c) => c.projectId === project.id && c.reviewStatus === "IN_REVIEW",
+      (c) =>
+        c.projectId === project.id &&
+        c.reviewStatus === "IN_REVIEW" &&
+        c.generationState !== "FAILED",
     ).length;
     const open = openConcepts + openContent;
     if (open > 0) {
@@ -189,7 +218,9 @@ export function attentionRows(world: PanelSnapshot): readonly AttentionRow[] {
         projectTitleFa: project.titleFa,
         // "بسته" leaves the interface entirely (ADR-0020 D5).
         detailFa: "خروجی آماده است اما تاریخی برایش تعیین نشده.",
-        href: "/studio/calendar",
+        // Carried like its three siblings. A bare href dropped the filter on
+        // arrival, and the rail then kept it dropped on every click after.
+        href: `/studio/calendar?project=${project.id}`,
         actionLabelFa: "تعیین تاریخ",
       });
     }

@@ -38,6 +38,44 @@ export const GATEWAY_ERROR_REASONS = [
 ] as const;
 export type GatewayErrorReason = (typeof GATEWAY_ERROR_REASONS)[number];
 
+/**
+ * What the UI may offer next (10 §2), as a closed vocabulary.
+ *
+ * `nextPermittedActions` has always been the recorded vehicle for "and now
+ * what?" — `revisionConflict` below has carried `REFRESH_AND_RESUBMIT` since
+ * ADR-0019 D10. What was missing was the rest of the set. Every refusal the
+ * write proxy can author (a lock held, a cooldown running, a budget spent, a
+ * portfolio already built, a write that outlived its request) arrived as one
+ * of the eight reasons and then rendered as the SAME sentence, because the
+ * reason alone cannot tell "wait thirty seconds" from "start a new session".
+ *
+ * A ninth reason would have been the other way to say these things, and
+ * ADR-0021 D6 forbids widening that set. This is the vocabulary the recorded
+ * field was always meant to carry, written down so the UI can key on it rather
+ * than on message text.
+ */
+export const NEXT_ACTIONS = {
+  /** ADR-0019 D10 — the caller's view is stale; re-read, then send again. */
+  REFRESH_AND_RESUBMIT: "REFRESH_AND_RESUBMIT",
+  /** The machine is busy with an earlier request on this session. Nothing was spent. */
+  WAIT_THEN_RETRY: "WAIT_THEN_RETRY",
+  /** A paid call ran a moment ago and the proxy is holding the next one back. Nothing was spent. */
+  COOL_DOWN: "COOL_DOWN",
+  /** The write passed its deadline but the service has no cancellation: it may still be running and spending. Do NOT resubmit. */
+  WAIT_FOR_RESULT: "WAIT_FOR_RESULT",
+  /** This session's ceiling on paid calls is reached. */
+  START_NEW_SESSION: "START_NEW_SESSION",
+  /** Research already exists for this session; doing this again replaces it, at a cost. */
+  REPLACE_EXISTING: "REPLACE_EXISTING",
+  /** Writes to the machine are switched off in this deployment. */
+  ENABLE_WRITES: "ENABLE_WRITES",
+  /** The machine has no such verb; the decision cannot be recorded on its side. */
+  UNSUPPORTED_BY_MACHINE: "UNSUPPORTED_BY_MACHINE",
+  /** ADR-0013 D2 — the decision needs a reason before it can be recorded. */
+  ADD_A_REASON: "ADD_A_REASON",
+} as const;
+export type NextAction = (typeof NEXT_ACTIONS)[keyof typeof NEXT_ACTIONS];
+
 export interface GatewayErrorOptions {
   /** 10 §2 — a correlation handle the UI can surface without leaking internals. */
   readonly diagnosticId?: string;

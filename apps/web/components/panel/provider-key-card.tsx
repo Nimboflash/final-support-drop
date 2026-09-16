@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Play, ShieldCheck } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@drop/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from "@drop/ui";
 
 /**
  * Where a person puts the provider credential (ADR-0024).
@@ -30,7 +30,14 @@ interface KeyState {
   readonly hint: string | null;
 }
 
-type Status = "LOADING" | "OFF" | "READY";
+/**
+ * OFF is the route's deliberate 404 — the section is switched off in this
+ * deployment. FAILED is anything else: a restart mid-request, a 500, no
+ * network. They used to be one state, so a dev server restarting told the
+ * person their section was "deliberately off" and to set an env var they had
+ * already set.
+ */
+type Status = "LOADING" | "OFF" | "FAILED" | "READY";
 
 export function ProviderKeyCard() {
   const [status, setStatus] = useState<Status>("LOADING");
@@ -41,16 +48,21 @@ export function ProviderKeyCard() {
   const [restartNeeded, setRestartNeeded] = useState(false);
 
   const load = useCallback(async () => {
+    setStatus("LOADING");
     try {
       const response = await fetch("/api/provider-key", { cache: "no-store" });
-      if (!response.ok) {
+      if (response.status === 404) {
         setStatus("OFF");
+        return;
+      }
+      if (!response.ok) {
+        setStatus("FAILED");
         return;
       }
       setState((await response.json()) as KeyState);
       setStatus("READY");
     } catch {
-      setStatus("OFF");
+      setStatus("FAILED");
     }
   }, []);
 
@@ -84,7 +96,26 @@ export function ProviderKeyCard() {
     setRestartNeeded(true);
   }
 
-  if (status === "LOADING") return null;
+  /*
+    A visible loading state. This returned `null`, so on every visit the one
+    thing the page exists for was simply absent until the request came back,
+    and the route boundary could not cover it because the fetch runs in an
+    effect. The skeleton holds the card's place and its shape.
+  */
+  if (status === "LOADING") {
+    return (
+      <Card className="drop-material gap-3" data-testid="provider-key-loading" aria-busy="true">
+        <CardHeader>
+          <CardTitle className="text-base">وضعیت اتصال</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-9 w-40" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="drop-material gap-3">
@@ -92,7 +123,19 @@ export function ProviderKeyCard() {
         <CardTitle className="text-base">وضعیت اتصال</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
-        {status === "OFF" ? (
+        {status === "FAILED" ? (
+          <>
+            <p role="alert" data-testid="provider-key-failed">
+              <Badge variant="outline" data-testid="connection-state">
+                نامشخص
+              </Badge>{" "}
+              وضعیت کلید خوانده نشد. شاید سرور در حال راه‌اندازی دوباره باشد.
+            </p>
+            <Button size="sm" variant="outline" onClick={() => void load()}>
+              تلاش دوباره
+            </Button>
+          </>
+        ) : status === "OFF" ? (
           <>
             <p>
               <Badge variant="outline" data-testid="connection-state">
@@ -144,17 +187,17 @@ export function ProviderKeyCard() {
                 <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
                   تعویض کلید
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => void clear()}>
+                {/* The one unrecoverable write on the page wears the kit's danger variant. */}
+                <Button size="sm" variant="destructive" onClick={() => void clear()}>
                   پاک‌کردن کلید
                 </Button>
               </div>
             ) : (
               <form onSubmit={(event) => void submit(event)} className="space-y-2">
-                <label htmlFor="provider-key" className="block font-medium">
-                  کلید OpenRouter
-                </label>
+                <Label htmlFor="provider-key">کلید OpenRouter</Label>
                 <div className="flex flex-wrap gap-2">
-                  <input
+                  {/* The kit's field: every state the others have, this one has. */}
+                  <Input
                     id="provider-key"
                     data-testid="provider-key-input"
                     // A password field, so it is never shown, never suggested
@@ -163,10 +206,12 @@ export function ProviderKeyCard() {
                     autoComplete="off"
                     spellCheck={false}
                     dir="ltr"
+                    aria-invalid={error !== null}
+                    aria-describedby={error === null ? undefined : "provider-key-error"}
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     placeholder="sk-or-v1-…"
-                    className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                    className="min-w-0 flex-1 font-mono"
                   />
                   <Button size="sm" type="submit" disabled={draft.trim() === ""}>
                     ثبت کلید
@@ -178,7 +223,7 @@ export function ProviderKeyCard() {
                   ) : null}
                 </div>
                 {error === null ? null : (
-                  <p role="alert" className="text-destructive">
+                  <p id="provider-key-error" role="alert" className="text-destructive">
                     {error}
                   </p>
                 )}

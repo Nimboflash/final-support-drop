@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Badge,
   Button,
@@ -16,10 +18,12 @@ import {
   useIsMobile,
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
-import { ProjectSelector, filterByProject, useSelectedProject } from "./project-selector";
+import { ProjectSelector, UnknownProjectState, filterByProject, useProjectFilter } from "./project-selector";
 import { useReturnFocus } from "./use-return-focus";
-import { commandErrorFa, useDownloadPackage, useSendToCalendar } from "../../lib/demo/commands";
+import { useDownloadPackage, useSendToCalendar } from "../../lib/demo/commands";
+import { useCanAct } from "../../lib/demo/policy";
 import { useDemoSession } from "../../lib/demo/providers";
+import { CommandError } from "./command-error";
 import {
   CONTENT_STATE_LABEL_FA,
   DIRECTION_LABEL_FA,
@@ -61,7 +65,7 @@ const STATE_TONE: Record<OutputState, string> = {
 };
 
 export function OutputsPage({ world }: { world: PanelSnapshot }) {
-  const selectedProject = useSelectedProject();
+  const { selected: selectedProject, known } = useProjectFilter(world);
   const [openConceptId, setOpenConceptId] = useState<string | null>(null);
   const detailFocus = useReturnFocus();
   /*
@@ -83,7 +87,9 @@ export function OutputsPage({ world }: { world: PanelSnapshot }) {
         <ProjectSelector world={world} />
       </header>
 
-      {outputs.length === 0 ? (
+      {!known ? (
+        <UnknownProjectState />
+      ) : outputs.length === 0 ? (
         <EmptyState
           title="هنوز خروجی‌ای ساخته نشده"
           detail="پس از تأیید محتواها، خروجی کامل اینجا ساخته می‌شود."
@@ -170,9 +176,11 @@ function OutputDetail({
   onCloseAutoFocus?: (event: Event) => void;
 }) {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const download = useDownloadPackage();
   /** Whether this output came from a real machine session rather than the demo world. */
   const live = useDemoSession().mode === "REAL";
+  const canAct = useCanAct();
   const send = useSendToCalendar();
 
   if (output === null) return null;
@@ -244,14 +252,16 @@ function OutputDetail({
             </p>
           )}
 
-          {download.isError || send.isError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {commandErrorFa(download.error ?? send.error)}
-            </p>
-          ) : null}
+          {download.isError ? <CommandError error={download.error} /> : null}
+          {send.isError ? <CommandError error={send.error} /> : null}
         </div>
 
         <div className="mt-auto flex flex-wrap gap-2 border-t p-4">
+          {canAct.allowed ? null : (
+            <p className="w-full text-sm text-muted-foreground" data-testid="cannot-act-reason">
+              {canAct.reason}
+            </p>
+          )}
           {/*
             A disabled control has to say why. «ارسال به تقویم» greys out until
             the output is actually assembled, and without this line the reader
@@ -265,7 +275,7 @@ function OutputDetail({
 
           {output.state === "scheduled" ? (
             <Button asChild variant="outline" data-testid="open-in-calendar">
-              <a href={`/studio/calendar?project=${output.projectId}`}>دیدن در تقویم</a>
+              <Link href={`/studio/calendar?project=${output.projectId}`}>دیدن در تقویم</Link>
             </Button>
           ) : (
             /*
@@ -277,6 +287,7 @@ function OutputDetail({
             <Button
               data-testid="send-to-calendar"
               disabled={
+                !canAct.allowed ||
                 output.state === "assembling" ||
                 output.packageFamilyId === null ||
                 output.packageVersionId === null ||
@@ -293,7 +304,7 @@ function OutputDetail({
                   },
                   {
                     onSuccess: () => {
-                      window.location.href = `/studio/calendar?project=${output.projectId}`;
+                      router.push(`/studio/calendar?project=${output.projectId}`);
                     },
                   },
                 );
@@ -325,7 +336,7 @@ function OutputDetail({
             <Button
               variant="outline"
               data-testid="download-output"
-              disabled={download.isPending}
+              disabled={!canAct.allowed || download.isPending}
               onClick={() => download.mutate(output.packageVersionId!)}
             >
               {download.isPending ? "در حال آماده‌سازی…" : "بارگیری خروجی"}

@@ -64,14 +64,22 @@ export interface ConceptLaneData extends Record<string, unknown> {
  */
 const HANDLE_STYLE = { opacity: 0 } as const;
 
-function ProductNodeCard({ data }: NodeProps<Node<ProductNodeData>>) {
+function ProductNodeCard({ data, selected }: NodeProps<Node<ProductNodeData>>) {
   const node = data.product;
   return (
     <div
       data-testid="graph-node"
       data-node-class={node.nodeClass}
       data-state={node.state}
-      className={`drop-material h-full w-full overflow-hidden rounded-md border-2 bg-card p-3 text-start ${NODE_STATE_TONE[node.state]}`}
+      data-selected={selected ? "true" : undefined}
+      /*
+        Selection is DRAWN. React Flow marks a selected node with `.selected`,
+        but its stylesheet styles that class only for its own built-in node
+        types, so a custom node selected by keyboard changed nothing on
+        screen. The ring is the same one every focused control in the panel
+        wears.
+      */
+      className={`drop-material h-full w-full overflow-hidden rounded-md border-2 bg-card p-3 text-start ${NODE_STATE_TONE[node.state]} ${selected ? "ring-[3px] ring-ring" : ""}`}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} style={HANDLE_STYLE} />
       <p className="truncate text-sm font-medium"><bdi dir="auto">{node.labelFa}</bdi></p>
@@ -339,6 +347,18 @@ export function GraphCanvas({
         edgesFocusable={false}
         deleteKeyCode={null}
         onNodeClick={(_, node) => onSelect((node.data as ProductNodeData).product)}
+        /*
+          Enter on a focused node selects it INSIDE React Flow and never calls
+          `onNodeClick` — the keyboard handler goes through the library's own
+          selection, not the click prop. Every node carried an accessible
+          description promising «برای انتخاب این مرحله Enter را بزنید», and
+          Enter did nothing the person could see. Listening to the selection
+          itself makes the promise true for keyboard and pointer alike.
+        */
+        onSelectionChange={({ nodes: chosen }) => {
+          const first = chosen.find((node) => node.type === "product");
+          if (first !== undefined) onSelect((first.data as ProductNodeData).product);
+        }}
         proOptions={{ hideAttribution: false }}
         // React Flow ships English accessible names on its controls, its mini
         // map, its handles and its keyboard announcements. They are `aria-label`

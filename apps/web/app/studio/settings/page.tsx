@@ -3,6 +3,7 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@drop/ui";
 import { ThemeControl } from "../../../components/panel/theme-control";
 import { ProviderKeyCard } from "../../../components/panel/provider-key-card";
+import { MachineSessionCard } from "../../../components/panel/machine-session-card";
 import { useDemoSession } from "../../../lib/demo/providers";
 
 /**
@@ -39,6 +40,9 @@ export default function Page() {
       {/* The one thing on this page a person comes here to DO, first. */}
       <ProviderKeyCard />
 
+      {/* Which session the panel is on, and the way back to the others. */}
+      <MachineSessionCard />
+
       <Card className="drop-material gap-3">
         <CardHeader>
           <CardTitle className="text-base">ظاهر</CardTitle>
@@ -73,11 +77,18 @@ export default function Page() {
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" data-testid="active-scenario">
-              <bdi lang="en" dir="ltr">
-                {active}
-              </bdi>
-            </Badge>
+            {/*
+              The demo world's own name, demo only. Live, this printed «BASE» —
+              the unused mock id — beside a shell badge saying the data was the
+              machine's. The session card above says what is live instead.
+            */}
+            {live ? null : (
+              <Badge variant="outline" data-testid="active-scenario">
+                <bdi lang="en" dir="ltr">
+                  {active}
+                </bdi>
+              </Badge>
+            )}
             <Button
               size="sm"
               variant="outline"

@@ -228,7 +228,16 @@
   --motion-fast: 90ms;
   --motion-base: 160ms;
   --motion-slow: 240ms;
-  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /*
+    Strong curves, not the browser's. The built-in easings are too weak to
+    read as intentional; these are the ones design engineering settled on for
+    UI (Kowalski). `--ease-out` answers immediately and settles; `--ease-in-out`
+    is for something already on screen moving to a new place; `--ease-drawer`
+    is the iOS sheet curve, for the one thing that slides in from an edge.
+  */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
 
   /* How far a raised surface lifts under the pointer, and sinks under a press. */
@@ -257,6 +266,7 @@
     --motion-base: 1ms;
     --motion-slow: 1ms;
     --ease-spring: var(--ease-out);
+    --ease-drawer: var(--ease-out);
     --lift: 0px;
     --press: 0px;
   }

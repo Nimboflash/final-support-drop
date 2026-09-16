@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Link from "next/link";
 import {
   Badge,
   Button,
@@ -21,9 +22,10 @@ import {
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
 import { ALL_PROJECTS, useSelectedProject } from "./project-selector";
-import { commandErrorFa } from "../../lib/demo/commands";
+import { CommandError } from "./command-error";
+import { useCanAct } from "../../lib/demo/policy";
 import { useDemoSession } from "../../lib/demo/providers";
-import { startMachineSession } from "../../lib/machine/start-session";
+import { useStartMachineSession } from "../../lib/machine/use-start-session";
 
 /**
  * The composer (ADR-0020, brief §6 step 1).
@@ -34,13 +36,14 @@ import { startMachineSession } from "../../lib/machine/start-session";
  * design made "blank versus reference" a fork before any input; the brief
  * removes that fork.
  *
- * Nothing is uploaded or fetched. A file contributes its name and size; a link
- * is validated and never requested. The demo marker in the shell is what keeps
- * that honest, rather than a notice repeated on this dialog (ADR-0020 D6).
+ * Nothing is uploaded or fetched. A link is validated and never requested. In
+ * REAL mode the links are APPENDED to the brief as plain text — that is the
+ * only way a reference reaches the machine, whose session takes one string —
+ * and the dialog says so. They used to be collected and then silently dropped
+ * on send, so a brief built around a pasted article was generated from the
+ * prose alone.
  */
-type Attachment =
-  | { kind: "link"; value: string; error: string | null }
-  | { kind: "note"; value: string };
+type Attachment = { kind: "link"; value: string; error: string | null };
 
 export function NewConceptComposer({
   world,
@@ -67,8 +70,14 @@ export function NewConceptComposer({
   const [phase, setPhase] = useState<"COMPOSE" | "WORKING">("COMPOSE");
   /** Whether this press reaches a real machine, or explains that it does not. */
   const live = useDemoSession().mode === "REAL";
-  const [machineError, setMachineError] = useState<string | null>(null);
-  const [working, setWorking] = useState(false);
+  const canAct = useCanAct();
+  const start = useStartMachineSession();
+  const linkRef = useRef<HTMLInputElement | null>(null);
+
+  const linkError =
+    link.trim() !== "" && !/^https?:\/\//.test(link.trim())
+      ? "فقط نشانی‌های http یا https پذیرفته می‌شوند."
+      : null;
 
   function addLink() {
     const value = link.trim();
@@ -79,9 +88,20 @@ export function NewConceptComposer({
       { kind: "link", value, error: ok ? null : "فقط نشانی‌های http یا https پذیرفته می‌شوند." },
     ]);
     setLink("");
+    // The field is what the person is working in; the button disabling itself
+    // under the pointer must not take focus with it.
+    linkRef.current?.focus();
   }
 
-  function start() {
+  /** What actually goes to the machine: the brief, then the references, in text. */
+  function composedBrief(): string {
+    const links = attachments.filter((a) => a.error === null).map((a) => a.value);
+    const head = brief.trim();
+    if (links.length === 0) return head;
+    return `${head}\n\nمنابع:\n${links.join("\n")}`;
+  }
+
+  function begin() {
     setPhase("WORKING");
     // In MOCK mode there is nothing to ask: generation belongs to the machine,
     // and the panel adds nothing it did not receive (ADR-0019 D2).
@@ -90,18 +110,13 @@ export function NewConceptComposer({
     // In REAL mode the brief is the whole point, and it only reaches the
     // machine through session creation — `generate_concepts` takes no body and
     // reads the brief off the session. So a new brief is a new session.
-    setWorking(true);
-    setMachineError(null);
-    startMachineSession(brief.trim())
-      .then(() => {
+    start.mutate(composedBrief(), {
+      onSuccess: () => {
         // A full navigation, not a router push: the provider lives in the
         // LAYOUT and would not remount, leaving the panel on the old session.
         window.location.assign("/studio/concepts");
-      })
-      .catch((error: unknown) => {
-        setMachineError(commandErrorFa(error));
-        setWorking(false);
-      });
+      },
+    });
   }
 
   function close(next: boolean) {
@@ -110,9 +125,13 @@ export function NewConceptComposer({
       setBrief("");
       setLink("");
       setAttachments([]);
+      start.reset();
     }
     onOpenChange(next);
   }
+
+  const projectHasConcepts = world.concepts.some((c) => c.projectId === projectId);
+  const cannotStart = !canAct.allowed || projectId === "";
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -122,7 +141,9 @@ export function NewConceptComposer({
         <DialogHeader>
           <DialogTitle>شروع کانسپت جدید</DialogTitle>
           <DialogDescription>
-            می‌توانید یک درخواست بنویسید، رفرنس بدهید، یا بدون هیچ ورودی شروع کنید.
+            {live
+              ? "هر درخواست تازه یک جلسهٔ تازه روی ماشین می‌سازد و پنل به آن می‌رود. جلسهٔ فعلی از تنظیمات قابل بازگشت است."
+              : "می‌توانید یک درخواست بنویسید، رفرنس بدهید، یا بدون هیچ ورودی شروع کنید."}
           </DialogDescription>
         </DialogHeader>
 
@@ -145,15 +166,33 @@ export function NewConceptComposer({
           <div className="space-y-3 py-6 text-center" data-testid="composer-working">
             {live ? (
               <>
-                <p className="text-sm" data-testid="composer-live-working">
-                  {working
-                    ? "ماشین در حال ساخت کانسپت‌هاست. این کار ممکن است چند ده ثانیه طول بکشد."
-                    : (machineError ?? "کانسپت‌ها ساخته شدند.")}
+                {/*
+                  A live region: this phase replaces the whole compose tree,
+                  and without it a screen-reader user heard nothing at the
+                  moment the paid call began.
+                */}
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="text-sm"
+                  data-testid="composer-live-working"
+                >
+                  {start.isPending
+                    ? "ماشین در حال ساخت کانسپت‌هاست. این کار ممکن است چند ده ثانیه طول بکشد و هزینه دارد؛ دوباره نزنید."
+                    : start.isSuccess
+                      ? "کانسپت‌ها ساخته شدند."
+                      : "درخواست فرستاده نشد."}
                 </p>
-                {working ? null : (
+                {start.isError ? <CommandError error={start.error} /> : null}
+                {start.isPending ? null : (
                   <div className="flex flex-wrap justify-center gap-2">
-                    <Button size="sm" asChild data-testid="composer-go-to-concepts">
-                      <a href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</a>
+                    {start.isError ? (
+                      <Button size="sm" data-testid="composer-retry" onClick={() => setPhase("COMPOSE")}>
+                        بازگشت به درخواست
+                      </Button>
+                    ) : null}
+                    <Button size="sm" variant="outline" asChild data-testid="composer-go-to-concepts">
+                      <Link href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</Link>
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => close(false)}>
                       بستن
@@ -163,15 +202,21 @@ export function NewConceptComposer({
               </>
             ) : (
               <>
-                <p className="text-sm">
+                <p className="text-sm" role="status">
                   ساخت کانسپت در این نسخهٔ نمایشی انجام نمی‌شود.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  کانسپت‌های موجود این پروژه را ببینید.
+                  {projectHasConcepts
+                    ? "کانسپت‌های موجود این پروژه را ببینید."
+                    : "این پروژه هنوز کانسپتی ندارد؛ پروژه‌های دیگر را در نمای کلی ببینید."}
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
                   <Button size="sm" asChild data-testid="composer-go-to-concepts">
-                    <a href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</a>
+                    {projectHasConcepts ? (
+                      <Link href={`/studio/concepts?project=${projectId}`}>دیدن کانسپت‌ها</Link>
+                    ) : (
+                      <Link href="/studio">رفتن به نمای کلی</Link>
+                    )}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => close(false)}>
                     بستن
@@ -182,21 +227,28 @@ export function NewConceptComposer({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="composer-project">پروژه</Label>
-              <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger id="composer-project" data-testid="composer-project">
-                  <SelectValue placeholder="یک پروژه انتخاب کنید" />
-                </SelectTrigger>
-                <SelectContent>
-                  {world.projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      <ContentText>{project.titleFa}</ContentText>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/*
+              One project per machine session, so live there is nothing to
+              choose. The select stayed on screen with a single option and
+              read as a control; it is the project's name now, stated.
+            */}
+            {live ? null : (
+              <div className="space-y-2">
+                <Label htmlFor="composer-project">پروژه</Label>
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger id="composer-project" data-testid="composer-project">
+                    <SelectValue placeholder="یک پروژه انتخاب کنید" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {world.projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        <ContentText>{project.titleFa}</ContentText>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="composer-brief">درخواست یا بریف</Label>
@@ -214,22 +266,36 @@ export function NewConceptComposer({
               <Label htmlFor="composer-link">نشانی یا رفرنس</Label>
               <div className="flex gap-2">
                 <Input
+                  ref={linkRef}
                   id="composer-link"
                   dir="ltr"
                   value={link}
+                  aria-invalid={linkError !== null}
+                  aria-describedby={linkError === null ? undefined : "composer-link-error"}
                   onChange={(event) => setLink(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addLink();
+                    }
+                  }}
                   placeholder="https://example.invalid/article"
                 />
                 <Button type="button" variant="outline" onClick={addLink} disabled={link.trim() === ""}>
                   افزودن
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {live
+                  ? "نشانی‌ها به متن درخواست افزوده می‌شوند تا ماشین ببیندشان؛ چیزی دانلود نمی‌شود."
+                  : "نشانی فقط ثبت می‌شود؛ چیزی دانلود نمی‌شود."}
+              </p>
             </div>
 
             {attachments.length === 0 ? null : (
               <ul className="space-y-2 text-sm" data-testid="composer-attachments">
                 {attachments.map((attachment, index) => (
-                  <li key={index} className="rounded-md border p-2">
+                  <li key={index} className="drop-enter rounded-md border p-2">
                     <div className="flex items-center justify-between gap-2">
                       <bdi dir="ltr" className="truncate text-xs">
                         {attachment.value}
@@ -245,8 +311,13 @@ export function NewConceptComposer({
                         حذف
                       </Button>
                     </div>
-                    {attachment.kind === "link" && attachment.error !== null ? (
-                      <p data-testid="composer-error" className="pt-1 text-destructive">
+                    {attachment.error !== null ? (
+                      <p
+                        id={index === attachments.length - 1 ? "composer-link-error" : undefined}
+                        role="alert"
+                        data-testid="composer-error"
+                        className="pt-1 text-destructive"
+                      >
                         {attachment.error}
                       </p>
                     ) : null}
@@ -255,13 +326,27 @@ export function NewConceptComposer({
               </ul>
             )}
 
+            {cannotStart ? (
+              <p className="text-sm text-muted-foreground" data-testid="start-blocked-reason">
+                {canAct.allowed
+                  ? "برای شروع، اول یک پروژه لازم است."
+                  : canAct.reason}
+              </p>
+            ) : null}
+
             <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
               {/* The secondary route is a button, not a different mode chosen
                   up front: the person can always just begin. */}
-              <Button variant="ghost" size="sm" data-testid="start-blank" onClick={start}>
+              <Button
+                variant="ghost"
+                size="sm"
+                data-testid="start-blank"
+                disabled={cannotStart}
+                onClick={begin}
+              >
                 بدون ورودی شروع کن
               </Button>
-              <Button data-testid="generate-concepts" onClick={start} disabled={projectId === ""}>
+              <Button data-testid="generate-concepts" onClick={begin} disabled={cannotStart}>
                 تولید کانسپت‌ها
               </Button>
             </div>

@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Badge,
   Button,
   ContentText,
   EmptyState,
+  Input,
+  Label,
   Sheet,
   SheetContent,
   SheetDescription,
@@ -20,10 +23,12 @@ import {
   useIsMobile,
 } from "@drop/ui";
 import type { PanelCalendarEntry, PanelSnapshot } from "@drop/panel-domain";
-import { ProjectSelector, filterByProject, useSelectedProject } from "./project-selector";
+import { ProjectSelector, UnknownProjectState, filterByProject, useProjectFilter } from "./project-selector";
 import { useReturnFocus } from "./use-return-focus";
 import { useDemoSession } from "../../lib/demo/providers";
-import { commandErrorFa, useUpdateCalendarEntry } from "../../lib/demo/commands";
+import { useUpdateCalendarEntry } from "../../lib/demo/commands";
+import { useCanAct } from "../../lib/demo/policy";
+import { CommandError } from "./command-error";
 import {
   WEEKDAY_LABELS_FA,
   WEEKDAY_SHORT_FA,
@@ -58,7 +63,8 @@ type View = "month" | "week" | "agenda";
 export function CalendarPage({ world }: { world: PanelSnapshot }) {
   const session = useDemoSession();
   const isMobile = useIsMobile();
-  const selectedProject = useSelectedProject();
+  const { selected: selectedProject, known } = useProjectFilter(world);
+  const canActPage = useCanAct();
 
   const today = session.clock.now().slice(0, 10);
   const [anchor, setAnchor] = useState(today);
@@ -95,6 +101,28 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
 
   const cells = view === "week" ? weekGrid(anchor, today) : monthGrid(anchor, today);
   const openEntry = entries.find((e) => e.id === openEntryId) ?? null;
+  /*
+    The agenda is the anchored MONTH, listed. It used to be every dated entry
+    in the world, while the toolbar above it — «بازهٔ قبلی», «بازهٔ بعدی»,
+    «امروز» and a month title — stayed live and moved the anchor that the list
+    never read. The title advanced to a month the list did not reflect and not
+    one row changed. Scoped, the three controls do in this view exactly what
+    they do in the other two, and the title is true.
+  */
+  const inMonth = (iso: string) => iso.slice(0, 7) === anchor.slice(0, 7);
+  const agendaEntries = scheduled.filter((entry) => inMonth(entry.date!));
+
+  if (!known) {
+    return (
+      <div className="space-y-5">
+        <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
+          <h1 className="text-3xl font-bold tracking-tight">تقویم</h1>
+          <ProjectSelector world={world} />
+        </header>
+        <UnknownProjectState />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -118,7 +146,7 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
           />
 
           <TabsContent value="agenda">
-            <AgendaView entries={scheduled} onOpen={openEntryFocused} />
+            <AgendaView entries={agendaEntries} onOpen={openEntryFocused} />
           </TabsContent>
           <TabsContent value={view === "week" ? "week" : "month"}>
             <div
@@ -150,6 +178,11 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
                     compact={view === "month"}
                     onSelectDay={() => setSelectedDay(cell.iso)}
                     onOpenEntry={openEntryFocused}
+                    onShowAll={() => {
+                      setAnchor(cell.iso);
+                      setSelectedDay(cell.iso);
+                      setView("week");
+                    }}
                   />
                 ))}
               </div>
@@ -182,6 +215,7 @@ export function CalendarPage({ world }: { world: PanelSnapshot }) {
                   <Button
                     size="sm"
                     data-testid="set-date"
+                    disabled={!canActPage.allowed}
                     onClick={() => {
                       openEntryFocused(entry.id);
                     }}
@@ -266,6 +300,7 @@ function DayCellView({
   compact,
   onSelectDay,
   onOpenEntry,
+  onShowAll,
 }: {
   cell: { iso: string; labelFa: string; inCurrentMonth: boolean; isToday: boolean };
   entries: readonly PanelCalendarEntry[];
@@ -273,6 +308,8 @@ function DayCellView({
   compact: boolean;
   onSelectDay: () => void;
   onOpenEntry: (id: string) => void;
+  /** Opens the week around this day, where nothing is capped. */
+  onShowAll: () => void;
 }) {
   // Month cells cap at two entries plus a "+N" (brief §7.6).
   const shown = compact ? entries.slice(0, 2) : entries;
@@ -328,8 +365,21 @@ function DayCellView({
           </li>
         ))}
         {overflow > 0 ? (
-          <li className="text-xs text-muted-foreground">
-            +{toPersianDigits(String(overflow))} مورد
+          <li>
+            {/*
+              A control, because the third event was unreachable from here:
+              «+N مورد» was muted static text, and the only way to open what
+              it counted was to switch views by hand. It now opens the week
+              around this day, where the cap does not apply.
+            */}
+            <button
+              type="button"
+              data-testid="day-overflow"
+              onClick={onShowAll}
+              className="w-full rounded px-1 py-0.5 text-start text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              +{toPersianDigits(String(overflow))} مورد دیگر — دیدن هفته
+            </button>
           </li>
         ) : null}
       </ul>
@@ -345,7 +395,12 @@ function AgendaView({
   onOpen: (id: string) => void;
 }) {
   if (entries.length === 0) {
-    return <EmptyState title="موردی برنامه‌ریزی نشده" detail="خروجی‌های دارای تاریخ اینجا فهرست می‌شوند." />;
+    return (
+      <EmptyState
+        title="در این ماه موردی برنامه‌ریزی نشده"
+        detail="با «بازهٔ قبلی» و «بازهٔ بعدی» ماه‌های دیگر را ببینید."
+      />
+    );
   }
   return (
     <ul className="space-y-2" data-testid="agenda-list">
@@ -392,6 +447,7 @@ function EventSheet({
 }) {
   const isMobile = useIsMobile();
   const update = useUpdateCalendarEntry();
+  const canAct = useCanAct();
   const [draftDate, setDraftDate] = useState("");
 
   if (entry === null) return null;
@@ -431,40 +487,60 @@ function EventSheet({
           </dl>
 
           <div className="space-y-2">
-            <label htmlFor="event-date-input" className="text-sm font-medium">
-              تغییر تاریخ
-            </label>
-            <input
+            <Label htmlFor="event-date-input">تغییر تاریخ</Label>
+            {/* The kit's field, so it has the same states as every other one. */}
+            <Input
               id="event-date-input"
               data-testid="event-date-input"
               type="date"
               dir="ltr"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              disabled={!canAct.allowed}
               value={draftDate === "" ? (entry.date ?? anchorIso) : draftDate}
               onChange={(event) => setDraftDate(event.target.value)}
             />
-            <Button
-              size="sm"
-              data-testid="save-event-date"
-              disabled={update.isPending}
-              onClick={() =>
-                update.mutate(
-                  { entry, date: draftDate === "" ? (entry.date ?? anchorIso) : draftDate },
-                  { onSuccess: () => onOpenChange(false) },
-                )
-              }
-            >
-              ذخیرهٔ تاریخ
-            </Button>
-            {update.isError ? (
-              <p role="alert" className="text-destructive">
-                {commandErrorFa(update.error)}
-              </p>
-            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                data-testid="save-event-date"
+                disabled={!canAct.allowed || update.isPending}
+                onClick={() =>
+                  update.mutate(
+                    { entry, date: draftDate === "" ? (entry.date ?? anchorIso) : draftDate },
+                    { onSuccess: () => onOpenChange(false) },
+                  )
+                }
+              >
+                ذخیرهٔ تاریخ
+              </Button>
+              {/*
+                The way back. A scheduled output could never return to the
+                undated tray: the field coalesced an empty value back to the
+                existing date, so `null` was unreachable from this sheet, and
+                the outputs page had already swapped its send button for a
+                link. A wrong date could be changed but never withdrawn.
+              */}
+              {entry.date === null ? null : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid="unschedule-event"
+                  disabled={!canAct.allowed || update.isPending}
+                  onClick={() =>
+                    update.mutate({ entry, date: null }, { onSuccess: () => onOpenChange(false) })
+                  }
+                >
+                  برگرداندن به «بدون تاریخ»
+                </Button>
+              )}
+            </div>
+            {canAct.allowed ? null : (
+              <p className="text-muted-foreground" data-testid="cannot-act-reason">{canAct.reason}</p>
+            )}
+            {update.isError ? <CommandError error={update.error} /> : null}
           </div>
 
           <Button asChild variant="outline" size="sm">
-            <a href={`/studio/outputs?project=${entry.projectId}`}>دیدن خروجی</a>
+            <Link href={`/studio/outputs?project=${entry.projectId}`}>دیدن خروجی</Link>
           </Button>
         </div>
       </SheetContent>

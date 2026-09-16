@@ -37,7 +37,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-overlay data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+        "fixed inset-0 z-50 bg-overlay duration-200 ease-(--ease-out) data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
         className
       )}
       {...props}
@@ -65,7 +65,11 @@ function SheetContent({
         data-slot="sheet-content"
         dir={direction}
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
+          // The iOS sheet curve, and the exit faster than the entrance. It was
+          // `ease-in-out` at 500ms in and 300ms out — an entrance that starts
+          // slow is what makes a sheet feel late, and 500ms is past the point a
+          // person is still watching it arrive.
+          "fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-(--ease-drawer) data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:animate-in data-[state=open]:duration-320",
           side === "right" &&
             // eslint-disable-next-line drop/no-physical-direction-classes -- the side prop selects a physical edge (Radix side semantics): the pinned edge, its inner border, and the slide animation must all stay on the physical side the caller chose
             "inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",

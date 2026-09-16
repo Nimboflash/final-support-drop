@@ -12,8 +12,9 @@ import type { Concept, PanelSnapshot } from "@drop/panel-domain";
 import {
   ALL_PROJECTS,
   ProjectSelector,
+  UnknownProjectState,
   filterByProject,
-  useSelectedProject,
+  useProjectFilter,
 } from "./project-selector";
 import { ConceptDetail } from "./concept-detail";
 import { useReturnFocus } from "./use-return-focus";
@@ -29,7 +30,7 @@ import { conceptStateOf, CONCEPT_STATE_LABEL_FA, type ConceptState } from "../..
  * version labels, no review-workflow vocabulary (ADR-0020 D5).
  */
 export function ConceptsPage({ world }: { world: PanelSnapshot }) {
-  const selectedProject = useSelectedProject();
+  const { selected: selectedProject, known } = useProjectFilter(world);
   const [openConceptId, setOpenConceptId] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   // Controlled overlays have no trigger to hand focus back to (see the hook).
@@ -68,7 +69,9 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
         </div>
       </header>
 
-      {concepts.length === 0 ? (
+      {!known ? (
+        <UnknownProjectState />
+      ) : concepts.length === 0 ? (
         <EmptyState
           title="هنوز کانسپتی ساخته نشده"
           detail="اولین مسیر را شروع کنید."
@@ -147,6 +150,7 @@ const STATE_TONE: Record<ConceptState, string> = {
   new: "border-s-2 border-s-selected",
   improving: "border-s-2 border-s-warning",
   selected: "border-s-2 border-s-success",
+  outdated: "border-s-2 border-s-warning",
   // NOT `opacity-70`. Dimming the whole card drags every piece of text inside
   // it below the AA contrast minimum — the description measured 3.16:1 — and
   // "faded" is a colour-only cue anyway. The state badge says the word.

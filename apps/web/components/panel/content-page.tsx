@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Link from "next/link";
 import {
   BookOpen,
   Clapperboard,
@@ -33,12 +34,15 @@ import type { ContentItem, PanelSnapshot } from "@drop/panel-domain";
 import {
   ALL_PROJECTS,
   ProjectSelector,
+  UnknownProjectState,
   filterByProject,
-  useSelectedProject,
+  useProjectFilter,
 } from "./project-selector";
 import { useReturnFocus } from "./use-return-focus";
-import { commandErrorFa, useRequestRevision, useReviewItem } from "../../lib/demo/commands";
+import { useRequestRevision, useReviewItem } from "../../lib/demo/commands";
+import { useCanAct } from "../../lib/demo/policy";
 import { useDemoSession } from "../../lib/demo/providers";
+import { CommandError } from "./command-error";
 import {
   CONTENT_STATE_ACTION_FA,
   CONTENT_STATE_LABEL_FA,
@@ -111,6 +115,7 @@ const STATE_ACTION_TONE: Record<ContentState, string> = {
   needs_input: "bg-attention text-attention-foreground",
   failed: "bg-destructive/15 text-foreground",
   ready_for_review: "bg-muted text-muted-foreground",
+  improving: "bg-muted text-muted-foreground",
   approved: "bg-muted text-foreground",
 };
 
@@ -119,6 +124,7 @@ const STATE_DOT: Record<ContentState, string> = {
   needs_input: "bg-warning",
   failed: "bg-destructive",
   ready_for_review: "bg-attention",
+  improving: "bg-warning",
   approved: "bg-success",
 };
 
@@ -139,6 +145,7 @@ const STATE_TONE: Record<ContentState, string> = {
   needs_input: "border-s-2 border-s-warning",
   failed: "border-s-2 border-s-destructive",
   ready_for_review: "border-s-2 border-s-selected",
+  improving: "border-s-2 border-s-warning",
   approved: "border-s-2 border-s-success",
 };
 
@@ -158,7 +165,7 @@ function groupByType(items: readonly ContentItem[]): Map<ContentItem["type"], Co
 }
 
 export function ContentPage({ world }: { world: PanelSnapshot }) {
-  const selectedProject = useSelectedProject();
+  const { selected: selectedProject, known } = useProjectFilter(world);
   const [openId, setOpenId] = useState<string | null>(null);
   const detailFocus = useReturnFocus();
   /*
@@ -187,13 +194,15 @@ export function ContentPage({ world }: { world: PanelSnapshot }) {
         <ProjectSelector world={world} />
       </header>
 
-      {groups.size === 0 ? (
+      {!known ? (
+        <UnknownProjectState />
+      ) : groups.size === 0 ? (
         <EmptyState
           title="هنوز محتوایی ساخته نشده"
           detail="ابتدا یک کانسپت را برای تولید محتوا انتخاب کنید."
           action={
             <Button asChild variant="outline">
-              <a href="/studio/concepts">رفتن به کانسپت‌ها</a>
+              <Link href="/studio/concepts">رفتن به کانسپت‌ها</Link>
             </Button>
           }
         />
@@ -406,9 +415,11 @@ function ContentDetail({
     comes back changed, and the machine has no call that changes one.
   */
   const machineCannotRewrite = useDemoSession().mode === "REAL";
+  const canAct = useCanAct();
   const [note, setNote] = useState("");
   const [source, setSource] = useState("");
   const [sourceOpen, setSourceOpen] = useState(false);
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
 
   if (item === null) return null;
 
@@ -467,13 +478,31 @@ function ContentDetail({
                 block, through the RESEARCH_REFRESH route that already means
                 exactly this.
               */}
+              {/*
+                The trigger STAYS. It used to be replaced by the field, which
+                unmounted the element that had focus; Radix then parked focus
+                on the sheet container and a keyboard user tabbed back down to
+                the field they had just asked for. A disclosure keeps its
+                button and says what it opened.
+              */}
+              <Button
+                size="sm"
+                data-testid="add-source"
+                aria-expanded={sourceOpen}
+                aria-controls={`source-form-${item.id}`}
+                disabled={!canAct.allowed}
+                onClick={() => setSourceOpen((prior) => !prior)}
+              >
+                افزودن منبع
+              </Button>
               {sourceOpen ? (
-                <div className="space-y-2">
+                <div id={`source-form-${item.id}`} className="drop-enter space-y-2">
                   <Label htmlFor={`source-${item.id}`}>نشانی یا توضیح منبع</Label>
                   <div className="flex flex-wrap gap-2">
                     <Input
                       id={`source-${item.id}`}
                       dir="ltr"
+                      autoFocus
                       className="min-w-0 flex-1"
                       value={source}
                       onChange={(event) => setSource(event.target.value)}
@@ -499,15 +528,7 @@ function ContentDetail({
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <Button
-                  size="sm"
-                  data-testid="add-source"
-                  onClick={() => setSourceOpen(true)}
-                >
-                  افزودن منبع
-                </Button>
-              )}
+              ) : null}
             </div>
           ) : null}
 
@@ -518,8 +539,10 @@ function ContentDetail({
               درخواست تغییر
             </Label>
             <Textarea
+              ref={noteRef}
               id={`feedback-${item.id}`}
               data-testid="content-feedback"
+              disabled={!canAct.allowed || machineCannotRewrite}
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="مثلاً: لحن را صمیمی‌تر کن."
@@ -527,30 +550,34 @@ function ContentDetail({
             />
           </div>
 
-          {review.isError || revision.isError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {commandErrorFa(review.error ?? revision.error)}
-            </p>
-          ) : null}
+          {review.isError ? <CommandError error={review.error} /> : null}
+          {revision.isError ? <CommandError error={revision.error} /> : null}
 
           {machineCannotRewrite ? (
             <p
               data-testid="machine-rewrite-unavailable"
-              className="rounded-md border border-warning bg-warning/10 p-3 text-sm"
+              className="rounded-md border border-border bg-muted p-3 text-sm"
             >
               تأیید شما همین‌جا ثبت می‌شود. اما ماشین این محتوا را در یک مرحله ساخته و
-              نمی‌تواند تک‌تک موارد را بازنویسی کند؛ برای تغییر، به کانسپت برگردید و آن را
-              دوباره بسازید.
+              نمی‌تواند تک‌تک موارد را بازنویسی کند. برای تغییر، در کانسپت درخواست بهبود
+              بدهید و سپس «بازسازی محتوا» را بزنید؛ همهٔ محتوا از نسخهٔ تازه ساخته می‌شود.
             </p>
           ) : null}
         </div>
 
         <div className="mt-auto flex flex-wrap gap-2 border-t p-4">
+          {canAct.allowed ? null : (
+            <p className="w-full text-sm text-muted-foreground" data-testid="cannot-act-reason">
+              {canAct.reason}
+            </p>
+          )}
           <Button
             data-testid="approve-content"
             // Approval is unavailable only while a source is genuinely missing,
             // and the reason is stated beside it rather than left to a tooltip.
-            disabled={needsSource || failed || review.isPending || state === "approved"}
+            disabled={
+              !canAct.allowed || needsSource || failed || review.isPending || state === "approved"
+            }
             onClick={() =>
               review.mutate(
                 {
@@ -570,24 +597,43 @@ function ContentDetail({
           <Button
             variant="outline"
             data-testid="request-content-change"
-            disabled={machineCannotRewrite || note.trim() === "" || revision.isPending}
+            disabled={
+              !canAct.allowed || machineCannotRewrite || note.trim() === "" || revision.isPending
+            }
             onClick={() => {
               // The DECISION is recorded first and durably (ADR-0019 D4): a
               // change request IS a review outcome, and if the rewrite below
               // fails the decision must still stand. Dispatching only the
               // revision left the request absent from the record entirely.
-              void (async () => {
-                const feedbackFa = note.trim();
-                setNote("");
-                await review.mutateAsync({
+              //
+              // The box is cleared on SUCCESS, not before the write. Cleared
+              // first, a refusal arrived over an empty box while the conflict
+              // sentence promised the text had been kept — and the button
+              // disabled itself under the pointer, dropping focus out of the
+              // sheet. Focus goes to the box first, for the same reason the
+              // concept sheet does it.
+              const feedbackFa = note.trim();
+              noteRef.current?.focus();
+              review.mutate(
+                {
                   target,
                   outcome: "CHANGES_REQUESTED",
                   reasonFa: feedbackFa,
                   expectedRowVersion: rowVersion,
-                });
-                await revision.mutateAsync({ target, feedbackFa, route: "CONTENT_REWRITE" });
-                onOpenChange(false);
-              })();
+                },
+                {
+                  onSuccess: () =>
+                    revision.mutate(
+                      { target, feedbackFa, route: "CONTENT_REWRITE" },
+                      {
+                        onSuccess: () => {
+                          setNote("");
+                          onOpenChange(false);
+                        },
+                      },
+                    ),
+                },
+              );
             }}
           >
             نیاز به تغییر

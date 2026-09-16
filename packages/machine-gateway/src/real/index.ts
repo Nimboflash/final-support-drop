@@ -10,6 +10,7 @@ export type {
 export {
   createMachineClient,
   isMachineSessionId,
+  machineWriteError,
   MACHINE_SESSION_ID,
   type MachineClient,
 } from "./machine-client";
@@ -21,4 +22,6 @@ export type {
   MachineReviewOutcome,
   MachineReviewLog,
   MachineSessionNotes,
+  MachineConceptDecision,
+  MachineConceptRequest,
 } from "./review-store";

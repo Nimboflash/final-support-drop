@@ -198,3 +198,31 @@ describe("an output's state follows the review, not the assembly", () => {
     }
   });
 });
+
+describe("a failed build is its own attention row, never a review row", () => {
+  it("does not send the person to approve what cannot be approved", () => {
+    const snapshot = structuredClone(loadScenario(BASE_WORLD_ID).snapshot);
+    const first = snapshot.content[0]!;
+    snapshot.content = snapshot.content.map((c) =>
+      c.id === first.id
+        ? {
+            ...c,
+            generationState: "FAILED" as const,
+            reviewStatus: "IN_REVIEW" as const,
+            blockedReasonCode: "ASSEMBLY_FAILED_RETRYABLE",
+            blockedReasonFa: "ساخت متوقف شد.",
+          }
+        : c,
+    );
+    const rows = attentionRows(snapshot).filter((row) => row.projectId === first.projectId);
+    expect(rows.some((row) => row.kind === "BUILD_FAILED")).toBe(true);
+    // The failed item is not counted among what «به تأیید شما نیاز دارد».
+    const review = rows.find((row) => row.kind === "AWAITING_REVIEW");
+    if (review !== undefined) expect(review.detailFa).not.toMatch(/یک محتوا به تأیید/);
+  });
+
+  it("the unscheduled row carries its project like its siblings", () => {
+    const rows = attentionRows(loadScenario(BASE_WORLD_ID).snapshot).filter((row) => row.kind === "MISSING_SCHEDULE");
+    for (const row of rows) expect(row.href).toContain(`?project=${row.projectId}`);
+  });
+});

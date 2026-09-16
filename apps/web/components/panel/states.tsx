@@ -7,6 +7,7 @@ import {
   ErrorState,
   LoadingState,
   PermissionDeniedState,
+  formatPersianDateTime,
 } from "@drop/ui";
 import type { ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
@@ -24,14 +25,19 @@ import { GatewayError } from "@drop/machine-gateway";
 export function QueryBoundary<T>({
   query,
   children,
-  empty,
-  lastSyncedAt,
 }: {
   query: UseQueryResult<T, Error>;
   children: (data: T) => ReactNode;
-  empty?: ReactNode;
-  lastSyncedAt?: string;
 }) {
+  /*
+    The last SUCCESSFUL read, from the query itself. Six of the seven
+    destinations passed no timestamp at all, and the one that did passed the
+    current wall-clock — "last synced: now", over data that had just failed
+    to refresh. `dataUpdatedAt` is the instant the data on screen actually
+    arrived, which is the only number the sentence is about.
+  */
+  const syncedAt =
+    query.dataUpdatedAt > 0 ? formatPersianDateTime(new Date(query.dataUpdatedAt).toISOString()) : null;
   if (query.isPending) return <LoadingState />;
 
   if (query.isError) {
@@ -48,9 +54,9 @@ export function QueryBoundary<T>({
         <div className="space-y-3">
           <DegradedModeBanner
             detail={
-              lastSyncedAt === undefined
+              syncedAt === null
                 ? undefined
-                : `آخرین همگام‌سازی: ${lastSyncedAt}. داده‌های نمایش‌داده‌شده ممکن است قدیمی باشند.`
+                : `آخرین همگام‌سازی: ${syncedAt.date}، ${syncedAt.time}. داده‌های نمایش‌داده‌شده ممکن است قدیمی باشند.`
             }
           />
           {query.data === undefined ? null : children(query.data)}
@@ -71,7 +77,6 @@ export function QueryBoundary<T>({
 
   const data = query.data;
   if (data === undefined) return <LoadingState />;
-  if (empty !== undefined && Array.isArray(data) && data.length === 0) return <>{empty}</>;
   return <>{children(data)}</>;
 }
 

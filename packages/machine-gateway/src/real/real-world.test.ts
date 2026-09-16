@@ -193,15 +193,30 @@ describe("what the machine cannot do still refuses, and says something true", ()
     ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
   });
 
-  it("rejecting a CONCEPT refuses, because the machine records no such decision", async () => {
-    // `approve_concept` is the machine's only review verb for a concept. There
-    // is no reject and no changes-requested, so the panel must not pretend.
+  it("setting a CONCEPT aside refuses only when there is nowhere to keep it", async () => {
+    // `approve_concept` is the machine's only review verb for a concept, so
+    // the set-aside is the PANEL's fact. Without a ledger it must say so
+    // rather than accept the decision and lose it.
     await expect(
       world.review.reviewItem({
         outcome: "REJECTED",
+        reasonFa: "با لحن برنامه هم‌خوان نیست.",
         target: { type: "CONCEPT", id: "mc-x", versionId: "mc-x-v1" },
       } as never),
     ).rejects.toMatchObject({ reason: "UNAUTHORIZED" });
+  });
+
+  it("names the machine, not the person, when it refuses", () => {
+    // The refusals that remain are about the machine's surface. They used to
+    // render «با نقش فعلی، اجازهٔ این کار را ندارید» — a claim about the
+    // person's role that was false. The next action says what it is.
+    let thrown: unknown;
+    try {
+      world.panelCommandGateway.addComment({} as never);
+    } catch (error) {
+      thrown = error;
+    }
+    expect((thrown as GatewayError).nextPermittedActions).toEqual(["UNSUPPORTED_BY_MACHINE"]);
   });
 
   it("scheduling refuses only when there is nowhere to keep the date", async () => {
@@ -392,5 +407,200 @@ describe("reviewing machine content, which the machine itself cannot record", ()
     };
     const snapshot = await worldOver(portReturning(OK), broken).panelCommandGateway.getSnapshot();
     expect(() => panelSnapshotSchema.parse(snapshot)).not.toThrow();
+  });
+});
+
+/**
+ * The captured session's latest round holds ONE concept — the approved one.
+ * These cases need a second, unchosen one beside it, so the fixture is widened
+ * here rather than in `@drop/panel-domain`, whose fixture is the one the
+ * projection's own tests are pinned to.
+ */
+const TWO_CONCEPTS = (() => {
+  const rounds = MACHINE_SESSION.concept_rounds;
+  const latest = rounds[rounds.length - 1]!;
+  const template = latest.concepts[0]!;
+  return {
+    ...MACHINE_SESSION,
+    concept_rounds: [
+      ...rounds.slice(0, -1),
+      {
+        ...latest,
+        concepts: [
+          ...latest.concepts,
+          { ...template, concept_id: "concept_other", title: "An unchosen idea" },
+        ],
+      },
+    ],
+  };
+})();
+const TWO = { status: 200, body: TWO_CONCEPTS as unknown };
+
+describe("the person's decisions about CONCEPTS, which the machine cannot record", () => {
+  /** A port whose approve/build calls are recorded, so the rebuild can be proven. */
+  function recordingPort(session: unknown) {
+    const calls: { name: string; input: unknown }[] = [];
+    const answer = (name: string) => (_id: unknown, input?: unknown) => {
+      calls.push({ name, input });
+      return Promise.resolve({ status: 200, body: session });
+    };
+    const port: MachineHttpPort = {
+      getSession: () => Promise.resolve({ status: 200, body: session }),
+      createSession: answer("createSession"),
+      generateConcepts: answer("generateConcepts"),
+      respondToConcepts: answer("respondToConcepts"),
+      approveConcept: answer("approveConcept"),
+      buildPortfolio: answer("buildPortfolio"),
+    };
+    return { port, calls };
+  }
+
+  function unchosenConcept(snapshot: { concepts: readonly { id: string; reviewStatus: string; activeVersionId: string }[] }) {
+    const concept = snapshot.concepts.find((c) => c.reviewStatus !== "APPROVED");
+    expect(concept, "the fixture must carry an unchosen concept").toBeDefined();
+    return concept!;
+  }
+
+  it("records a set-aside, shows it on the next snapshot, and clears the review row", async () => {
+    const store = memoryReviewStore();
+    const world = worldOver(portReturning(TWO), store);
+    const before = await world.panelCommandGateway.getSnapshot();
+    const concept = unchosenConcept(before);
+
+    await world.review.reviewItem({
+      commandId: "k-1",
+      idempotencyKey: "idem-k-1",
+      outcome: "REJECTED",
+      reasonFa: "با لحن این برنامه هم‌خوان نیست.",
+      target: { type: "CONCEPT", id: concept.id, versionId: concept.activeVersionId },
+    } as never);
+
+    const after = await world.panelCommandGateway.getSnapshot();
+    const row = after.concepts.find((c) => c.id === concept.id);
+    expect(row?.reviewStatus).toBe("REJECTED");
+    // V2 01 §4 — a rejection always carries its reason.
+    expect(row?.rejectionReasonFa).toBe("با لحن این برنامه هم‌خوان نیست.");
+    // And it is a history row: تاریخچه was permanently empty in REAL mode.
+    expect(after.decisions.some((d) => d.target.id === concept.id && d.outcome === "REJECTED")).toBe(true);
+    expect(() => panelSnapshotSchema.parse(after)).not.toThrow();
+  });
+
+  it("refuses a set-aside with no reason", async () => {
+    const world = worldOver(portReturning(TWO), memoryReviewStore());
+    const concept = unchosenConcept(await world.panelCommandGateway.getSnapshot());
+    await expect(
+      world.review.reviewItem({
+        commandId: "k-2",
+        idempotencyKey: "idem-k-2",
+        outcome: "REJECTED",
+        reasonFa: null,
+        target: { type: "CONCEPT", id: concept.id, versionId: concept.activeVersionId },
+      } as never),
+    ).rejects.toMatchObject({ reason: "SCHEMA_VALIDATION_FAILED", nextPermittedActions: ["ADD_A_REASON"] });
+  });
+
+  it("will not set aside the concept the research was built from", async () => {
+    const world = worldOver(portReturning(TWO), memoryReviewStore());
+    const snapshot = await world.panelCommandGateway.getSnapshot();
+    const chosen = snapshot.concepts.find((c) => c.reviewStatus === "APPROVED");
+    expect(chosen, "the fixture must carry the approved concept").toBeDefined();
+    await expect(
+      world.review.reviewItem({
+        commandId: "k-3",
+        idempotencyKey: "idem-k-3",
+        outcome: "REJECTED",
+        reasonFa: "دلیل.",
+        target: { type: "CONCEPT", id: chosen!.id, versionId: chosen!.activeVersionId },
+      } as never),
+    ).rejects.toMatchObject({ reason: "INVALID_STATE_TRANSITION" });
+  });
+
+  it("keeps the words behind a refinement, so the thread survives a close", async () => {
+    const store = memoryReviewStore();
+    const { port } = recordingPort(TWO_CONCEPTS);
+    const world = worldOver(port, store);
+    const concept = unchosenConcept(await world.panelCommandGateway.getSnapshot());
+
+    await world.revisionGateway.requestRevision({
+      commandId: "r-1",
+      idempotencyKey: "idem-r-1",
+      route: "CONCEPT_REVISION",
+      feedbackFa: "این مسیر را مینیمال‌تر کن.",
+      target: { type: "CONCEPT", id: concept.id, versionId: concept.activeVersionId },
+    } as never);
+
+    const after = await world.panelCommandGateway.getSnapshot();
+    const said = after.comments.filter((c) => c.target.id === concept.id);
+    expect(said.map((c) => c.bodyFa)).toEqual(["این مسیر را مینیمال‌تر کن."]);
+    expect(() => panelSnapshotSchema.parse(after)).not.toThrow();
+  });
+
+  it("selecting another concept over existing research refuses and names the way", async () => {
+    // Not a build over the first concept's research by accident. The next
+    // action points at the rebuild route, which the panel reaches only through
+    // a confirmation that names the cost.
+    const { port, calls } = recordingPort(TWO_CONCEPTS);
+    const world = worldOver(port, memoryReviewStore());
+    const concept = unchosenConcept(await world.panelCommandGateway.getSnapshot());
+    await expect(
+      world.review.reviewItem({
+        commandId: "k-4",
+        idempotencyKey: "idem-k-4",
+        outcome: "APPROVED",
+        reasonFa: "انتخاب.",
+        target: { type: "CONCEPT", id: concept.id, versionId: concept.activeVersionId },
+      } as never),
+    ).rejects.toMatchObject({ reason: "INVALID_STATE_TRANSITION", nextPermittedActions: ["REPLACE_EXISTING"] });
+    expect(calls, "nothing may be written before the refusal").toEqual([]);
+  });
+
+  it("the rebuild route approves if needed, builds WITH replace, and forgets old content reviews", async () => {
+    const store = memoryReviewStore();
+    const { port, calls } = recordingPort(TWO_CONCEPTS);
+    const world = worldOver(port, store);
+    const before = await world.panelCommandGateway.getSnapshot();
+    const concept = unchosenConcept(before);
+    const item = before.content[0]!;
+
+    // An approval on the OLD research…
+    await world.review.reviewItem({
+      commandId: "c-old",
+      idempotencyKey: "idem-c-old",
+      outcome: "APPROVED",
+      reasonFa: "تأیید.",
+      target: { type: "CONTENT", id: item.id, versionId: item.activeVersionId },
+    } as never);
+    expect((await world.panelCommandGateway.getSnapshot()).content[0]!.reviewStatus).toBe("APPROVED");
+
+    await world.revisionGateway.requestRevision({
+      commandId: "r-2",
+      idempotencyKey: "idem-r-2",
+      route: "RESEARCH_REFRESH",
+      feedbackFa: "بازسازی.",
+      target: { type: "CONCEPT", id: concept.id, versionId: concept.activeVersionId },
+    } as never);
+
+    expect(calls.map((c) => c.name)).toEqual(["approveConcept", "buildPortfolio"]);
+    expect((calls[1]!.input as { replaceExistingPortfolio?: boolean }).replaceExistingPortfolio).toBe(true);
+    // …does not attach itself to the new research, whose third track is a
+    // different track with the same id.
+    expect((await world.panelCommandGateway.getSnapshot()).content[0]!.reviewStatus).not.toBe("APPROVED");
+  });
+
+  it("a plain approval never passes replace", async () => {
+    // The session fixture has a portfolio; approve the ALREADY approved
+    // concept and it must be a no-op — no build, no spend.
+    const { port, calls } = recordingPort(TWO_CONCEPTS);
+    const world = worldOver(port, memoryReviewStore());
+    const snapshot = await world.panelCommandGateway.getSnapshot();
+    const chosen = snapshot.concepts.find((c) => c.reviewStatus === "APPROVED")!;
+    await world.review.reviewItem({
+      commandId: "k-5",
+      idempotencyKey: "idem-k-5",
+      outcome: "APPROVED",
+      reasonFa: "انتخاب.",
+      target: { type: "CONCEPT", id: chosen.id, versionId: chosen.activeVersionId },
+    } as never);
+    expect(calls).toEqual([]);
   });
 });

@@ -38,6 +38,8 @@ export type ConceptState =
   | "new"
   | "improving"
   | "selected"
+  /** Selected, but refined since — the research was built from an older version. */
+  | "outdated"
   | "set_aside";
 
 export const CONCEPT_STATE_LABEL_FA: Readonly<Record<ConceptState, string>> = {
@@ -45,6 +47,7 @@ export const CONCEPT_STATE_LABEL_FA: Readonly<Record<ConceptState, string>> = {
   new: "جدید",
   improving: "در حال بازنگری",
   selected: "انتخاب‌شده",
+  outdated: "محتوا از نسخهٔ قبلی است",
   set_aside: "کنار گذاشته‌شده",
 };
 
@@ -59,7 +62,17 @@ export const CONCEPT_STATE_LABEL_FA: Readonly<Record<ConceptState, string>> = {
  */
 export function conceptStateOf(concept: Concept): ConceptState {
   if (concept.reviewStatus === "REJECTED") return "set_aside";
-  if (concept.reviewStatus === "APPROVED") return "selected";
+  /*
+    STALE on a selected concept is the machine's own self-contradiction, made
+    visible: an approval survives a later round, so the research was built
+    from a version the person has since asked to change. The projection has
+    recorded this on the freshness axis all along; nothing read it, so a
+    refined-and-selected concept read «انتخاب‌شده» with no trace that its
+    content was now about something else.
+  */
+  if (concept.reviewStatus === "APPROVED") {
+    return concept.freshness === "STALE" ? "outdated" : "selected";
+  }
   if (concept.reviewStatus === "DRAFT") return "generating";
   // Asking for a change USED to leave the card reading «جدید», identical to
   // before — so D8's central promise, that a person asks in their own words and
@@ -75,6 +88,8 @@ export type ContentState =
   | "needs_input"
   | "failed"
   | "ready_for_review"
+  /** A change was asked for and the rewrite has not landed. */
+  | "improving"
   | "approved";
 
 export const CONTENT_STATE_LABEL_FA: Readonly<Record<ContentState, string>> = {
@@ -82,6 +97,7 @@ export const CONTENT_STATE_LABEL_FA: Readonly<Record<ContentState, string>> = {
   needs_input: "نیازمند منبع",
   failed: "ساخت آن ناتمام ماند",
   ready_for_review: "آماده بررسی",
+  improving: "در حال بازنگری",
   approved: "تأییدشده",
 };
 
@@ -96,9 +112,11 @@ export const CONTENT_STATE_ACTION_FA: Readonly<Record<ContentState, string | nul
   draft: null,
   needs_input: "برای نهایی‌کردن این محتوا یک منبع معتبر لازم است.",
   // No instruction to add a source: adding one would not help. What this state
-  // needs is the item's own reason, shown beside it.
-  failed: "ساخت این محتوا به نتیجه نرسید.",
+  // needs is the item's own reason, shown beside it — and the one route out,
+  // which is a change request: a rewrite is a fresh attempt with new input.
+  failed: "ساخت این محتوا به نتیجه نرسید. با یک درخواست تغییر، دوباره ساخته می‌شود.",
   ready_for_review: "این محتوا منتظر تأیید شماست.",
+  improving: "درخواست تغییر شما ثبت شده و نسخهٔ تازه در راه است.",
   approved: null,
 };
 
@@ -112,6 +130,10 @@ export function contentStateOf(item: ContentItem): ContentState {
   if (item.generationState === "RUNNING" || item.generationState === "QUEUED") return "draft";
   if (item.reviewStatus === "APPROVED" && item.freshness === "CURRENT") return "approved";
   if (item.reviewStatus === "DRAFT") return "draft";
+  // The same signal concepts got at `conceptStateOf`: asking for a change used
+  // to leave the card reading «آماده بررسی», identical to before, so the
+  // request left no visible trace on the surface it was made from.
+  if (item.reviewStatus === "REVISION_REQUESTED") return "improving";
   return "ready_for_review";
 }
 
@@ -245,6 +267,16 @@ export function outputsFor(world: PanelSnapshot): readonly OutputView[] {
  * when it is attached to what the person should do about it.
  */
 function blockerFor(states: readonly ContentState[]): string | null {
+  // A build that did not finish outranks everything: `null` here rendered as
+  // «همهٔ محتواها تأیید شده‌اند» over an item that had failed, because this
+  // function had no branch for `failed` and the card turned an absence into
+  // a positive claim.
+  const failed = states.filter((s) => s === "failed").length;
+  if (failed > 0) {
+    return failed === 1
+      ? "ساخت یک محتوا ناتمام ماند."
+      : `ساخت ${toPersianDigits(String(failed))} محتوا ناتمام ماند.`;
+  }
   const needsInput = states.filter((s) => s === "needs_input").length;
   if (needsInput > 0) {
     return needsInput === 1
@@ -256,6 +288,12 @@ function blockerFor(states: readonly ContentState[]): string | null {
     return waiting === 1
       ? "یک محتوا به تأیید شما نیاز دارد."
       : `${toPersianDigits(String(waiting))} محتوا به تأیید شما نیاز دارند.`;
+  }
+  const improving = states.filter((s) => s === "improving").length;
+  if (improving > 0) {
+    return improving === 1
+      ? "یک محتوا در حال بازنگری است."
+      : `${toPersianDigits(String(improving))} محتوا در حال بازنگری‌اند.`;
   }
   const drafting = states.filter((s) => s === "draft").length;
   if (drafting > 0) return "چند محتوا هنوز در حال آماده‌سازی‌اند.";
@@ -275,6 +313,12 @@ export function projectMessageFa(world: PanelSnapshot, project: PanelProject): s
   if (concepts.length === 0) return "هنوز کانسپتی برای این پروژه ساخته نشده.";
 
   const content = world.content.filter((c) => c.projectId === project.id);
+  const failed = content.filter((c) => contentStateOf(c) === "failed").length;
+  if (failed > 0) {
+    return failed === 1
+      ? "ساخت یک محتوا ناتمام ماند."
+      : `ساخت ${toPersianDigits(String(failed))} محتوا ناتمام ماند.`;
+  }
   const needsSource = content.filter((c) => contentStateOf(c) === "needs_input").length;
   if (needsSource > 0) {
     return needsSource === 1

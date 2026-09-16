@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Badge,
   Button,
@@ -22,7 +23,7 @@ import {
   type ProductNode,
 } from "@drop/workflow-ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
-import { ProjectSelector, useSelectedProject, ALL_PROJECTS } from "./project-selector";
+import { ProjectSelector, UnknownProjectState, useSelectedProject, ALL_PROJECTS } from "./project-selector";
 import { useDemoSession } from "../../lib/demo/providers";
 
 /**
@@ -66,10 +67,19 @@ export function EnginePage({ world }: { world: PanelSnapshot }) {
     return (
       <div className="space-y-5">
         <EngineHeader world={world} />
-        <EmptyState
-          title="جریانی برای نمایش نیست"
-          detail="هنوز پروژه‌ای برای نمایش جریان اجرا وجود ندارد."
-        />
+        {/*
+          Two different absences. A filter naming a project the world does not
+          hold is a bad address, and says so like every other surface; a world
+          with no project at all is the honest empty state.
+        */}
+        {selectedProject !== ALL_PROJECTS && world.projects.length > 0 ? (
+          <UnknownProjectState />
+        ) : (
+          <EmptyState
+            title="جریانی برای نمایش نیست"
+            detail="هنوز پروژه‌ای برای نمایش جریان اجرا وجود ندارد."
+          />
+        )}
       </div>
     );
   }
@@ -208,7 +218,7 @@ function NodeDetails({ node, projectId }: { node: ProductNode; projectId: string
 
         {node.state === "AWAITING_REVIEW" || node.state === "BLOCKED" ? (
           <Button asChild size="sm" data-testid="engine-node-link">
-            <a href={destination.href}><ContentText>{destination.labelFa}</ContentText></a>
+            <Link href={destination.href}><ContentText>{destination.labelFa}</ContentText></Link>
           </Button>
         ) : null}
       </CardContent>

@@ -17,7 +17,8 @@ import { useReturnFocus } from "./use-return-focus";
 import {
   ALL_PROJECTS,
   ProjectSelector,
-  useSelectedProject,
+  UnknownProjectState,
+  useProjectFilter,
 } from "./project-selector";
 import {
   Sheet,
@@ -68,7 +69,7 @@ export function Overview({ world }: { world: PanelSnapshot }) {
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const composerFocus = useReturnFocus();
   const panelFocus = useReturnFocus();
-  const selected = useSelectedProject();
+  const { selected, known } = useProjectFilter(world);
   const projects =
     selected === ALL_PROJECTS
       ? world.projects
@@ -93,7 +94,9 @@ export function Overview({ world }: { world: PanelSnapshot }) {
         </div>
       </header>
 
-      {world.projects.length === 0 ? (
+      {!known ? (
+        <UnknownProjectState />
+      ) : world.projects.length === 0 ? (
         <EmptyState
           title="هنوز کاری شروع نشده"
           detail="با یک درخواست، یک رفرنس، یا بدون هیچ ورودی شروع کنید."

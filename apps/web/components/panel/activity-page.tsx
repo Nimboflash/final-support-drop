@@ -7,7 +7,7 @@ import {
   PersianDateTime,
 } from "@drop/ui";
 import type { PanelSnapshot } from "@drop/panel-domain";
-import { ProjectSelector, useSelectedProject, ALL_PROJECTS } from "./project-selector";
+import { ProjectSelector, UnknownProjectState, useProjectFilter, ALL_PROJECTS } from "./project-selector";
 
 /**
  * History — reachable, but off the main path (ADR-0020 D2).
@@ -16,7 +16,7 @@ import { ProjectSelector, useSelectedProject, ALL_PROJECTS } from "./project-sel
  * material, not a step in the work, and it was occupying a project tab.
  */
 export function ActivityPage({ world }: { world: PanelSnapshot }) {
-  const selectedProject = useSelectedProject();
+  const { selected: selectedProject, known } = useProjectFilter(world);
 
   const owned = new Set(
     [
@@ -89,10 +89,12 @@ export function ActivityPage({ world }: { world: PanelSnapshot }) {
         <ProjectSelector world={world} />
       </header>
 
-      {rows.length === 0 ? (
+      {!known ? (
+        <UnknownProjectState />
+      ) : rows.length === 0 ? (
         <EmptyState
           title="هنوز رویدادی ثبت نشده"
-          detail="گفت‌وگوها و تصمیم‌ها پس از شروع کار اینجا دیده می‌شوند."
+          detail="هر تصمیمی که ثبت کنید و هر درخواستی که برای بهبود بدهید اینجا می‌آید."
         />
       ) : (
         <ul className="space-y-2" data-testid="activity-list">

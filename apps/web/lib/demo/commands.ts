@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
-import { GatewayError } from "@drop/machine-gateway";
+import { GatewayError, NEXT_ACTIONS } from "@drop/machine-gateway";
 import type { PanelCalendarEntry, RevisionRoute, Target } from "@drop/panel-domain";
 import { useDemoSession } from "./providers";
 import { panelKeys } from "./queries";
@@ -286,19 +286,100 @@ export function isForbidden(error: unknown): boolean {
   return error instanceof GatewayError && error.reason === "UNAUTHORIZED";
 }
 
-/** The Persian explanation for a failed command, by reason. */
+/**
+ * How a failure should be PRESENTED, before what it says.
+ *
+ *   wait      nothing failed — the machine is busy, or still working; do not press again
+ *   conflict  the person's view is stale; refresh and resubmit, their text is kept
+ *   refused   the panel will not do this here, and says why
+ *   failed    something went wrong
+ *
+ * One classification, so every surface renders the same failure the same way:
+ * a "wait" is a `role="status"` line in the warning tone, never an alert in
+ * red, because a red alert for "the machine is still working on your last
+ * request" is what makes a person press again — which is the one response
+ * that costs twice.
+ */
+export type CommandErrorTone = "wait" | "conflict" | "refused" | "failed";
+
+function nextActionOf(error: GatewayError): string | null {
+  return error.nextPermittedActions[0] ?? null;
+}
+
+export function commandErrorTone(error: unknown): CommandErrorTone {
+  if (!(error instanceof GatewayError)) return "failed";
+  const next = nextActionOf(error);
+  if (
+    next === NEXT_ACTIONS.WAIT_THEN_RETRY ||
+    next === NEXT_ACTIONS.COOL_DOWN ||
+    next === NEXT_ACTIONS.WAIT_FOR_RESULT
+  ) {
+    return "wait";
+  }
+  if (error.reason === "REVISION_CONFLICT" || error.reason === "STALE_DATA") return "conflict";
+  if (
+    error.reason === "UNAUTHORIZED" ||
+    error.reason === "INVALID_STATE_TRANSITION" ||
+    next === NEXT_ACTIONS.ADD_A_REASON
+  ) {
+    return "refused";
+  }
+  return "failed";
+}
+
+/**
+ * The Persian explanation for a failed command.
+ *
+ * Keyed on the reason AND on `nextPermittedActions`, because the reason alone
+ * cannot tell "wait thirty seconds" from "start a new session" — both arrive
+ * as `INVALID_STATE_TRANSITION`. Every sentence here is one a person can act
+ * on; there is no «ثبت این فرمان ممکن نشد» fallback any more, because a
+ * sentence that names no cause and no next step is the one that used to
+ * render for a write the proxy KNEW was still running and spending.
+ */
 export function commandErrorFa(error: unknown): string {
   if (!(error instanceof GatewayError)) return "خطای ناشناخته‌ای رخ داد.";
+  const next = nextActionOf(error);
+
+  switch (next) {
+    case NEXT_ACTIONS.WAIT_THEN_RETRY:
+      return "ماشین هنوز مشغول درخواست قبلی روی همین جلسه است. چیزی خرج نشد؛ چند لحظه صبر کنید و دوباره بزنید.";
+    case NEXT_ACTIONS.COOL_DOWN:
+      return "ماشین بین دو کار پولی مکث کوتاهی می‌کند. چیزی خرج نشد؛ نیم دقیقهٔ دیگر دوباره بزنید.";
+    case NEXT_ACTIONS.WAIT_FOR_RESULT:
+      return "پاسخ ماشین از مهلت گذشت، اما کار متوقف نشده و ممکن است هنوز در حال انجام و پرداخت باشد. دوباره نفرستید؛ نتیجه تا چند دقیقهٔ دیگر خودش روی صفحه می‌آید.";
+    case NEXT_ACTIONS.START_NEW_SESSION:
+      return "سقف کارهای پولی این جلسه پر شده است. برای ادامه، از «شروع کانسپت جدید» جلسهٔ تازه‌ای بسازید.";
+    case NEXT_ACTIONS.REPLACE_EXISTING:
+      return "برای این جلسه قبلاً تحقیق ساخته شده است. ساختن دوباره، تحقیق قبلی را جایگزین می‌کند و هزینه دارد؛ این کار از خود کانسپت و با تأیید شما انجام می‌شود.";
+    case NEXT_ACTIONS.ENABLE_WRITES:
+      return "نوشتن روی ماشین در این اجرا خاموش است؛ پنل فقط می‌خواند. روشن‌کردنش در تنظیمات سرور است.";
+    case NEXT_ACTIONS.UNSUPPORTED_BY_MACHINE:
+      return "ماشین چنین کاری ندارد و پنل هم جایی برای نگه‌داشتن آن ندارد؛ این تصمیم ثبت نمی‌شود.";
+    case NEXT_ACTIONS.ADD_A_REASON:
+      return "ثبت این تصمیم بدون دلیل ممکن نیست.";
+    default:
+      break;
+  }
+
   switch (error.reason) {
     case "REVISION_CONFLICT":
       return "این مورد در جای دیگری تغییر کرده است. صفحه را تازه کنید و دوباره ثبت کنید؛ متن شما حفظ شده است.";
+    case "STALE_DATA":
+      return "آنچه روی صفحه است قدیمی شده. صفحه را تازه کنید و دوباره ثبت کنید؛ متن شما حفظ شده است.";
     case "UNAUTHORIZED":
       return "با نقش فعلی، اجازهٔ این کار را ندارید.";
     case "MACHINE_SYSTEM_DISCONNECTED":
       return "ارتباط با سامانهٔ ماشین برقرار نیست. داده‌های نمایش‌داده‌شده ممکن است قدیمی باشند.";
+    case "TIMEOUT":
+      return "ماشین در مهلت مقرر پاسخ نداد. چند لحظهٔ دیگر دوباره بزنید.";
+    case "UNKNOWN_ID":
+      return "این مورد دیگر روی ماشین نیست. صفحه را تازه کنید.";
+    case "INVALID_STATE_TRANSITION":
+      return "این کار در وضعیت فعلی ممکن نیست.";
     case "SCHEMA_VALIDATION_FAILED":
-      return "ثبت این تصمیم بدون دلیل ممکن نیست.";
+      return "پنل درخواستی فرستاد که پذیرفته نشد. صفحه را تازه کنید؛ اگر تکرار شد، اشکال از پنل است.";
     default:
-      return "ثبت این فرمان ممکن نشد.";
+      return "خطای ناشناخته‌ای رخ داد.";
   }
 }

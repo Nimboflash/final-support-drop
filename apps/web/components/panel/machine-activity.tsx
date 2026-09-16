@@ -28,6 +28,12 @@ import { useDemoSession } from "../../lib/demo/providers";
  * "this has been running a while", which is why the elapsed seconds are shown
  * beside the working state instead. A number that keeps climbing is honest
  * about a long job in a way a static word is not.
+ *
+ * `role="status"`, matching `DegradedModeBanner` and `BlockerCallout`: the
+ * Persian word is the only carrier (the dot is aria-hidden), and it was being
+ * swapped silently. The elapsed count is NOT announced every second — the
+ * badge re-renders, but a polite region only speaks when it settles, and the
+ * state word is what changes meaningfully.
  */
 export function MachineActivity() {
   const live = useDemoSession().mode === "REAL";
@@ -60,6 +66,7 @@ export function MachineActivity() {
     return (
       <Badge
         variant="outline"
+        role="status"
         data-testid="machine-activity"
         data-state="working"
         className="gap-1.5 font-normal"
@@ -80,6 +87,7 @@ export function MachineActivity() {
     return (
       <Badge
         variant="outline"
+        role="status"
         data-testid="machine-activity"
         data-state="reading"
         className="gap-1.5 font-normal text-muted-foreground"
@@ -93,6 +101,7 @@ export function MachineActivity() {
   return (
     <Badge
       variant="outline"
+      role="status"
       data-testid="machine-activity"
       data-state="idle"
       className="gap-1.5 font-normal text-muted-foreground"

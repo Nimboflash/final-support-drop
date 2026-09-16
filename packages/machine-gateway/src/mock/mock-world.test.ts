@@ -141,3 +141,49 @@ describe("event delivery (AC-P3.13)", () => {
     await expect(world.panelCommandGateway.exportPackage("nope")).rejects.toThrow();
   });
 });
+
+describe("the two dead ends the seed shipped", () => {
+  it("the guardian's approval passes the editorial gate, so the walkthrough output can assemble", async () => {
+    const world = createMockWorld({ scenarioId: "BASE" });
+    const before = await world.panelCommandGateway.getSnapshot();
+    const pending = before.content.find(
+      (c) => c.editorialStatus === "PENDING" && c.generationState === "SUCCEEDED",
+    );
+    expect(pending, "the base world seeds a PENDING item").toBeDefined();
+    await world.review.reviewItem({
+      commandId: "e-1",
+      idempotencyKey: "idem-e-1",
+      workspaceId: "drop-demo",
+      actorId: "actor-guardian",
+      actedAsRole: "DROP_GUARDIAN",
+      outcome: "APPROVED",
+      reasonFa: "تأیید.",
+      target: { type: "CONTENT", id: pending!.id, versionId: pending!.activeVersionId },
+      expectedRowVersion: pending!.rowVersion,
+    });
+    const after = await world.panelCommandGateway.getSnapshot();
+    expect(after.content.find((c) => c.id === pending!.id)?.editorialStatus).toBe("PASSED");
+  });
+
+  it("a change request on a FAILED item is the retry its message promised", async () => {
+    const world = createMockWorld({ scenarioId: "BASE" });
+    const before = await world.panelCommandGateway.getSnapshot();
+    const failed = before.content.find((c) => c.generationState === "FAILED");
+    expect(failed, "the base world seeds a FAILED item").toBeDefined();
+    await world.revisionGateway.requestRevision({
+      commandId: "e-2",
+      idempotencyKey: "idem-e-2",
+      workspaceId: "drop-demo",
+      actorId: "actor-guardian",
+      actedAsRole: "DROP_GUARDIAN",
+      feedbackFa: "دوباره بساز.",
+      route: "CONTENT_REWRITE",
+      target: { type: "CONTENT", id: failed!.id, versionId: failed!.activeVersionId },
+      expectedRowVersion: failed!.rowVersion,
+    });
+    const after = await world.panelCommandGateway.getSnapshot();
+    const row = after.content.find((c) => c.id === failed!.id);
+    expect(row?.generationState).toBe("SUCCEEDED");
+    expect(row?.reviewStatus).toBe("REVISION_REQUESTED");
+  });
+});

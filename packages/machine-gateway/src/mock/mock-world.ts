@@ -20,7 +20,7 @@ import type {
   Target,
 } from "@drop/panel-domain";
 import { toApprovalDecision, toReviewStatus } from "@drop/panel-domain";
-import { GatewayError, gatewayErrors } from "../errors";
+import { GatewayError, gatewayErrors, NEXT_ACTIONS } from "../errors";
 import type { PanelCommandGateway } from "../panel-command-gateway";
 import type { RevisionGateway } from "../revision-gateway";
 import type { ReviewApplicationService } from "../review-application-service";
@@ -240,6 +240,21 @@ export function createMockWorld(options: MockWorldOptions): MockWorld {
             if ("rejectionReasonFa" in card && reviewStatus === "REJECTED") {
               card.rejectionReasonFa = command.reason;
             }
+            /*
+              The guardian's approval IS the editorial pass in this panel.
+
+              V2 01 §5 says comments alone never satisfy the Persian editorial
+              gate, and they do not: nothing here touches a gate on a comment.
+              But the seed shipped two of the walkthrough project's four
+              required items PENDING and nothing anywhere could ever write the
+              field — so that project's output could not assemble by any route,
+              and the e2e scenario worked around it by borrowing another
+              project's output. There is one human actor in this world, and
+              their approval is the review the gate exists for.
+            */
+            if ("editorialStatus" in card && reviewStatus === "APPROVED" && card.editorialStatus === "PENDING") {
+              card.editorialStatus = "PASSED";
+            }
           }
           const kind = draft.concepts.some((c) => c.id === targetId) ? "CONCEPT" : "CONTENT";
           // The last required approval assembles the package (V2 01 §6).
@@ -288,7 +303,7 @@ export function createMockWorld(options: MockWorldOptions): MockWorld {
         throw new GatewayError(
           "SCHEMA_VALIDATION_FAILED",
           "SCHEMA_VALIDATION_FAILED: a review decision requires a reason (ADR-0013 D2)",
-          { retryable: false },
+          { retryable: false, nextPermittedActions: [NEXT_ACTIONS.ADD_A_REASON] },
         );
       }
       const decision = toApprovalDecision(
@@ -374,6 +389,18 @@ export function createMockWorld(options: MockWorldOptions): MockWorld {
                 // recorded, and recording it is what unblocks.
                 if (command.route === "RESEARCH_REFRESH" && card.generationState === "BLOCKED") {
                   card.generationState = "SUCCEEDED";
+                  card.blockedReasonFa = null;
+                }
+                /*
+                  A rewrite is a fresh attempt with new input, which is exactly
+                  what a FAILED item needs and the only thing the panel offers
+                  it. The seeded failure said "can be retried" and no control
+                  retried it; the request for change now does, and the state
+                  says so on the card while the new version lands.
+                */
+                if (command.route === "CONTENT_REWRITE" && card.generationState === "FAILED") {
+                  card.generationState = "SUCCEEDED";
+                  card.blockedReasonCode = null;
                   card.blockedReasonFa = null;
                 }
                 card.rowVersion += 1;

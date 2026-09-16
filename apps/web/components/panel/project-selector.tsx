@@ -1,8 +1,11 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
+  Button,
   ContentText,
+  EmptyState,
   Select,
   SelectContent,
   SelectItem,
@@ -26,7 +29,30 @@ import type { PanelSnapshot } from "@drop/panel-domain";
 export const ALL_PROJECTS = "all";
 
 export function useSelectedProject(): string {
-  return useSearchParams().get("project") ?? ALL_PROJECTS;
+  const raw = useSearchParams().get("project");
+  // `?project=` with nothing after it is not a project. It reached the URL
+  // from a composer opened in an empty world, and a filter matching nothing
+  // then showed «هنوز کانسپتی ساخته نشده» over a world full of concepts.
+  return raw === null || raw.trim() === "" ? ALL_PROJECTS : raw;
+}
+
+/**
+ * The filter, and whether the world can honour it.
+ *
+ * A `?project=` the snapshot does not contain used to produce one of two lies:
+ * «هنوز محتوایی ساخته نشده» (false — the filter, not the world, is empty) on
+ * four surfaces, or five columns of «۰» with no message at all on the
+ * overview. Every project id in REAL mode is `ms-<session>`, so any bookmark
+ * from the demo world hits this the moment the server is pointed at a machine.
+ */
+export function useProjectFilter(world: PanelSnapshot): {
+  readonly selected: string;
+  readonly known: boolean;
+} {
+  const selected = useSelectedProject();
+  const known =
+    selected === ALL_PROJECTS || world.projects.some((project) => project.id === selected);
+  return { selected, known };
 }
 
 /** Narrows any project-owned list to the current selection. */
@@ -35,6 +61,26 @@ export function filterByProject<T extends { projectId: string }>(
   selected: string,
 ): readonly T[] {
   return selected === ALL_PROJECTS ? items : items.filter((item) => item.projectId === selected);
+}
+
+/**
+ * The one honest answer to a filter that matches nothing: say so, and offer
+ * the way out. Rendered by every surface that honours `?project=`, so the
+ * sentence is the same on all of them.
+ */
+export function UnknownProjectState() {
+  const pathname = usePathname();
+  return (
+    <EmptyState
+      title="این نشانی به پروژه‌ای در این فضای کار اشاره نمی‌کند"
+      detail="شاید پیوند قدیمی باشد، یا پنل اکنون جلسهٔ دیگری را نشان می‌دهد."
+      action={
+        <Button asChild variant="outline" data-testid="show-all-projects">
+          <Link href={pathname}>نمایش همهٔ پروژه‌ها</Link>
+        </Button>
+      }
+    />
+  );
 }
 
 /**
@@ -54,7 +100,16 @@ export function ProjectSelector({
   const pathname = usePathname();
   const params = useSearchParams();
   const fallback = allowAll ? ALL_PROJECTS : (world.projects[0]?.id ?? ALL_PROJECTS);
-  const selected = params.get("project") ?? fallback;
+  const raw = params.get("project");
+  const requested = raw === null || raw.trim() === "" ? fallback : raw;
+  // An id the world does not hold must not read as «همه پروژه‌ها»: that is the
+  // placeholder Radix falls back to for an unmatched value, and it told the
+  // person the board was unfiltered while it was filtered to nothing.
+  const selected = world.projects.some((project) => project.id === requested)
+    ? requested
+    : requested === ALL_PROJECTS
+      ? ALL_PROJECTS
+      : "";
 
   function choose(value: string) {
     const next = new URLSearchParams(params.toString());
@@ -67,7 +122,7 @@ export function ProjectSelector({
   return (
     <Select value={selected} onValueChange={choose}>
       <SelectTrigger data-testid="project-selector" className="w-56" aria-label="انتخاب پروژه">
-        <SelectValue placeholder="همه پروژه‌ها" />
+        <SelectValue placeholder={selected === "" ? "پروژهٔ ناشناخته" : "همه پروژه‌ها"} />
       </SelectTrigger>
       <SelectContent>
         {allowAll ? <SelectItem value={ALL_PROJECTS}>همه پروژه‌ها</SelectItem> : null}

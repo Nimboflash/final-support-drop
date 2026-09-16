@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Badge, BrandMark, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
 import { StudioSidebar } from "./_shell/studio-sidebar";
 import { MachineActivity } from "../../components/panel/machine-activity";
+import { PolicyNotice } from "../../components/panel/policy-notice";
 import { DemoProviders } from "../../lib/demo/providers";
 
 /**
@@ -135,6 +136,7 @@ export default async function StudioLayout({ children }: { children: ReactNode }
             main landmark, and a second one nested inside it gives a screen
             reader two "main" regions to choose between.
           */}
+          <PolicyNotice />
           <div className="p-6">{children}</div>
         </SidebarInset>
       </SidebarProvider>
