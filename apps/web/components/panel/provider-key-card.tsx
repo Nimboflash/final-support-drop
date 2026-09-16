@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Play, ShieldCheck } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from "@drop/ui";
+import { Badge, Button, Input, Label, Skeleton } from "@drop/ui";
+import { SettingsSection } from "./settings-section";
 
 /**
  * Where a person puts the provider credential (ADR-0024).
@@ -114,25 +115,23 @@ export function ProviderKeyCard() {
   */
   if (status === "LOADING") {
     return (
-      <Card className="drop-material gap-3" data-testid="provider-key-loading" aria-busy="true">
-        <CardHeader>
-          <CardTitle className="text-base">وضعیت اتصال</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <SettingsSection id="connection" title="اتصال" testId="provider-key-loading">
+        <div role="status" aria-busy="true" aria-label="در حال خواندن وضعیت کلید" className="space-y-3 py-2">
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
           <Skeleton className="h-9 w-40" />
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
     );
   }
 
   return (
-    <Card className="drop-material gap-3">
-      <CardHeader>
-        <CardTitle className="text-base">وضعیت اتصال</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm">
+    <SettingsSection
+      id="connection"
+      title="اتصال"
+      description="کلید ارائه‌دهنده روی همین دستگاه، کنار مخزن، نگه داشته می‌شود و هرگز به مرورگر برنمی‌گردد."
+    >
+      <div className="space-y-4 py-2 text-sm">
         {status === "FAILED" ? (
           <>
             <p role="alert" data-testid="provider-key-failed">
@@ -251,7 +250,7 @@ export function ProviderKeyCard() {
             ) : null}
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </SettingsSection>
   );
 }

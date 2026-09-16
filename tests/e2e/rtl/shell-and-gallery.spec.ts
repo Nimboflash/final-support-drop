@@ -120,13 +120,25 @@ test.describe("/studio shell (AC-P1.9)", () => {
 
   test("settings and history are reachable but are not destinations", async ({ page }) => {
     await page.goto("/studio");
+    // Outside the navigation landmark — they are not work (ADR-0020 D2) —
+    // and no longer behind a «بیشتر» menu: plain items at the rail's foot,
+    // one press each, the way the owner's reference keeps Settings.
+    const primary = page.getByRole("navigation", { name: "ناوبری اصلی استودیو" });
     for (const label of SECONDARY_LABELS) {
-      await expect(page.getByRole("navigation").getByRole("link", { name: label, exact: true })).toHaveCount(0);
+      await expect(primary.getByRole("link", { name: label, exact: true })).toHaveCount(0);
+      await expect(page.getByTestId("secondary-nav").getByRole("link", { name: label, exact: true })).toBeVisible();
     }
-    await page.getByTestId("secondary-menu-trigger").click();
-    for (const label of SECONDARY_LABELS) {
-      await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
-    }
+  });
+
+  test("the rail's primary action opens the composer and hands focus back", async ({ page }) => {
+    await page.goto("/studio");
+    await page.getByTestId("start-concept").click();
+    await page.waitForURL("**/studio/concepts?compose=1");
+    await expect(page.getByTestId("concept-composer")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("concept-composer")).toBeHidden();
+    // The address is cleaned so a reload does not reopen what was closed.
+    await page.waitForURL((url) => !url.searchParams.has("compose"));
   });
 
   test("every destination states the one question it answers (brief §5)", async ({ page }) => {

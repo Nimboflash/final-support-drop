@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ContentText, PersianDateTime } from "@drop/ui";
+import { Badge, Button, ContentText, PersianDateTime } from "@drop/ui";
+import { SettingsRow, SettingsSection } from "./settings-section";
 import { useDemoSession } from "../../lib/demo/providers";
 import { readStartedSessions, type StartedSession } from "../../lib/machine/session-history";
 import { forgetMachineSession, switchMachineSession } from "../../lib/machine/start-session";
@@ -44,72 +45,72 @@ export function MachineSessionCard() {
   }
 
   return (
-    <Card className="drop-material gap-3" data-testid="machine-session-card">
-      <CardHeader>
-        <CardTitle className="text-base">جلسهٔ ماشین</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <p className="flex flex-wrap items-center gap-2">
+    <SettingsSection
+      id="session"
+      title="جلسهٔ ماشین"
+      description="هر درخواست تازه، جلسهٔ تازه‌ای می‌سازد. جلسه‌های قبلی این مرورگر از اینجا و از ستون کناری قابل بازگشت‌اند."
+      testId="machine-session-card"
+    >
+      <SettingsRow
+        label="جلسهٔ فعلی"
+        description={
           <Badge variant="outline" data-testid="current-session">
             <bdi lang="en" dir="ltr" className="font-mono">{current}</bdi>
           </Badge>
-          <span className="text-muted-foreground">
-            پنل اکنون این جلسه را نشان می‌دهد. هر درخواست تازه، جلسهٔ تازه‌ای می‌سازد.
-          </span>
-        </p>
+        }
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="forget-session"
+          pending={busy === "forget"}
+          disabled={busy !== null}
+          onClick={() => void go("forget", forgetMachineSession)}
+        >
+          فراموش‌کردن این جلسه
+        </Button>
+      </SettingsRow>
 
-        {others.length === 0 ? (
-          <p className="text-muted-foreground" data-testid="no-other-sessions">
-            جلسهٔ دیگری از این مرورگر شروع نشده است.
-          </p>
-        ) : (
-          <ul className="space-y-2" data-testid="session-list">
-            {others.map((row) => (
-              <li
-                key={row.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-2"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">
-                    <ContentText>{row.briefFa === "" ? "بدون ورودی" : row.briefFa}</ContentText>
+      <SettingsRow
+        label="جلسه‌های دیگر این مرورگر"
+        description={
+          others.length === 0 ? (
+            <span data-testid="no-other-sessions">جلسهٔ دیگری از این مرورگر شروع نشده است.</span>
+          ) : (
+            <ul className="space-y-2" data-testid="session-list">
+              {others.map((row) => (
+                <li key={row.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">
+                      <ContentText>{row.briefFa === "" ? "بدون ورودی" : row.briefFa}</ContentText>
+                    </span>
+                    {row.startedAt === "" ? null : (
+                      <PersianDateTime value={row.startedAt} className="text-xs text-muted-foreground" />
+                    )}
                   </span>
-                  {row.startedAt === "" ? null : (
-                    <PersianDateTime value={row.startedAt} className="text-xs text-muted-foreground" />
-                  )}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  data-testid="switch-session"
-                  pending={busy === row.id}
-                  disabled={busy !== null}
-                  onClick={() => void go(row.id, () => switchMachineSession(row.id))}
-                >
-                  رفتن به این جلسه
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    data-testid="switch-session"
+                    pending={busy === row.id}
+                    disabled={busy !== null}
+                    onClick={() => void go(row.id, () => switchMachineSession(row.id))}
+                  >
+                    رفتن به این جلسه
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            data-testid="forget-session"
-            pending={busy === "forget"}
-            disabled={busy !== null}
-            onClick={() => void go("forget", forgetMachineSession)}
-          >
-            فراموش‌کردن جلسهٔ انتخاب‌شده
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            پنل به جلسهٔ پیش‌فرض سرور برمی‌گردد، یا اگر نباشد، به نسخهٔ نمایشی.
-          </span>
-        </div>
+      <SettingsRow
+        label="پیش‌فرض سرور"
+        description="با فراموش‌کردن جلسه، پنل به جلسهٔ پیش‌فرض سرور برمی‌گردد، یا اگر نباشد، به نسخهٔ نمایشی."
+      />
 
-        {error === null ? null : <CommandError error={error} />}
-      </CardContent>
-    </Card>
+      {error === null ? null : <div className="py-3"><CommandError error={error} /></div>}
+    </SettingsSection>
   );
 }

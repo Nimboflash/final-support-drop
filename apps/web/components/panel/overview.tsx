@@ -28,9 +28,11 @@ import {
   SheetTitle,
 } from "@drop/ui";
 import { PROJECT_STAGE_LABEL_FA, projectMessageFa } from "../../lib/demo/presentation";
+import { useDemoSession } from "../../lib/demo/providers";
 import {
   PROJECT_STAGES,
   attentionFor,
+  attentionRows,
   projectStage,
   type AttentionRow,
 } from "../../lib/demo/read-models";
@@ -70,28 +72,39 @@ export function Overview({ world }: { world: PanelSnapshot }) {
   const composerFocus = useReturnFocus();
   const panelFocus = useReturnFocus();
   const { selected, known } = useProjectFilter(world);
+  const session = useDemoSession();
   const projects =
     selected === ALL_PROJECTS
       ? world.projects
       : world.projects.filter((project) => project.id === selected);
   const openProject = world.projects.find((p) => p.id === openProjectId) ?? null;
+  const waiting = attentionRows(world).filter(
+    (row) => selected === ALL_PROJECTS || row.projectId === selected,
+  ).length;
 
   return (
     <div className="drop-surface space-y-6">
-      <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
-        <h1 className="text-3xl font-bold tracking-tight">نمای کلی</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <ProjectSelector world={world} />
-          <Button
-            data-testid="start-concept"
-            onClick={() => {
-              composerFocus.remember();
-              setComposerOpen(true);
-            }}
-          >
-            شروع کانسپت جدید
-          </Button>
+      <header className="drop-rule flex flex-wrap items-end justify-between gap-3 pb-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">نمای کلی</h1>
+          {/*
+            The reference's home greets you and then says one thing. This is
+            that one thing — the count the whole board exists to answer — in a
+            sentence, before the person has to read five columns to find it.
+            The clock is the session's, so the demo world greets the same way
+            on every run.
+          */}
+          <p className="text-sm text-muted-foreground" data-testid="overview-greeting">
+            {greetingFa(session.clock.now())}
+            {"؛ "}
+            {waiting === 0
+              ? "کار جدیدی در انتظار شما نیست."
+              : waiting === 1
+                ? "یک مورد منتظر شماست."
+                : `${toPersianDigits(String(waiting))} مورد منتظر شماست.`}
+          </p>
         </div>
+        <ProjectSelector world={world} />
       </header>
 
       {!known ? (
@@ -102,6 +115,7 @@ export function Overview({ world }: { world: PanelSnapshot }) {
           detail="با یک درخواست، یک رفرنس، یا بدون هیچ ورودی شروع کنید."
           action={
             <Button
+              data-testid="start-concept-empty"
               onClick={() => {
                 composerFocus.remember();
                 setComposerOpen(true);
@@ -366,4 +380,17 @@ function AttentionRowView({ row }: { row: AttentionRow }) {
       </Button>
     </div>
   );
+}
+
+/** Time of day in Asia/Tehran, in the words a person would use. */
+function greetingFa(instant: string): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "Asia/Tehran" })
+      .format(new Date(instant)),
+  );
+  if (hour < 5) return "شب بخیر";
+  if (hour < 12) return "صبح بخیر";
+  if (hour < 17) return "ظهر بخیر";
+  if (hour < 20) return "عصر بخیر";
+  return "شب بخیر";
 }

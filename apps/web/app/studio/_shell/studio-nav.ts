@@ -2,9 +2,11 @@ import {
   CalendarDays,
   Cpu,
   FileText,
+  History,
   LayoutDashboard,
   Lightbulb,
   PackageCheck,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,11 +69,20 @@ export const STUDIO_NAV: readonly StudioNavItem[] = [
   },
 ] as const;
 
-/** Reachable from the profile menu, not the primary bar (ADR-0020 D2). */
-export const SECONDARY_NAV = [
-  { label: "تنظیمات", href: "/studio/settings" },
-  { label: "تاریخچه", href: "/studio/activity" },
-] as const;
+/**
+ * Reachable from the rail's foot, not its primary group (ADR-0020 D2).
+ *
+ * They were behind a «بیشتر» menu — one press to open, a second to choose —
+ * and the owner asked for the reference's structure instead: the two things
+ * that are not work sit at the bottom of the rail as plain items, the way
+ * Settings sits at the foot of Claude's. Still not destinations: they render
+ * outside the navigation landmark, so the six work units stay the whole of
+ * «ناوبری اصلی».
+ */
+export const SECONDARY_NAV: readonly { label: string; href: string; icon: LucideIcon }[] = [
+  { label: "تاریخچه", href: "/studio/activity", icon: History },
+  { label: "تنظیمات", href: "/studio/settings", icon: Settings },
+];
 
 /**
  * Where each retired path now goes.

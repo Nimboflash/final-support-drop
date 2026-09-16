@@ -60,7 +60,7 @@ function CardSkeleton({ lines = 2 }: { lines?: number }) {
 export function ConceptsSkeleton() {
   return (
     <Frame label="در حال بارگذاری کانسپت‌ها">
-      <HeaderSkeleton withAction />
+      <HeaderSkeleton />
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]">
         {Array.from({ length: 6 }, (_, index) => (
           <CardSkeleton key={index} lines={3} />
@@ -118,7 +118,7 @@ export function ContentSkeleton() {
 export function OverviewSkeleton() {
   return (
     <Frame label="در حال بارگذاری نمای کلی">
-      <HeaderSkeleton withAction />
+      <HeaderSkeleton />
       <div className="grid items-start gap-x-4 gap-y-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 5 }, (_, column) => (
           <div key={column} className="space-y-3">
@@ -215,14 +215,32 @@ export function EngineSkeleton() {
 export function SettingsSkeleton() {
   return (
     <Frame label="در حال بارگذاری تنظیمات">
-      <HeaderSkeleton withSelector={false} />
-      {Array.from({ length: 3 }, (_, index) => (
-        <div key={index} className="space-y-3 rounded-xl border border-border bg-card p-6">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-9 w-40" />
+      <div className="mx-auto max-w-5xl space-y-6">
+        <HeaderSkeleton withSelector={false} />
+        <div className="grid gap-8 lg:grid-cols-[10rem_minmax(0,1fr)]">
+          <div className="flex gap-1 lg:flex-col">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+          <div className="space-y-10">
+            {Array.from({ length: 2 }, (_, index) => (
+              <div key={index} className="space-y-4">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-2/3" />
+                <div className="space-y-4 divide-y divide-border">
+                  <div className="flex justify-between gap-6 py-4">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                    <Skeleton className="h-9 w-32" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      </div>
     </Frame>
   );
 }

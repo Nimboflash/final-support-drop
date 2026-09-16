@@ -140,12 +140,12 @@ export default async function StudioLayout({ children }: { children: ReactNode }
           <div className="p-6">{children}</div>
         </SidebarInset>
         {/*
-          The ONE Toaster (ADR-0026 D5). Bottom-start in RTL is the bottom
-          right, under the rail; bottom-left keeps notices over the content
-          they are about. Close buttons, because a loading notice for a paid
-          call persists until the call settles and a person may want it gone.
+          The ONE Toaster (ADR-0026 D5). The reference puts notices in the top
+          corner opposite its rail; ours is on the right, so top-left. Close
+          buttons, because a loading notice for a paid call persists until the
+          call settles and a person may want it gone.
         */}
-        <Toaster position="bottom-left" closeButton />
+        <Toaster position="top-left" closeButton />
       </SidebarProvider>
     </DemoProviders>
   );

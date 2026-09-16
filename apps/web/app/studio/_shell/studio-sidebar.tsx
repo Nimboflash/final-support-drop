@@ -1,19 +1,18 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   BrandMark,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  ContentText,
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -21,17 +20,25 @@ import {
   SidebarSeparator,
 } from "@drop/ui";
 import { SECONDARY_NAV, STUDIO_NAV, isNavItemActive } from "./studio-nav";
+import { useDemoSession } from "../../../lib/demo/providers";
+import { readStartedSessions, type StartedSession } from "../../../lib/machine/session-history";
+import { switchMachineSession } from "../../../lib/machine/start-session";
 
 /**
- * The primary navigation (ADR-0020 D2): six work-unit destinations.
+ * The rail, in the reference's order (ADR-0020 D2; the owner's Claude reference).
  *
- * Settings and history live behind the secondary menu in the footer, so the
- * primary bar carries only the path of the work itself.
+ *   the mark
+ *   the one primary action        «شروع کانسپت جدید» — first, like "New chat"
+ *   the six destinations          inside the navigation landmark
+ *   recent sessions               what this browser has started, current one marked
+ *   ─────
+ *   history · settings            plain items at the foot, no menu to open first
  *
- * The destinations sit inside a real `<nav>`. `Sidebar` renders a generic
- * element, so the `aria-label` it used to carry was silently discarded — a
- * screen-reader user had no navigation landmark to jump to, and no test noticed
- * because nothing had queried the landmark before.
+ * The primary action lives ABOVE the `<nav>`, not in it: it is a thing to do,
+ * not a place to go, and the landmark stays exactly the six work units. It is
+ * a link to the concepts destination with `?compose=1`, which that page reads
+ * and opens the composer for — so the action is addressable, survives a
+ * reload, and needs no snapshot in the layout.
  */
 export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
   const pathname = usePathname();
@@ -50,7 +57,13 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
     does not invent one.
   */
   const project = useSearchParams().get("project");
-  const carry = (href: string) => (project === null ? href : `${href}?project=${project}`);
+  const carry = (href: string, extra?: string) => {
+    const params = new URLSearchParams();
+    if (project !== null) params.set("project", project);
+    if (extra !== undefined) params.set(extra, "1");
+    const query = params.toString();
+    return query === "" ? href : `${href}?${query}`;
+  };
 
   return (
     <Sidebar side="right" collapsible="icon">
@@ -63,6 +76,20 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
         <div className="px-2 py-1">
           <BrandMark hasWordmark={hasWordmark} className="text-lg" />
         </div>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              tooltip="شروع کانسپت جدید"
+              className="font-medium data-[active=true]:bg-transparent"
+            >
+              <Link href={carry("/studio/concepts", "compose")} data-testid="start-concept">
+                <Plus aria-hidden="true" />
+                <span>شروع کانسپت جدید</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
@@ -87,9 +114,6 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
                           the collapse quietly removed the navigation's meaning.
                         */
                         tooltip={item.label}
-                        // The active destination is the one place the brand accent
-                        // tints a surface (ADR-0019 D14). Position is never the
-                        // only cue: aria-current carries it too.
                         /*
                           The tint is the brand accent's, not the hover tint's.
                           `sidebarMenuButtonVariants` paints hover, press and
@@ -119,35 +143,99 @@ export function StudioSidebar({ hasWordmark }: { hasWordmark: boolean }) {
             </SidebarGroupContent>
           </SidebarGroup>
         </nav>
+
+        <RecentSessions />
       </SidebarContent>
 
       <SidebarFooter>
         <SidebarSeparator />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton data-testid="secondary-menu-trigger">
-                  <MoreHorizontal aria-hidden="true" />
-                  <span>بیشتر</span>
+        {/*
+          Carried, like the primary rail. These were bare hrefs behind a menu,
+          so «تاریخچه» — which honours the filter — arrived unfiltered, and
+          from there every rail link went back to being bare too.
+        */}
+        <SidebarMenu data-testid="secondary-nav">
+          {SECONDARY_NAV.map((item) => {
+            const active = isNavItemActive(item.href, pathname);
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active}
+                  tooltip={item.label}
+                  className={
+                    active
+                      ? "border-e-2 border-e-selected font-medium data-[active=true]:bg-selected/10"
+                      : "text-muted-foreground"
+                  }
+                >
+                  <Link href={carry(item.href)} aria-current={active ? "page" : undefined}>
+                    <item.icon aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
                 </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="left" align="end">
-                {/*
-                  Carried, like the primary rail. These were bare hrefs, so
-                  «تاریخچه» — which honours the filter — arrived unfiltered,
-                  and from there every rail link went back to being bare too.
-                */}
-                {SECONDARY_NAV.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link href={carry(item.href)}>{item.label}</Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+/**
+ * «جلسه‌های اخیر» — the reference's Recents, for the thing this panel has many
+ * of: machine sessions. Only what this browser started (see
+ * `session-history.ts`), the one on screen marked, each row a way back.
+ *
+ * Read after mount, because the list is in `localStorage` and the server
+ * pass has none — rendering it during hydration would disagree with the
+ * server's markup. REAL only: the demo world has one session and no history.
+ */
+function RecentSessions() {
+  const session = useDemoSession();
+  const [rows, setRows] = useState<readonly StartedSession[]>([]);
+  const [switching, setSwitching] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRows(readStartedSessions());
+  }, []);
+
+  if (session.mode !== "REAL") return null;
+  const current = session.machineSessionId;
+  const listed = rows.filter((row) => row.id !== current).slice(0, 6);
+  if (listed.length === 0) return null;
+
+  return (
+    <SidebarGroup data-testid="recent-sessions">
+      <SidebarGroupLabel>جلسه‌های اخیر</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {listed.map((row) => {
+            const label = row.briefFa === "" ? "بدون ورودی" : row.briefFa;
+            return (
+              <SidebarMenuItem key={row.id}>
+                <SidebarMenuButton
+                  tooltip={label}
+                  size="sm"
+                  disabled={switching !== null}
+                  aria-busy={switching === row.id ? true : undefined}
+                  onClick={() => {
+                    setSwitching(row.id);
+                    switchMachineSession(row.id)
+                      .then(() => window.location.assign("/studio"))
+                      .catch(() => setSwitching(null));
+                  }}
+                >
+                  <span className="truncate">
+                    <ContentText>{label}</ContentText>
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   );
 }

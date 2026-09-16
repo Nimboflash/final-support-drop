@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Badge,
   Button,
@@ -46,6 +47,39 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
   const [lastOpened, setLastOpened] = useState<string>("none");
   const composerFocus = useReturnFocus();
 
+  /*
+    The composer opens from the URL. The rail's primary action is a link to
+    `?compose=1` — a thing to do, addressable and reload-safe — and this is the
+    page that answers it. Focus is remembered in the effect rather than in a
+    click handler because there is no click handler here: after a client
+    navigation the rail link still holds focus, which is exactly the element
+    the composer should hand focus back to when it closes.
+  */
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const composeRequested = params.get("compose") === "1";
+  useEffect(() => {
+    if (composeRequested) {
+      composerFocus.remember();
+      setComposerOpen(true);
+      return;
+    }
+    // Both directions. The composer's own «دیدن کانسپت‌ها» is a client
+    // navigation to this same route with the filter and without `compose`;
+    // the page does not remount, so the dialog stayed open over the cards it
+    // had just sent the person to look at.
+    setComposerOpen(false);
+  }, [composeRequested]);
+  const closeComposer = (value: boolean) => {
+    setComposerOpen(value);
+    if (value || !composeRequested) return;
+    const next = new URLSearchParams(params.toString());
+    next.delete("compose");
+    const query = next.toString();
+    router.replace(query === "" ? pathname : `${pathname}?${query}`);
+  };
+
   const concepts = filterByProject(world.concepts, selectedProject);
   const openConcept = concepts.find((c) => c.id === openConceptId) ?? null;
 
@@ -56,18 +90,8 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
     <div className="drop-surface space-y-5">
       <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
         <h1 className="text-3xl font-bold tracking-tight">کانسپت‌ها</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <ProjectSelector world={world} />
-          <Button
-            data-testid="start-concept"
-            onClick={() => {
-              composerFocus.remember();
-              setComposerOpen(true);
-            }}
-          >
-            شروع کانسپت جدید
-          </Button>
-        </div>
+        {/* The primary action lives in the rail now, first, like the reference's. */}
+        <ProjectSelector world={world} />
       </header>
 
       {!known ? (
@@ -78,6 +102,7 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
           detail="اولین مسیر را شروع کنید."
           action={
             <Button
+              data-testid="start-concept-empty"
               onClick={() => {
                 composerFocus.remember();
                 setComposerOpen(true);
@@ -114,7 +139,7 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
       <NewConceptComposer
         world={world}
         open={composerOpen}
-        onOpenChange={(next) => composerFocus.onOpenChange(next, setComposerOpen)}
+        onOpenChange={(next) => composerFocus.onOpenChange(next, closeComposer)}
         onCloseAutoFocus={composerFocus.onCloseAutoFocus}
       />
 
