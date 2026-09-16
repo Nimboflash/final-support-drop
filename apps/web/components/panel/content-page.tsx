@@ -43,6 +43,7 @@ import { useRequestRevision, useReviewItem } from "../../lib/demo/commands";
 import { useCanAct } from "../../lib/demo/policy";
 import { useDemoSession } from "../../lib/demo/providers";
 import { CommandError } from "./command-error";
+import { usePulseKey } from "./use-pulse";
 import {
   CONTENT_STATE_ACTION_FA,
   CONTENT_STATE_LABEL_FA,
@@ -195,7 +196,7 @@ export function ContentPage({ world }: { world: PanelSnapshot }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="drop-surface space-y-5">
       <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
         <h1 className="text-3xl font-bold tracking-tight">محتوا</h1>
         <ProjectSelector world={world} />
@@ -336,6 +337,7 @@ function ContentCard({
   const state = contentStateOf(item);
   const action = CONTENT_STATE_ACTION_FA[state];
   const Icon = KIND_ICON[item.type] ?? PenLine;
+  const pulse = usePulseKey(state);
 
   return (
     <Card
@@ -369,7 +371,11 @@ function ContentCard({
             <ContentText>{version?.titleFa ?? "محتوای بدون عنوان"}</ContentText>
           </span>
           {/* The state in words, always — the dot beside it is never alone. */}
-          <span data-testid="content-state" className="mt-0.5 block text-xs text-muted-foreground">
+          <span
+            key={pulse}
+            data-testid="content-state"
+            className={`mt-0.5 block text-xs text-muted-foreground ${pulse > 0 ? "drop-pulse" : ""}`}
+          >
             {CONTENT_STATE_LABEL_FA[state]}
           </span>
         </span>
@@ -518,6 +524,7 @@ function ContentDetail({
                     <Button
                       size="sm"
                       data-testid="save-source"
+                      pending={revision.isPending}
                       disabled={source.trim() === "" || revision.isPending}
                       onClick={() => {
                         revision.mutate(
@@ -580,6 +587,7 @@ function ContentDetail({
           )}
           <Button
             data-testid="approve-content"
+            pending={review.isPending}
             // Approval is unavailable only while a source is genuinely missing,
             // and the reason is stated beside it rather than left to a tooltip.
             disabled={
@@ -604,6 +612,7 @@ function ContentDetail({
           <Button
             variant="outline"
             data-testid="request-content-change"
+            pending={review.isPending || revision.isPending}
             disabled={
               !canAct.allowed || machineCannotRewrite || note.trim() === "" || revision.isPending
             }

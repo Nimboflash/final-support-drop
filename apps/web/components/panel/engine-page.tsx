@@ -102,7 +102,7 @@ export function EnginePage({ world }: { world: PanelSnapshot }) {
   }, {});
 
   return (
-    <div className="space-y-5">
+    <div className="drop-surface space-y-5">
       <EngineHeader world={world} lastSyncedAt={session.clock.now()} />
 
       {/* Legend: status is stated in words, never carried by colour alone. */}

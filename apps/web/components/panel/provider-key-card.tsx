@@ -46,6 +46,7 @@ export function ProviderKeyCard() {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restartNeeded, setRestartNeeded] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setStatus("LOADING");
@@ -73,11 +74,20 @@ export function ProviderKeyCard() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/provider-key", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ key: draft }),
-    });
+    setSaving(true);
+    let response: Response;
+    try {
+      response = await fetch("/api/provider-key", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key: draft }),
+      });
+    } catch {
+      setSaving(false);
+      setError("کلید فرستاده نشد. اتصال را بررسی کنید و دوباره بزنید.");
+      return;
+    }
+    setSaving(false);
     // Cleared whether or not it was accepted: a rejected key is still a key.
     setDraft("");
     if (!response.ok) {
@@ -213,7 +223,7 @@ export function ProviderKeyCard() {
                     placeholder="sk-or-v1-…"
                     className="min-w-0 flex-1 font-mono"
                   />
-                  <Button size="sm" type="submit" disabled={draft.trim() === ""}>
+                  <Button size="sm" type="submit" pending={saving} disabled={draft.trim() === ""}>
                     ثبت کلید
                   </Button>
                   {state.configured ? (

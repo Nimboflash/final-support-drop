@@ -20,6 +20,7 @@ import { ConceptDetail } from "./concept-detail";
 import { useReturnFocus } from "./use-return-focus";
 import { NewConceptComposer } from "./new-concept-composer";
 import { conceptStateOf, CONCEPT_STATE_LABEL_FA, type ConceptState } from "../../lib/demo/presentation";
+import { usePulseKey } from "./use-pulse";
 
 /**
  * Concepts — the start, review and selection of ideas (ADR-0020 D2).
@@ -52,7 +53,7 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
     world.projects.find((p) => p.id === id)?.titleFa ?? "";
 
   return (
-    <div className="space-y-5">
+    <div className="drop-surface space-y-5">
       <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
         <h1 className="text-3xl font-bold tracking-tight">کانسپت‌ها</h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -170,6 +171,7 @@ function ConceptCard({
 }) {
   const version = world.conceptVersions.find((v) => v.id === concept.activeVersionId);
   const state = conceptStateOf(concept);
+  const pulse = usePulseKey(state);
 
   /*
     The WHOLE card is the control, which is how the content and overview cards
@@ -194,7 +196,12 @@ function ConceptCard({
       >
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           {/* Three states, in three words (ADR-0020 D7). */}
-          <Badge variant="outline" data-testid="concept-state">
+          <Badge
+            key={pulse}
+            variant="outline"
+            data-testid="concept-state"
+            className={pulse > 0 ? "drop-pulse" : undefined}
+          >
             {CONCEPT_STATE_LABEL_FA[state]}
           </Badge>
           {/*

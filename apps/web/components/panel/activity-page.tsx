@@ -83,7 +83,7 @@ export function ActivityPage({ world }: { world: PanelSnapshot }) {
   ].sort((a, b) => b.at.localeCompare(a.at));
 
   return (
-    <div className="space-y-5">
+    <div className="drop-surface space-y-5">
       <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
         <h1 className="text-3xl font-bold tracking-tight">تاریخچه</h1>
         <ProjectSelector world={world} />

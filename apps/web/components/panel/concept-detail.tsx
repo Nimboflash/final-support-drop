@@ -370,6 +370,7 @@ export function ConceptDetail({
             <Button
               size="sm"
               data-testid="assistant-send"
+              pending={revision.isPending}
               disabled={!canAct.allowed || message.trim() === "" || revision.isPending}
               onClick={improve}
             >
@@ -387,6 +388,7 @@ export function ConceptDetail({
           <Button
             data-testid="select-concept"
             data-action={primary.confirm ? "replace" : "select"}
+            pending={review.isPending || (revision.isPending && primary.confirm)}
             disabled={!canAct.allowed || busy || primary.disabled}
             aria-expanded={primary.confirm ? replaceOpen : undefined}
             aria-controls={primary.confirm ? "replace-confirm" : undefined}
@@ -426,7 +428,7 @@ export function ConceptDetail({
                 تأییدهای قبلی محتوا پاک می‌شوند و این کار هزینه دارد.
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" data-testid="confirm-replace" disabled={busy} autoFocus onClick={primary.run}>
+                <Button size="sm" data-testid="confirm-replace" pending={busy} autoFocus onClick={primary.run}>
                   تأیید و ساخت
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setReplaceOpen(false)}>
@@ -476,6 +478,7 @@ export function ConceptDetail({
                 <Button
                   size="sm"
                   data-testid="confirm-set-aside"
+                  pending={review.isPending}
                   disabled={reason.trim() === "" || busy}
                   onClick={setAside}
                 >
@@ -488,6 +491,16 @@ export function ConceptDetail({
             </div>
           ) : null}
 
+          {/*
+            The machine's own pace, said where the press happened. The notice
+            in the corner says it too; this is for the person still looking at
+            the button they pressed.
+          */}
+          {live && (review.isPending || revision.isPending) ? (
+            <p role="status" className="w-full text-xs text-muted-foreground" data-testid="machine-working">
+              ماشین مشغول است؛ این کار چند ده ثانیه طول می‌کشد و نتیجه خودش می‌آید. این پنجره را می‌توانید ببندید.
+            </p>
+          ) : null}
           {review.isError ? <CommandError error={review.error} className="w-full" /> : null}
         </div>
       </SheetContent>

@@ -346,6 +346,52 @@
   animation: drop-enter var(--motion-slow) var(--ease-spring) both;
 }
 
+/*
+  A destination arriving. One motion for the whole surface — never a stagger
+  across its cards, because these are lists a person scrolls past every day
+  and a cascade on every visit is an interface that makes you wait for it.
+  Three pixels and the base duration: felt, not watched.
+*/
+/*
+  Transform only — no fade. A surface fading in from opacity 0 is text that
+  fails contrast for 160ms, and an accessibility sweep that runs at page load
+  measures exactly that window (eight nodes on the overview, reproducibly).
+  The rise alone is the near-imperceptible tier this motion belongs to.
+*/
+.drop-surface {
+  animation: drop-surface var(--motion-base) var(--ease-out) both;
+}
+
+@keyframes drop-surface {
+  from {
+    transform: translateY(3px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/*
+  A state the person just CHANGED. Applied to a state badge only when its
+  value changed after mount — never on first render, where eighteen badges
+  popping at once is noise — so the one card whose state moved is the one
+  thing on the board that moves.
+*/
+.drop-pulse {
+  animation: drop-pulse var(--motion-slow) var(--ease-spring) both;
+}
+
+@keyframes drop-pulse {
+  from {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes drop-enter {
   from {
     opacity: 0;

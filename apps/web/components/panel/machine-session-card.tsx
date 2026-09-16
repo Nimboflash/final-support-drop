@@ -21,7 +21,7 @@ export function MachineSessionCard() {
   const session = useDemoSession();
   const [known, setKnown] = useState<readonly StartedSession[]>([]);
   const [error, setError] = useState<unknown>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
     setKnown(readStartedSessions());
@@ -31,15 +31,15 @@ export function MachineSessionCard() {
   const current = session.machineSessionId;
   const others = known.filter((row) => row.id !== current);
 
-  async function go(action: () => Promise<void>) {
+  async function go(which: string, action: () => Promise<void>) {
     setError(null);
-    setBusy(true);
+    setBusy(which);
     try {
       await action();
       window.location.assign("/studio");
     } catch (thrown) {
       setError(thrown);
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -81,8 +81,9 @@ export function MachineSessionCard() {
                   size="sm"
                   variant="outline"
                   data-testid="switch-session"
-                  disabled={busy}
-                  onClick={() => void go(() => switchMachineSession(row.id))}
+                  pending={busy === row.id}
+                  disabled={busy !== null}
+                  onClick={() => void go(row.id, () => switchMachineSession(row.id))}
                 >
                   رفتن به این جلسه
                 </Button>
@@ -96,8 +97,9 @@ export function MachineSessionCard() {
             size="sm"
             variant="outline"
             data-testid="forget-session"
-            disabled={busy}
-            onClick={() => void go(forgetMachineSession)}
+            pending={busy === "forget"}
+            disabled={busy !== null}
+            onClick={() => void go("forget", forgetMachineSession)}
           >
             فراموش‌کردن جلسهٔ انتخاب‌شده
           </Button>

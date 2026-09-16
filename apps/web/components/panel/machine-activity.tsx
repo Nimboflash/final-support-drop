@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { Badge } from "@drop/ui";
+import { formatElapsedFa } from "../../lib/demo/notify";
 import { useDemoSession } from "../../lib/demo/providers";
 
 /**
@@ -77,7 +78,7 @@ export function MachineActivity() {
         />
         <span>
           ماشین در حال کار است
-          {elapsed > 0 ? ` — ${toFaSeconds(elapsed)}` : null}
+          {elapsed > 0 ? ` — ${formatElapsedFa(elapsed)}` : null}
         </span>
       </Badge>
     );
@@ -110,14 +111,4 @@ export function MachineActivity() {
       <span>زنده</span>
     </Badge>
   );
-}
-
-/** Persian digits, and a unit that reads naturally rather than «۹۰ ثانیه». */
-function toFaSeconds(seconds: number): string {
-  const fa = (value: number): string =>
-    String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)] ?? digit);
-  if (seconds < 60) return `${fa(seconds)} ثانیه`;
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return rest === 0 ? `${fa(minutes)} دقیقه` : `${fa(minutes)} دقیقه و ${fa(rest)} ثانیه`;
 }

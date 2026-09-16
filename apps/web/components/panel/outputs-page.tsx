@@ -25,6 +25,7 @@ import { useCanAct } from "../../lib/demo/policy";
 import { useDemoSession } from "../../lib/demo/providers";
 import { CommandError } from "./command-error";
 import { useDownloadMachineReport } from "../../lib/machine/use-download-report";
+import { usePulseKey } from "./use-pulse";
 import {
   CONTENT_STATE_LABEL_FA,
   DIRECTION_LABEL_FA,
@@ -82,7 +83,7 @@ export function OutputsPage({ world }: { world: PanelSnapshot }) {
   const open = outputs.find((o) => o.conceptId === openConceptId) ?? null;
 
   return (
-    <div className="space-y-5">
+    <div className="drop-surface space-y-5">
       <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
         <h1 className="text-3xl font-bold tracking-tight">خروجی‌ها</h1>
         <ProjectSelector world={world} />
@@ -129,6 +130,7 @@ export function OutputsPage({ world }: { world: PanelSnapshot }) {
 }
 
 function OutputCard({ output, onOpen }: { output: OutputView; onOpen: () => void }) {
+  const pulse = usePulseKey(output.state);
   // One press target, matching every other card surface. See `concepts-page`.
   return (
     <Card
@@ -143,7 +145,12 @@ function OutputCard({ output, onOpen }: { output: OutputView; onOpen: () => void
         className="flex h-full w-full flex-col items-start gap-3 p-4 text-start hover:bg-accent/40"
       >
         <span className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" data-testid="output-state">
+          <Badge
+            key={pulse}
+            variant="outline"
+            data-testid="output-state"
+            className={pulse > 0 ? "drop-pulse" : undefined}
+          >
             {OUTPUT_STATE_LABEL_FA[output.state]}
           </Badge>
           <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate">
@@ -290,6 +297,7 @@ function OutputDetail({
             */
             <Button
               data-testid="send-to-calendar"
+              pending={send.isPending}
               disabled={
                 !canAct.allowed ||
                 output.state === "assembling" ||
@@ -314,7 +322,7 @@ function OutputDetail({
                 );
               }}
             >
-              {send.isPending ? "در حال ارسال…" : "ارسال به تقویم"}
+              ارسال به تقویم
             </Button>
           )}
           {/*
@@ -331,21 +339,23 @@ function OutputDetail({
             <Button
               variant="outline"
               data-testid="download-output"
+              pending={report.isPending}
               disabled={!canAct.allowed || report.isPending || session.machineSessionId === null}
               onClick={() => {
                 if (session.machineSessionId !== null) report.mutate(session.machineSessionId);
               }}
             >
-              {report.isPending ? "در حال آماده‌سازی…" : "بارگیری گزارش کامل"}
+              بارگیری گزارش کامل
             </Button>
           ) : (
             <Button
               variant="outline"
               data-testid="download-output"
+              pending={download.isPending}
               disabled={!canAct.allowed || download.isPending}
               onClick={() => download.mutate(output.packageVersionId!)}
             >
-              {download.isPending ? "در حال آماده‌سازی…" : "بارگیری خروجی"}
+              بارگیری خروجی
             </Button>
           )}
         </div>

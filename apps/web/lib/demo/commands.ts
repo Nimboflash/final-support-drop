@@ -2,7 +2,8 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 import { GatewayError, NEXT_ACTIONS } from "@drop/machine-gateway";
-import type { PanelCalendarEntry, RevisionRoute, Target } from "@drop/panel-domain";
+import type { PanelCalendarEntry, PanelSnapshot, RevisionRoute, Target } from "@drop/panel-domain";
+import { beginMachineWork, notifyFailure, notifyRecorded, type MachineWorkNotice } from "./notify";
 import { useDemoSession } from "./providers";
 import { panelKeys } from "./queries";
 
@@ -82,10 +83,44 @@ function useInvalidateWorld() {
   };
 }
 
+/**
+ * The snapshot as it will read once the decision lands, applied NOW.
+ *
+ * A panel-side decision — approving content, asking for a change, setting a
+ * concept aside — takes milliseconds to record and then a full round trip to
+ * show, because the sheet closes on success and the card behind it still
+ * reads the old state until the refetch. The cache is updated first with
+ * exactly the overlay `applyNotes` will produce, the write runs, and a
+ * refusal rolls the cache back. Nothing here invents a state the write would
+ * not have produced.
+ *
+ * Machine-bound decisions (approving a concept live) are NOT optimistic:
+ * they take tens of seconds and can be refused for money reasons, and the
+ * honest state for those is "working", which the notice carries.
+ */
+function useOptimisticSnapshot() {
+  const session = useDemoSession();
+  const client = useQueryClient();
+  const key = panelKeys.snapshot(session.scenarioId, session.machineSessionId);
+  return {
+    async apply(patch: (snapshot: PanelSnapshot) => PanelSnapshot): Promise<PanelSnapshot | undefined> {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData<PanelSnapshot>(key);
+      if (previous !== undefined) client.setQueryData<PanelSnapshot>(key, patch(previous));
+      return previous;
+    },
+    rollback(previous: PanelSnapshot | undefined): void {
+      if (previous !== undefined) client.setQueryData<PanelSnapshot>(key, previous);
+    },
+  };
+}
+
 export function useReviewItem(): UseMutationResult<unknown, Error, ReviewInput> {
   const session = useDemoSession();
   const envelope = useEnvelope();
   const invalidate = useInvalidateWorld();
+  const optimistic = useOptimisticSnapshot();
+  const live = session.mode === "REAL";
 
   return useMutation({
     mutationFn: (input: ReviewInput) => {
@@ -100,7 +135,47 @@ export function useReviewItem(): UseMutationResult<unknown, Error, ReviewInput> 
         }),
       );
     },
-    onSuccess: invalidate,
+    onMutate: async (input) => {
+      const machineBound = live && input.target.type === "CONCEPT" && input.outcome === "APPROVED";
+      const notice: MachineWorkNotice | null = machineBound ? beginMachineWork("build") : null;
+      let previous: PanelSnapshot | undefined;
+      if (input.target.type === "CONTENT" && input.outcome !== "REJECTED") {
+        previous = await optimistic.apply((snapshot) => ({
+          ...snapshot,
+          content: snapshot.content.map((item) =>
+            item.id !== input.target.id
+              ? item
+              : input.outcome === "APPROVED"
+                ? { ...item, reviewStatus: "APPROVED", freshness: "CURRENT" }
+                : { ...item, reviewStatus: "REVISION_REQUESTED" },
+          ),
+        }));
+      } else if (input.target.type === "CONCEPT" && input.outcome === "REJECTED") {
+        previous = await optimistic.apply((snapshot) => ({
+          ...snapshot,
+          concepts: snapshot.concepts.map((concept) =>
+            concept.id !== input.target.id
+              ? concept
+              : { ...concept, reviewStatus: "REJECTED", rejectionReasonFa: input.reasonFa ?? "" },
+          ),
+        }));
+      }
+      return { notice, previous };
+    },
+    onError: (error, _input, context) => {
+      optimistic.rollback(context?.previous);
+      if (context?.notice) context.notice.fail(error);
+      else notifyFailure(error);
+    },
+    onSuccess: async (_result, input, context) => {
+      if (context?.notice) context.notice.done();
+      else if (input.target.type === "CONTENT") {
+        notifyRecorded(input.outcome === "APPROVED" ? "approved" : "changesRequested");
+      } else {
+        notifyRecorded(input.outcome === "APPROVED" ? "selected" : "setAside");
+      }
+      await invalidate();
+    },
   });
 }
 
@@ -116,6 +191,7 @@ export function useRequestRevision(): UseMutationResult<unknown, Error, Revision
   const session = useDemoSession();
   const envelope = useEnvelope();
   const invalidate = useInvalidateWorld();
+  const live = session.mode === "REAL";
 
   return useMutation({
     mutationFn: (input: RevisionInput) => {
@@ -131,7 +207,28 @@ export function useRequestRevision(): UseMutationResult<unknown, Error, Revision
         }),
       );
     },
-    onSuccess: invalidate,
+    onMutate: (input) => {
+      // The two routes that reach a model live. Everything else is instant.
+      const work =
+        live && input.target.type === "CONCEPT"
+          ? input.route === "CONCEPT_REVISION"
+            ? "refine"
+            : input.route === "RESEARCH_REFRESH"
+              ? "rebuild"
+              : null
+          : null;
+      return { notice: work === null ? null : beginMachineWork(work) };
+    },
+    onError: (error, _input, context) => {
+      if (context?.notice) context.notice.fail(error);
+      else notifyFailure(error);
+    },
+    onSuccess: async (_result, input, context) => {
+      if (context?.notice) context.notice.done();
+      else if (input.route === "RESEARCH_REFRESH") notifyRecorded("sourceAdded");
+      else notifyRecorded("changesRequested");
+      await invalidate();
+    },
   });
 }
 
@@ -155,6 +252,7 @@ export function useAddComment(): UseMutationResult<
           bodyFa: input.bodyFa,
         }),
       ),
+    onError: (error) => notifyFailure(error),
     onSuccess: invalidate,
   });
 }
@@ -175,6 +273,8 @@ export function useUpdateCalendarEntry(): UseMutationResult<
   const envelope = useEnvelope();
   const invalidate = useInvalidateWorld();
 
+  const optimistic = useOptimisticSnapshot();
+
   return useMutation({
     mutationFn: (input: { entry: PanelCalendarEntry; date: string | null }) =>
       Promise.resolve(
@@ -186,7 +286,22 @@ export function useUpdateCalendarEntry(): UseMutationResult<
           entry: { ...input.entry, date: input.date },
         }),
       ),
-    onSuccess: invalidate,
+    onMutate: async (input) => ({
+      previous: await optimistic.apply((snapshot) => ({
+        ...snapshot,
+        calendar: snapshot.calendar.map((entry) =>
+          entry.id === input.entry.id ? { ...entry, date: input.date } : entry,
+        ),
+      })),
+    }),
+    onError: (error, _input, context) => {
+      optimistic.rollback(context?.previous);
+      notifyFailure(error);
+    },
+    onSuccess: async (_result, input) => {
+      notifyRecorded(input.date === null ? "undated" : "dated");
+      await invalidate();
+    },
   });
 }
 
@@ -245,7 +360,11 @@ export function useSendToCalendar(): UseMutationResult<
         }),
       );
     },
-    onSuccess: invalidate,
+    onError: (error) => notifyFailure(error),
+    onSuccess: async () => {
+      notifyRecorded("sentToCalendar");
+      await invalidate();
+    },
   });
 }
 
@@ -274,6 +393,8 @@ export function useDownloadPackage(): UseMutationResult<string, Error, string> {
       });
       return exported.filename;
     },
+    onError: (error) => notifyFailure(error),
+    onSuccess: () => notifyRecorded("downloaded"),
   });
 }
 

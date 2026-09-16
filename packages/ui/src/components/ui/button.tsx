@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Loader2Icon } from "lucide-react"
 import { Slot } from "radix-ui"
 
 import { cn } from "../../lib/utils"
@@ -53,15 +54,33 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * `pending` is the one way a button says "I heard you, and it is not done".
+ *
+ * Every mutation in the panel used to say it differently: some swapped the
+ * label for «در حال ارسال…», most only greyed out, and a greyed-out button is
+ * indistinguishable from one that is unavailable. A pending button keeps its
+ * label, gains a spinner, disables itself and announces `aria-busy`, so a
+ * paid machine call that takes forty seconds looks like exactly that on the
+ * control that started it.
+ *
+ * Not injected under `asChild`: a Slot needs one child, and a link is never
+ * pending.
+ */
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  pending = false,
+  disabled,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    /** A request this button started is still running. Disables and shows a spinner. */
+    pending?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
 
@@ -70,9 +89,30 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      data-pending={pending ? "true" : undefined}
+      aria-busy={pending ? true : undefined}
+      disabled={disabled || pending}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {/*
+        A Slot needs EXACTLY one element child. `{null}{children}` is two
+        children as far as React.Children is concerned, and Radix's SlotClone
+        throws on it — which took down every overlay that rendered a link
+        through `<Button asChild>` the moment it opened. The spinner is only
+        ever composed for a real button.
+      */}
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {pending ? (
+            <Loader2Icon aria-hidden="true" className="animate-spin [animation-duration:650ms]" />
+          ) : null}
+          {children}
+        </>
+      )}
+    </Comp>
   )
 }
 

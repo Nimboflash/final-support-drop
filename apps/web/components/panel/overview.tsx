@@ -77,7 +77,7 @@ export function Overview({ world }: { world: PanelSnapshot }) {
   const openProject = world.projects.find((p) => p.id === openProjectId) ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="drop-surface space-y-6">
       <header className="drop-rule flex flex-wrap items-center justify-between gap-3 pb-4">
         <h1 className="text-3xl font-bold tracking-tight">نمای کلی</h1>
         <div className="flex flex-wrap items-center gap-2">

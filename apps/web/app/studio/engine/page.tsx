@@ -1,9 +1,9 @@
 "use client";
 
 import { Suspense } from "react";
-import { LoadingState } from "@drop/ui";
 import { EnginePage } from "../../../components/panel/engine-page";
 import { QueryBoundary } from "../../../components/panel/states";
+import { EngineSkeleton } from "../../../components/panel/skeletons";
 import { usePanelSnapshot } from "../../../lib/demo/queries";
 
 /**
@@ -13,7 +13,7 @@ import { usePanelSnapshot } from "../../../lib/demo/queries";
  */
 export default function Page() {
   return (
-    <Suspense fallback={<LoadingState />}>
+    <Suspense fallback={<EngineSkeleton />}>
       <Surface />
     </Suspense>
   );
@@ -21,5 +21,5 @@ export default function Page() {
 
 function Surface() {
   const query = usePanelSnapshot();
-  return <QueryBoundary query={query}>{(world) => <EnginePage world={world} />}</QueryBoundary>;
+  return <QueryBoundary query={query} pending={<EngineSkeleton />}>{(world) => <EnginePage world={world} />}</QueryBoundary>;
 }

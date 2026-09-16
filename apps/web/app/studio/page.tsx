@@ -1,9 +1,9 @@
 "use client";
 
 import { Suspense } from "react";
-import { LoadingState } from "@drop/ui";
 import { Overview } from "../../components/panel/overview";
 import { QueryBoundary } from "../../components/panel/states";
+import { OverviewSkeleton } from "../../components/panel/skeletons";
 import { usePanelSnapshot } from "../../lib/demo/queries";
 
 /**
@@ -17,7 +17,7 @@ import { usePanelSnapshot } from "../../lib/demo/queries";
  */
 export default function Page() {
   return (
-    <Suspense fallback={<LoadingState />}>
+    <Suspense fallback={<OverviewSkeleton />}>
       <Surface />
     </Suspense>
   );
@@ -26,7 +26,7 @@ export default function Page() {
 function Surface() {
   const query = usePanelSnapshot();
   return (
-    <QueryBoundary query={query}>
+    <QueryBoundary query={query} pending={<OverviewSkeleton />}>
       {(world) => <Overview world={world} />}
     </QueryBoundary>
   );

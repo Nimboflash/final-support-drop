@@ -25,9 +25,12 @@ import { GatewayError } from "@drop/machine-gateway";
 export function QueryBoundary<T>({
   query,
   children,
+  pending,
 }: {
   query: UseQueryResult<T, Error>;
   children: (data: T) => ReactNode;
+  /** The surface's own shape while it loads. Falls back to the generic state. */
+  pending?: ReactNode;
 }) {
   /*
     The last SUCCESSFUL read, from the query itself. Six of the seven
@@ -38,7 +41,7 @@ export function QueryBoundary<T>({
   */
   const syncedAt =
     query.dataUpdatedAt > 0 ? formatPersianDateTime(new Date(query.dataUpdatedAt).toISOString()) : null;
-  if (query.isPending) return <LoadingState />;
+  if (query.isPending) return <>{pending ?? <LoadingState />}</>;
 
   if (query.isError) {
     const error = query.error;
@@ -76,7 +79,7 @@ export function QueryBoundary<T>({
   }
 
   const data = query.data;
-  if (data === undefined) return <LoadingState />;
+  if (data === undefined) return <>{pending ?? <LoadingState />}</>;
   return <>{children(data)}</>;
 }
 

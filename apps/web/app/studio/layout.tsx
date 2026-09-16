@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
-import { Badge, BrandMark, SidebarInset, SidebarProvider, SidebarTrigger } from "@drop/ui";
+import { Badge, BrandMark, SidebarInset, SidebarProvider, SidebarTrigger, Toaster } from "@drop/ui";
 import { StudioSidebar } from "./_shell/studio-sidebar";
 import { MachineActivity } from "../../components/panel/machine-activity";
 import { PolicyNotice } from "../../components/panel/policy-notice";
@@ -139,6 +139,13 @@ export default async function StudioLayout({ children }: { children: ReactNode }
           <PolicyNotice />
           <div className="p-6">{children}</div>
         </SidebarInset>
+        {/*
+          The ONE Toaster (ADR-0026 D5). Bottom-start in RTL is the bottom
+          right, under the rail; bottom-left keeps notices over the content
+          they are about. Close buttons, because a loading notice for a paid
+          call persists until the call settles and a person may want it gone.
+        */}
+        <Toaster position="bottom-left" closeButton />
       </SidebarProvider>
     </DemoProviders>
   );

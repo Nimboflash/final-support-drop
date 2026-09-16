@@ -2,6 +2,7 @@
 
 import { useMutation, type UseMutationResult } from "@tanstack/react-query";
 import { GatewayError } from "@drop/machine-gateway";
+import { notifyFailure, notifyRecorded } from "../demo/notify";
 
 /**
  * Downloads the machine's final report for a session.
@@ -56,5 +57,7 @@ export function useDownloadMachineReport(): UseMutationResult<string, Error, str
       });
       return filename;
     },
+    onError: (error) => notifyFailure(error),
+    onSuccess: () => notifyRecorded("downloaded"),
   });
 }
