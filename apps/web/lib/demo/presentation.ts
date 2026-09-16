@@ -283,11 +283,17 @@ function blockerFor(states: readonly ContentState[]): string | null {
       ? "یک محتوا هنوز منبع لازم را ندارد."
       : `${toPersianDigits(String(needsInput))} محتوا هنوز منبع لازم را ندارند.`;
   }
+  /*
+    "Not yet reviewed", not "needs your approval". The owner ruled that an
+    output is the approved subset and nothing unapproved is REQUIRED — so a
+    sentence saying seventeen items "need" approval, beside a badge saying
+    the output is approved, contradicted both the badge and the ruling.
+  */
   const waiting = states.filter((s) => s === "ready_for_review").length;
   if (waiting > 0) {
     return waiting === 1
-      ? "یک محتوا به تأیید شما نیاز دارد."
-      : `${toPersianDigits(String(waiting))} محتوا به تأیید شما نیاز دارند.`;
+      ? "یک محتوای دیگر هنوز بررسی نشده؛ فقط تأییدشده‌ها در خروجی می‌آیند."
+      : `${toPersianDigits(String(waiting))} محتوای دیگر هنوز بررسی نشده‌اند؛ فقط تأییدشده‌ها در خروجی می‌آیند.`;
   }
   const improving = states.filter((s) => s === "improving").length;
   if (improving > 0) {

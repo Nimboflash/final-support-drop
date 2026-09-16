@@ -119,11 +119,18 @@ const STATE_ACTION_TONE: Record<ContentState, string> = {
   approved: "bg-muted text-foreground",
 };
 
+/*
+  The dot follows the stripe. Seventeen Acid dots down a column is the same
+  flood ADR-0022 D3 warned about at a smaller size: a signal on everything is
+  a background. Acid keeps `needs_input` — the one state where the person is
+  the blocker — and «آماده بررسی» wears the brand accent its stripe already
+  wears, so a card never disagrees with itself.
+*/
 const STATE_DOT: Record<ContentState, string> = {
   draft: "bg-muted-foreground",
-  needs_input: "bg-warning",
+  needs_input: "bg-attention",
   failed: "bg-destructive",
-  ready_for_review: "bg-attention",
+  ready_for_review: "bg-selected",
   improving: "bg-warning",
   approved: "bg-success",
 };

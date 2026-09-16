@@ -24,6 +24,7 @@ import { useDownloadPackage, useSendToCalendar } from "../../lib/demo/commands";
 import { useCanAct } from "../../lib/demo/policy";
 import { useDemoSession } from "../../lib/demo/providers";
 import { CommandError } from "./command-error";
+import { useDownloadMachineReport } from "../../lib/machine/use-download-report";
 import {
   CONTENT_STATE_LABEL_FA,
   DIRECTION_LABEL_FA,
@@ -178,8 +179,10 @@ function OutputDetail({
   const isMobile = useIsMobile();
   const router = useRouter();
   const download = useDownloadPackage();
+  const report = useDownloadMachineReport();
   /** Whether this output came from a real machine session rather than the demo world. */
-  const live = useDemoSession().mode === "REAL";
+  const session = useDemoSession();
+  const live = session.mode === "REAL";
   const canAct = useCanAct();
   const send = useSendToCalendar();
 
@@ -253,6 +256,7 @@ function OutputDetail({
           )}
 
           {download.isError ? <CommandError error={download.error} /> : null}
+          {report.isError ? <CommandError error={report.error} /> : null}
           {send.isError ? <CommandError error={send.error} /> : null}
         </div>
 
@@ -314,24 +318,26 @@ function OutputDetail({
             </Button>
           )}
           {/*
-            Not offered live, because live it cannot work.
+            Two files, one button.
 
-            `exportPackage` builds a zip from the demo world's own files. A
-            machine session has none: the projection emits a package that NAMES
-            the machine's final report without carrying its bytes, since the
-            report lives in the run directory and the projection is pure. So the
-            button rendered enabled on every live output and answered «با نقش
-            فعلی، اجازهٔ این کار را ندارید» — a refusal about the person's ROLE,
-            for something no role can do.
-
-            ADR-0020 D11: an affordance must act. This one cannot yet, so it
-            says so once, quietly, instead of failing per click.
+            The demo world's export is a zip built from its own files. A machine
+            session's output is the machine's own final report, which the
+            service writes beside the session and `/api/machine/report` serves.
+            This control used to render enabled live, fail every time and blame
+            the person's role; then it was hidden behind a sentence saying the
+            file was "on this device". It is the file now.
           */}
           {output.packageVersionId === null ? null : live ? (
-            <p data-testid="download-unavailable" className="w-full text-sm text-muted-foreground">
-              بارگیری فایل برای خروجی ماشین هنوز آماده نیست. گزارش کامل در پوشهٔ همین
-              نشست روی دستگاه ذخیره شده است.
-            </p>
+            <Button
+              variant="outline"
+              data-testid="download-output"
+              disabled={!canAct.allowed || report.isPending || session.machineSessionId === null}
+              onClick={() => {
+                if (session.machineSessionId !== null) report.mutate(session.machineSessionId);
+              }}
+            >
+              {report.isPending ? "در حال آماده‌سازی…" : "بارگیری گزارش کامل"}
+            </Button>
           ) : (
             <Button
               variant="outline"
