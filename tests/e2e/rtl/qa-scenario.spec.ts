@@ -8,6 +8,11 @@ import { expect, test, type Page } from "@playwright/test";
  * click-through, because a click-through is evidence exactly once and this is
  * evidence on every run.
  *
+ * It runs at DESKTOP only. The owner has ruled the panel a desktop tool
+ * (ADR-0027), which supersedes the mobile half of §15 and of AC-P9.13 — so the
+ * second pass is gone rather than skipped, because a skipped test still claims
+ * the requirement exists.
+ *
  * It is deliberately ONE long test per viewport, not twenty-three small ones.
  * The scenario's claim is that a person can carry a single piece of work from
  * an idea to a scheduled output without losing it; split into independent
@@ -20,12 +25,15 @@ import { expect, test, type Page } from "@playwright/test";
  * first. The brief's own §4 is what demands that, so the two are consistent.
  */
 
-const VIEWPORTS = [
-  { name: "desktop", width: 1440, height: 1000 },
-  { name: "mobile", width: 390, height: 844 },
-] as const;
+const VIEWPORTS = [{ name: "desktop", width: 1440, height: 1000 }] as const;
 
-/** §16 — the mobile experience must work with no horizontal scroll. */
+/**
+ * §16 — no surface scrolls sideways.
+ *
+ * Still asserted at every step, and still worth asserting without a phone in
+ * the matrix: sideways scroll at 1440 is not a responsive problem, it is a
+ * layout that has broken.
+ */
 async function expectNoHorizontalScroll(page: Page, where: string) {
   const overflow = await page.evaluate(() => {
     const doc = document.documentElement;
@@ -37,7 +45,14 @@ async function expectNoHorizontalScroll(page: Page, where: string) {
   ).toBeLessThanOrEqual(overflow.client + 1);
 }
 
-/** On mobile the sidebar is collapsed behind its trigger. */
+/**
+ * Navigate by pressing what a person presses.
+ *
+ * The trigger branch stays after the mobile pass was removed, because the rail
+ * collapses at desktop too — by the person's own press, and the state persists
+ * in a cookie. A walk that assumed an expanded sidebar would fail for a reason
+ * that has nothing to do with the scenario.
+ */
 async function goToDestination(page: Page, labelFa: string, urlGlob: string) {
   const nav = page.getByRole("navigation");
   const link = nav.getByRole("link", { name: labelFa, exact: true });
@@ -49,8 +64,9 @@ async function goToDestination(page: Page, labelFa: string, urlGlob: string) {
   await link.click();
   await page.waitForURL(urlGlob);
   if (openedSheet) {
-    // The mobile sidebar is a sheet over the page; left open it swallows every
-    // click that follows, which is exactly what a person would experience.
+    // Below the sidebar's own breakpoint it is a sheet over the page; left
+    // open it swallows every click that follows. Harmless at desktop, and
+    // cheap enough to keep correct.
     await page.keyboard.press("Escape");
     await expect(page.locator('[data-mobile="true"][data-state="open"]')).toHaveCount(0);
   }

@@ -12,10 +12,19 @@ import AxeBuilder from "@axe-core/playwright";
  * are all still asserted here; only the destinations moved.
  */
 
+/**
+ * The supported widths. A phone is not one of them.
+ *
+ * 09 §14 named three and the narrowest was 390px, which is where the shell
+ * stops being a shell: the sidebar becomes a sheet over the page and every
+ * dense surface in the panel — the board, the calendar canvas, the graph —
+ * degrades into a single column a person would not run their work from. The
+ * owner has ruled the panel a desktop tool (ADR-0027), so the baselines cover
+ * the two widths it is actually used at, and 1024 is the floor.
+ */
 const BREAKPOINTS = [
   { name: "desktop", width: 1440, height: 1000 },
   { name: "compact", width: 1024, height: 768 },
-  { name: "mobile", width: 390, height: 844 },
 ] as const;
 
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];

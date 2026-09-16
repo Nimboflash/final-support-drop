@@ -436,11 +436,20 @@ describe("A19 — offline or timeout while revising", () => {
   });
 });
 
-describe("A20 — keyboard and mobile review", () => {
+describe("A20 — keyboard review", () => {
   it("has the state its Playwright walk depends on", () => {
-    // The journey itself is keyboard-and-viewport work and lives in
-    // tests/e2e/rtl/panel-journey.spec.ts, which walks it at 390px with no
-    // pointer. This asserts the world it walks is the one bound to it.
+    /*
+      The journey itself is keyboard work and lives in the Seam E specs:
+      `shell-and-gallery.spec.ts` walks the navigation with no pointer and
+      asserts visible focus, and `full-audit.spec.ts` asserts focus returns to
+      the control that opened a sheet. This asserts the world they walk is the
+      one bound to A20.
+
+      It named `tests/e2e/rtl/panel-journey.spec.ts` for as long as this stood,
+      and that file does not exist — a pointer to coverage that was never
+      there. The viewport half is gone with it: A20 used to be walked at 390px,
+      and the panel is a desktop tool (ADR-0027).
+    */
     const { binding } = worldFor("A20");
     const snapshot = loadScenario(binding.scenarioId).snapshot;
     // The date edit is half the journey, so the world must have a date to edit.

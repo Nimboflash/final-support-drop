@@ -29,9 +29,17 @@ const SURFACES = [
   "/studio/engine?project=p1",
 ] as const;
 
+/*
+  768 is the floor, and it is a NARROW DESKTOP WINDOW rather than a tablet —
+  half a screen, a split view, a laptop someone has dragged in. It stays
+  because a person really does work at that width; 390 is gone because a phone
+  is not a surface this panel is for (ADR-0027).
+
+  768 is also exactly where `useIsMobile` flips. Keeping the floor there means
+  every width under test is one where the sidebar is still a sidebar.
+*/
 const WIDTHS = [
-  { name: "mobile", width: 390, height: 844 },
-  { name: "tablet", width: 768, height: 1024 },
+  { name: "narrow", width: 768, height: 1024 },
   { name: "compact", width: 1024, height: 768 },
   { name: "desktop", width: 1440, height: 1000 },
 ] as const;
@@ -129,15 +137,23 @@ test.describe("the sidebar navigates from every surface", () => {
     });
   }
 
-  test("the sidebar is reachable on mobile through its trigger", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test("collapsing the sidebar to its rail leaves every destination reachable", async ({ page }) => {
+    /*
+      The rail, not a phone sheet. This used to run at 390px and prove the
+      mobile drawer opened; the panel is a desktop tool (ADR-0027), so what is
+      worth proving is the thing a person here actually does — press the
+      trigger to win back horizontal space — and that the six destinations
+      survive it.
+    */
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/studio", { waitUntil: "networkidle" });
-    // On mobile the sidebar collapses; if the trigger does not open it, every
-    // destination becomes unreachable — which reads as "nothing is clickable".
     await page.getByRole("button", { name: "نمایش یا پنهان‌کردن منو" }).click();
-    await expect(
-      page.getByRole("navigation").getByRole("link", { name: "تقویم", exact: true }),
-    ).toBeVisible();
+    const calendar = page
+      .getByRole("navigation")
+      .getByRole("link", { name: "تقویم", exact: true });
+    await expect(calendar).toBeVisible();
+    await calendar.click();
+    await page.waitForURL("**/studio/calendar");
   });
 });
 
