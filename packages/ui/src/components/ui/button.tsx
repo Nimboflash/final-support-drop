@@ -7,7 +7,20 @@ import { Slot } from "radix-ui"
 import { cn } from "../../lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  /*
+    `transition-all` with nothing to transition: a press produced no feedback at
+    all, so the only confirmation that a button had been pressed was whatever
+    happened afterwards — which for a machine call is tens of seconds later.
+
+    `active:scale-[0.97]` and the shared motion timing fix that. The scale is
+    small on purpose: this is a dense operational panel, and a button that
+    visibly squashes reads as a toy. It is enough to feel and not enough to see.
+
+    `duration-[--motion-fast]` rather than a number, so a press here and a press
+    on a card are the same press — and so `prefers-reduced-motion` turns both
+    off in one place (theme.css).
+  */
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all duration-[--motion-fast] ease-[--ease-out] active:scale-[0.97] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

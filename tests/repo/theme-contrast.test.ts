@@ -287,6 +287,28 @@ describe("theme contrast (WCAG 2.2 AA, 09 §3)", () => {
     expect(offenders, "a diluted state border cannot reach 3:1 — drop the alpha").toEqual([]);
   });
 
+  it("declares its light tokens in ONE :root block, so this guard can see them all", () => {
+    /*
+      `block()` finds the FIRST `:root {` and stops. That is fine while there is
+      one — and silently wrong the moment there are two: a second block's tokens
+      are invisible here, so they are never measured, and the "declared in .dark
+      but not in :root" check reports them as dark-only when they are not.
+
+      Adding a motion layer as its own `:root` did exactly that, and the failure
+      pointed at the wrong thing entirely. A guard that quietly stops covering
+      part of the file is worse than one that fails.
+
+      Scoped to TOP-LEVEL blocks: the `prefers-reduced-motion` override inside
+      `@media` is a legitimate second `:root` and is not what this forbids.
+    */
+    const topLevel = css.replace(/@media[^{]*\{[\s\S]*?\n\}/g, " ");
+    const blocks = topLevel.match(/(^|\n):root\s*\{/g) ?? [];
+    expect(
+      blocks.length,
+      "split :root blocks hide tokens from every check in this file",
+    ).toBe(1);
+  });
+
   it("no token is declared twice in the same block", () => {
     for (const selector of [":root", ".dark"]) {
       const text = block(css, selector).replace(/\/\*[\s\S]*?\*\//g, "");

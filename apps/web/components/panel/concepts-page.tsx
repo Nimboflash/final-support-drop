@@ -5,9 +5,6 @@ import {
   Badge,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   ContentText,
   EmptyState,
 } from "@drop/ui";
@@ -133,15 +130,27 @@ export function ConceptsPage({ world }: { world: PanelSnapshot }) {
   );
 }
 
+/*
+  A status STRIPE on the start edge, not a coloured outline.
+
+  These were four-edge borders, and at the alpha they used to carry they were
+  invisible; at full strength — which is what they needed to reach 3:1 — ten
+  cards of brand accent read as ten alarms. Neither is a status marker.
+
+  A stripe is. It is contained, it is legible at full strength, it stacks down a
+  column without competing, and it is the same shape the overview already uses
+  for a row that wants attention. The card keeps its own hairline for structure;
+  the stripe says what state it is in, beside a badge that says it in words.
+*/
 const STATE_TONE: Record<ConceptState, string> = {
-  generating: "border-border",
-  new: "border-selected",
-  improving: "border-warning",
-  selected: "border-success",
+  generating: "",
+  new: "border-s-2 border-s-selected",
+  improving: "border-s-2 border-s-warning",
+  selected: "border-s-2 border-s-success",
   // NOT `opacity-70`. Dimming the whole card drags every piece of text inside
   // it below the AA contrast minimum — the description measured 3.16:1 — and
   // "faded" is a colour-only cue anyway. The state badge says the word.
-  set_aside: "border-border",
+  set_aside: "",
 };
 
 function ConceptCard({
@@ -158,47 +167,54 @@ function ConceptCard({
   const version = world.conceptVersions.find((v) => v.id === concept.activeVersionId);
   const state = conceptStateOf(concept);
 
+  /*
+    The WHOLE card is the control, which is how the content and overview cards
+    already worked and how this one did not.
+
+    It carried three ways in: a pressable title, a «باز کردن کانسپت» button, and
+    a card that ignored the pointer entirely. Two of those did the same thing
+    and the third did nothing, so the same gesture meant different things on
+    two surfaces of one product. One target, one meaning, everywhere.
+  */
   return (
-    <Card data-testid="concept-card" data-state={state} className={`h-full gap-3 ${STATE_TONE[state]}`}>
-      <CardHeader>
-        <CardTitle className="space-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {/* Three states, in three words (ADR-0020 D7). */}
-            <Badge variant="outline" data-testid="concept-state">
-              {CONCEPT_STATE_LABEL_FA[state]}
+    <Card
+      data-testid="concept-card"
+      data-state={state}
+      className={`drop-material drop-interactive h-full gap-0 overflow-hidden py-0 ${STATE_TONE[state]}`}
+    >
+      <button
+        type="button"
+        data-testid="open-concept"
+        onClick={onOpen}
+        className="flex h-full w-full flex-col items-start gap-3 p-4 text-start hover:bg-accent/40"
+      >
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          {/* Three states, in three words (ADR-0020 D7). */}
+          <Badge variant="outline" data-testid="concept-state">
+            {CONCEPT_STATE_LABEL_FA[state]}
+          </Badge>
+          {/*
+            A machine title is a whole English sentence, and `Badge` is
+            `w-fit shrink-0 whitespace-nowrap`: it sizes to its content and
+            refuses to shrink, so one long title pushed 74px of the card off
+            the side of the screen. It ellipsises now. The mock world's titles
+            are short Persian, which is why the e2e overflow sweep never
+            caught this.
+          */}
+          {projectTitleFa === null ? null : (
+            <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate">
+              <ContentText>{projectTitleFa}</ContentText>
             </Badge>
-            {/*
-              A machine title is a whole English sentence, and `Badge` is
-              `w-fit shrink-0 whitespace-nowrap`: it sizes to its content and
-              refuses to shrink, so one long title pushed 74px of the card off
-              the side of the screen. It ellipsises now. The mock world's titles
-              are short Persian, which is why the e2e overflow sweep never
-              caught this.
-            */}
-            {projectTitleFa === null ? null : (
-              <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate">
-                <ContentText>{projectTitleFa}</ContentText>
-              </Badge>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onOpen}
-            className="text-start text-base font-semibold underline-offset-4 hover:underline"
-          >
-            <ContentText>{version?.titleFa ?? "کانسپت بدون عنوان"}</ContentText>
-          </button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+          )}
+        </span>
+        <span className="text-base font-semibold">
+          <ContentText>{version?.titleFa ?? "کانسپت بدون عنوان"}</ContentText>
+        </span>
         {/* Two to three lines; the full document lives in the detail view. */}
-        <p className="line-clamp-3 text-sm leading-7 text-muted-foreground">
+        <span className="line-clamp-3 text-sm leading-7 text-muted-foreground">
           <ContentText>{version?.thesisFa}</ContentText>
-        </p>
-        <Button size="sm" variant="outline" onClick={onOpen} data-testid="open-concept">
-          باز کردن کانسپت
-        </Button>
-      </CardContent>
+        </span>
+      </button>
     </Card>
   );
 }

@@ -200,6 +200,66 @@
   --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 46%);
   --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
   --shadow-raised: 0 1px 2px rgba(18, 18, 18, 0.07);
+
+/* ---------- motion (ADR-0026) ---------- */
+/*
+  A shared vocabulary for how things move, because there was not one.
+
+  Counted across the panel before this existed: five `transition-colors`, three
+  `transition-transform`, one `transition-shadow` and a handful of ad-hoc
+  durations. Every interactive surface picked its own, most picked nothing, and
+  a press produced no feedback at all — which is what made a carefully-made
+  panel feel unfinished the moment you touched it. Colour and spacing were
+  designed; the twenty milliseconds after a click were not.
+
+  Three durations and two curves, and nothing else. A system small enough to
+  hold in your head is one people actually use.
+
+  --motion-fast    a press, a colour, a tint — should feel instant
+  --motion-base    a hover lift, a border, an opacity
+  --motion-slow    something entering or leaving the screen
+
+  `--ease-out` for anything a person initiated: it moves most at the start, so
+  it answers immediately and settles. `--ease-spring` overshoots very slightly
+  and is reserved for a state a person CAUSED and should notice — an approval
+  landing, an item arriving.
+*/
+
+  --motion-fast: 90ms;
+  --motion-base: 160ms;
+  --motion-slow: 240ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
+
+  /* How far a raised surface lifts under the pointer, and sinks under a press. */
+  --lift: -1px;
+  --press: 0.5px;
+  --shadow-lifted: 0 4px 12px -2px rgba(18, 18, 18, 0.12), 0 2px 4px -2px rgba(18, 18, 18, 0.08);
+}
+
+
+
+.dark {
+  /* On near-black, a cast shadow does almost nothing; the sheen carries the
+     lift instead, so this only deepens the seam under a raised edge. */
+  --shadow-lifted: 0 4px 14px -2px rgba(0, 0, 0, 0.6), 0 2px 6px -2px rgba(0, 0, 0, 0.45);
+}
+
+/*
+  Every motion in this file goes through here, so honouring the OS setting is
+  one rule rather than a discipline to remember at each call site. Duration goes
+  to ~0 rather than the transition being removed: a zero-length transition still
+  fires `transitionend`, so nothing that waits on it hangs.
+*/
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-base: 1ms;
+    --motion-slow: 1ms;
+    --ease-spring: var(--ease-out);
+    --lift: 0px;
+    --press: 0px;
+  }
 }
 
 /*
@@ -225,6 +285,66 @@
 /* A single aluminium hairline — the deck rules its tables with exactly this. */
 .drop-rule {
   border-block-end: 1px solid var(--hairline);
+}
+
+/*
+  A surface you can press.
+
+  One class, so the four card surfaces stop each inventing their own answer —
+  before this, a concept card and a content card were pressed in two different
+  ways and felt like two different products. It composes with `.drop-material`
+  rather than replacing it: the material says what a surface is made of, this
+  says what it does when you touch it.
+
+  The lift is one pixel. That is deliberate and it is enough: paired with the
+  shadow it reads as the card coming toward you, and anything more turns a dense
+  operational board into something that wobbles when the pointer crosses it.
+
+  `:active` sinks BELOW the resting position rather than returning to it, which
+  is what makes a press feel like a press rather than a hover ending.
+*/
+.drop-interactive {
+  transition:
+    transform var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+  will-change: transform;
+}
+
+@media (hover: hover) {
+  .drop-interactive:hover {
+    transform: translateY(var(--lift));
+    box-shadow: var(--edge-highlight), var(--shadow-lifted);
+  }
+}
+
+.drop-interactive:active {
+  transform: translateY(var(--press));
+  box-shadow: var(--edge-highlight), var(--shadow-raised);
+  transition-duration: var(--motion-fast);
+}
+
+/*
+  Something that just arrived because of something the person did.
+
+  Used for a row entering a list after a write — an approval landing, an item
+  appearing. The spring is the point: it is the difference between a list that
+  redraws and a list that responds.
+*/
+.drop-enter {
+  animation: drop-enter var(--motion-slow) var(--ease-spring) both;
+}
+
+@keyframes drop-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* dark theme — Charcoal is the main workspace (V2 02 §1); the default. */

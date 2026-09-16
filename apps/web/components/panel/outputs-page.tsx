@@ -5,9 +5,6 @@ import {
   Badge,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   ContentText,
   EmptyState,
   Sheet,
@@ -44,11 +41,23 @@ import {
  * the rule underneath survives unchanged, so there is still no invented
  * percentage and no progress bar anywhere in this tree.
  */
+/*
+  A status STRIPE on the start edge, not a coloured outline.
+
+  These were four-edge borders, and at the alpha they used to carry they were
+  invisible; at full strength — which is what they needed to reach 3:1 — ten
+  cards of brand accent read as ten alarms. Neither is a status marker.
+
+  A stripe is. It is contained, it is legible at full strength, it stacks down a
+  column without competing, and it is the same shape the overview already uses
+  for a row that wants attention. The card keeps its own hairline for structure;
+  the stripe says what state it is in, beside a badge that says it in words.
+*/
 const STATE_TONE: Record<OutputState, string> = {
-  assembling: "border-border",
-  ready_for_approval: "border-selected",
-  approved: "border-success",
-  scheduled: "border-success",
+  assembling: "",
+  ready_for_approval: "border-s-2 border-s-selected",
+  approved: "border-s-2 border-s-success",
+  scheduled: "border-s-2 border-s-success",
 };
 
 export function OutputsPage({ world }: { world: PanelSnapshot }) {
@@ -113,38 +122,35 @@ export function OutputsPage({ world }: { world: PanelSnapshot }) {
 }
 
 function OutputCard({ output, onOpen }: { output: OutputView; onOpen: () => void }) {
+  // One press target, matching every other card surface. See `concepts-page`.
   return (
     <Card
       data-testid="output-card"
       data-state={output.state}
-      className={`h-full gap-3 ${STATE_TONE[output.state]}`}
+      className={`drop-material drop-interactive h-full gap-0 overflow-hidden py-0 ${STATE_TONE[output.state]}`}
     >
-      <CardHeader>
-        <CardTitle className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" data-testid="output-state">
-              {OUTPUT_STATE_LABEL_FA[output.state]}
-            </Badge>
-            <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate"><ContentText>{output.projectTitleFa}</ContentText></Badge>
-          </div>
-          <button
-            type="button"
-            onClick={onOpen}
-            className="text-start text-base font-semibold underline-offset-4 hover:underline"
-          >
-            <ContentText>{output.titleFa}</ContentText>
-          </button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <button
+        type="button"
+        data-testid="open-output"
+        onClick={onOpen}
+        className="flex h-full w-full flex-col items-start gap-3 p-4 text-start hover:bg-accent/40"
+      >
+        <span className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" data-testid="output-state">
+            {OUTPUT_STATE_LABEL_FA[output.state]}
+          </Badge>
+          <Badge variant="secondary" className="max-w-full min-w-0 shrink truncate">
+            <ContentText>{output.projectTitleFa}</ContentText>
+          </Badge>
+        </span>
+        <span className="text-base font-semibold">
+          <ContentText>{output.titleFa}</ContentText>
+        </span>
         {/* A human sentence, not a counter (ADR-0020 D5). */}
-        <p className="text-muted-foreground" data-testid="output-summary">
+        <span className="text-sm text-muted-foreground" data-testid="output-summary">
           {output.blockerFa ?? "همهٔ محتواها تأیید شده‌اند."}
-        </p>
-        <Button size="sm" onClick={onOpen} data-testid="open-output">
-          بررسی خروجی
-        </Button>
-      </CardContent>
+        </span>
+      </button>
     </Card>
   );
 }

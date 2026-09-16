@@ -215,7 +215,7 @@ function ProjectCard({
       data-testid="project-card"
       data-project={project.id}
       data-waiting={waiting}
-      className="drop-material gap-0 overflow-hidden py-0"
+      className="drop-material drop-interactive gap-0 overflow-hidden py-0"
     >
       <button
         type="button"

@@ -89,11 +89,28 @@ const KIND_ICON: Record<ContentItem["type"], LucideIcon> = {
  * state; the others keep the tone they already carry on the card's border, so
  * the strip and the border of a card never disagree.
  */
+/*
+  Acid is for the EXCEPTION, and «آماده بررسی» is not one.
+
+  ADR-0022 D3 reserves Acid Lime for "a person is the blocker", and warned in
+  terms that "a full-width bar on four of seven cards floods the board with the
+  one colour that exists to stand out". A real machine portfolio is eighteen
+  items and every one of them arrives awaiting review — so every card carried a
+  full-width Acid strip, seventeen at a time down a single column. A signal that
+  is on everything is not a signal; it is a background.
+
+  So «منتظر تأیید» is quiet. It IS the normal state of freshly built content,
+  and the state badge and the dot both already say it in words.
+
+  What keeps Acid: `needs_input`. That one genuinely cannot proceed without the
+  person going and fetching something, it is rare, and it is the only state on
+  this surface where the work is actually stopped.
+*/
 const STATE_ACTION_TONE: Record<ContentState, string> = {
   draft: "bg-muted text-foreground",
-  needs_input: "bg-warning/15 text-foreground",
+  needs_input: "bg-attention text-attention-foreground",
   failed: "bg-destructive/15 text-foreground",
-  ready_for_review: "bg-attention text-attention-foreground",
+  ready_for_review: "bg-muted text-muted-foreground",
   approved: "bg-muted text-foreground",
 };
 
@@ -105,12 +122,24 @@ const STATE_DOT: Record<ContentState, string> = {
   approved: "bg-success",
 };
 
+/*
+  A status STRIPE on the start edge, not a coloured outline.
+
+  These were four-edge borders, and at the alpha they used to carry they were
+  invisible; at full strength — which is what they needed to reach 3:1 — ten
+  cards of brand accent read as ten alarms. Neither is a status marker.
+
+  A stripe is. It is contained, it is legible at full strength, it stacks down a
+  column without competing, and it is the same shape the overview already uses
+  for a row that wants attention. The card keeps its own hairline for structure;
+  the stripe says what state it is in, beside a badge that says it in words.
+*/
 const STATE_TONE: Record<ContentState, string> = {
-  draft: "border-border",
-  needs_input: "border-warning",
-  failed: "border-destructive",
-  ready_for_review: "border-selected",
-  approved: "border-success",
+  draft: "",
+  needs_input: "border-s-2 border-s-warning",
+  failed: "border-s-2 border-s-destructive",
+  ready_for_review: "border-s-2 border-s-selected",
+  approved: "border-s-2 border-s-success",
 };
 
 /**
@@ -296,7 +325,7 @@ function ContentCard({
     <Card
       data-testid="content-card"
       data-state={state}
-      className={`drop-material gap-0 overflow-hidden py-0 ${STATE_TONE[state]}`}
+      className={`drop-material drop-interactive gap-0 overflow-hidden py-0 ${STATE_TONE[state]}`}
     >
       {/*
         The whole card is the control, not a button buried at the bottom of it.
