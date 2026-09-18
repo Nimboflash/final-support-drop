@@ -212,6 +212,44 @@ describe("the proxy exists and is the only way to the machine", () => {
   });
 });
 
+describe("a paid write's deadline is sized to what it takes, and the lock outlives it", () => {
+  /*
+    The first build deadline was set "just above the service's http_timeout"
+    on the belief that the service could not outlast it. That timeout is a
+    socket inactivity limit and the provider keeps the socket alive, so the
+    owner's first two live builds (251s, 313s) finished on the service and
+    504'd at the proxy. These numbers are read from source so the relation
+    cannot drift apart silently again.
+  */
+  const number = (source: string, name: string): number => {
+    const match = new RegExp(`const ${name} = ([0-9_]+);`).exec(source);
+    expect(match, `${name} must be a literal`).not.toBeNull();
+    return Number(match![1]!.replace(/_/g, ""));
+  };
+  const route = read(ROUTE);
+  const lock = read(join(ROOT, "apps", "web", "lib", "machine", "session-write-lock.ts"));
+
+  it("waits longer for a build than a build has ever taken", () => {
+    // Longest observed live build: 313s. Below that the proxy gives up on a
+    // write that is about to land, every time.
+    expect(number(route, "BUILD_TIMEOUT_MS")).toBeGreaterThanOrEqual(480_000);
+    expect(number(route, "MODEL_TIMEOUT_MS")).toBeGreaterThanOrEqual(120_000);
+  });
+
+  it("the build is the write that gets the long deadline", () => {
+    expect(route).toMatch(/kind: "build"[^}]*deadlineMs: BUILD_TIMEOUT_MS/);
+    expect(route).toMatch(/kind: "generate"[^}]*deadlineMs: MODEL_TIMEOUT_MS/);
+  });
+
+  it("the lock outlives the longest deadline by a clear margin", () => {
+    // A timed-out write is not released: it may still be spending. If the lock
+    // expired first, a second paid call could start over the top of it.
+    expect(number(lock, "LOCK_EXPIRY_MS")).toBeGreaterThanOrEqual(
+      number(route, "BUILD_TIMEOUT_MS") + 60_000,
+    );
+  });
+});
+
 describe("the browser only ever talks to its own origin", () => {
   it("uses a relative proxy path and names no host", () => {
     const source = read(PORT);

@@ -25,14 +25,21 @@ import { commandErrorFa, commandErrorTone } from "./commands";
  */
 export type MachineWork = "generate" | "build" | "rebuild" | "refine";
 
-const WORK_FA: Readonly<Record<MachineWork, { doing: string; done: string }>> = {
-  generate: { doing: "ماشین در حال ساخت کانسپت‌هاست", done: "کانسپت‌ها ساخته شدند." },
-  build: { doing: "ماشین در حال ساخت تحقیق و محتواست", done: "محتوا ساخته شد؛ در «محتوا» ببینید." },
-  rebuild: { doing: "ماشین در حال بازسازی محتواست", done: "محتوا از نو ساخته شد." },
-  refine: { doing: "ماشین در حال بازنگری کانسپت است", done: "نسخهٔ تازهٔ کانسپت رسید." },
+/*
+  `takes` is what the work is OBSERVED to take, not a hope. A concept round
+  runs about forty seconds; a portfolio build about five minutes (251s and
+  313s on the owner's live runs). One sentence for both told a person waiting
+  on a build that it would take "tens of seconds", which after three minutes
+  reads as something having gone wrong — and that is when people press again.
+*/
+const WORK_FA: Readonly<Record<MachineWork, { doing: string; done: string; takes: string }>> = {
+  generate: { doing: "ماشین در حال ساخت کانسپت‌هاست", done: "کانسپت‌ها ساخته شدند.", takes: "چند ده ثانیه" },
+  build: { doing: "ماشین در حال ساخت تحقیق و محتواست", done: "محتوا ساخته شد؛ در «محتوا» ببینید.", takes: "حدود پنج دقیقه" },
+  rebuild: { doing: "ماشین در حال بازسازی محتواست", done: "محتوا از نو ساخته شد.", takes: "حدود پنج دقیقه" },
+  refine: { doing: "ماشین در حال بازنگری کانسپت است", done: "نسخهٔ تازهٔ کانسپت رسید.", takes: "چند ده ثانیه" },
 };
 
-const COSTS_FA = "این کار هزینه دارد و چند ده ثانیه طول می‌کشد؛ دوباره نزنید.";
+const costsFa = (takes: string): string => `این کار هزینه دارد و ${takes} طول می‌کشد؛ دوباره نزنید.`;
 
 /** Persian digits, and a unit that reads naturally rather than «۹۰ ثانیه». */
 export function formatElapsedFa(seconds: number): string {
@@ -59,12 +66,13 @@ export interface MachineWorkNotice {
 export function beginMachineWork(kind: MachineWork): MachineWorkNotice {
   const words = WORK_FA[kind];
   const started = Date.now();
-  const id = toast.loading(words.doing, { description: COSTS_FA, duration: Infinity });
+  const description = costsFa(words.takes);
+  const id = toast.loading(words.doing, { description, duration: Infinity });
   const timer = setInterval(() => {
     const elapsed = Math.round((Date.now() - started) / 1000);
     toast.loading(`${words.doing} — ${formatElapsedFa(elapsed)}`, {
       id,
-      description: COSTS_FA,
+      description,
       duration: Infinity,
     });
   }, 1_000);

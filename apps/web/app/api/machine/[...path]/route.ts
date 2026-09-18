@@ -76,14 +76,26 @@ const SESSION_ID = /^[a-f0-9]{12}$/;
 const UPSTREAM_TIMEOUT_MS = 20_000;
 
 /**
- * Writes that reach a model.
+ * Writes that reach a model — sized to what each one is OBSERVED to take.
  *
- * Above the service's own `http_timeout` default of 180s, deliberately. A
- * shorter deadline here saves nothing — the service has no cancellation, so the
- * spend and the file write continue regardless — and it would return control to
- * a caller whose write is still running.
+ * Not to the service's `http_timeout`. That value (default 180s) is what
+ * `backends/openrouter.py` hands `requests` as `timeout=`, and it is a per-
+ * socket connect/read INACTIVITY limit, not a wall clock: the provider keeps
+ * the connection alive while it works, so a five-minute call never trips it.
+ * The first deadline here was set "just above 180s" on the belief that the
+ * service could not outlast it, and the owner's first two live builds — 251s
+ * and 313s — both finished on the service and both 504'd at the proxy. The
+ * person was told the write might still be running; it was, and it landed
+ * seconds later, and they had no way to know that except to wait.
+ *
+ * A shorter deadline saves nothing — the service has no cancellation, so the
+ * spend and the file write continue regardless — so each is the observed
+ * latency with room: a concept round runs ~40s, a portfolio build ~5 minutes.
+ * `session-write-lock.ts` must outlive the longest of these; the guard in
+ * `tests/repo/machine-boundary.test.ts` holds the two together.
  */
 const MODEL_TIMEOUT_MS = 195_000;
+const BUILD_TIMEOUT_MS = 540_000;
 
 /** The largest write body the proxy will read, before it reads it. */
 const MAX_BODY_BYTES = 8 * 1024;
@@ -159,6 +171,8 @@ interface WriteTarget {
   readonly sessionId: string | null;
   /** Whether this call reaches a model and therefore costs money. */
   readonly spends: boolean;
+  /** How long the proxy waits for it. See the deadlines above. */
+  readonly deadlineMs: number;
 }
 
 /**
@@ -169,21 +183,21 @@ interface WriteTarget {
  */
 function resolveWriteTarget(segments: readonly string[]): WriteTarget | null {
   if (segments.length === 1 && segments[0] === "sessions") {
-    return { kind: "create", sessionId: null, spends: false };
+    return { kind: "create", sessionId: null, spends: false, deadlineMs: UPSTREAM_TIMEOUT_MS };
   }
   if (segments.length !== 4 || segments[0] !== "sessions") return null;
   const id = segments[1];
   if (typeof id !== "string" || !SESSION_ID.test(id)) return null;
 
   if (segments[2] === "concepts") {
-    if (segments[3] === "generate") return { kind: "generate", sessionId: id, spends: true };
-    if (segments[3] === "respond") return { kind: "respond", sessionId: id, spends: true };
+    if (segments[3] === "generate") return { kind: "generate", sessionId: id, spends: true, deadlineMs: MODEL_TIMEOUT_MS };
+    if (segments[3] === "respond") return { kind: "respond", sessionId: id, spends: true, deadlineMs: MODEL_TIMEOUT_MS };
     // Free: `approve_concept` only rewrites the session file.
-    if (segments[3] === "approve") return { kind: "approve", sessionId: id, spends: false };
+    if (segments[3] === "approve") return { kind: "approve", sessionId: id, spends: false, deadlineMs: UPSTREAM_TIMEOUT_MS };
     return null;
   }
   if (segments[2] === "portfolio" && segments[3] === "build") {
-    return { kind: "build", sessionId: id, spends: true };
+    return { kind: "build", sessionId: id, spends: true, deadlineMs: BUILD_TIMEOUT_MS };
   }
   return null;
 }
@@ -467,7 +481,7 @@ export async function POST(
     const response = await callUpstream(origin, upstreamPath, {
       method: "POST",
       body: upstreamBody,
-      timeoutMs: target.spends ? MODEL_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS,
+      timeoutMs: target.deadlineMs,
     });
 
     if (response === null) {

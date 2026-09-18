@@ -498,7 +498,10 @@ export function ConceptDetail({
           */}
           {live && (review.isPending || revision.isPending) ? (
             <p role="status" className="w-full text-xs text-muted-foreground" data-testid="machine-working">
-              ماشین مشغول است؛ این کار چند ده ثانیه طول می‌کشد و نتیجه خودش می‌آید. این پنجره را می‌توانید ببندید.
+              {/* A build is the five-minute one; a refinement is the forty-second one. */}
+              {review.isPending
+                ? "ماشین مشغول ساخت تحقیق و محتواست؛ این کار حدود پنج دقیقه طول می‌کشد و نتیجه خودش می‌آید. این پنجره را می‌توانید ببندید."
+                : "ماشین مشغول است؛ این کار چند ده ثانیه طول می‌کشد و نتیجه خودش می‌آید. این پنجره را می‌توانید ببندید."}
             </p>
           ) : null}
           {review.isError ? <CommandError error={review.error} className="w-full" /> : null}

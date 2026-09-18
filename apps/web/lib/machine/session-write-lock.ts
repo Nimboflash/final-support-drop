@@ -41,16 +41,21 @@ interface Held {
 /**
  * How long a lock entry may stand before another write may take it.
  *
- * Deliberately far above the service's worst case rather than above the proxy's
- * deadline. `backends/openrouter.py` passes `http_timeout` (default 180) to
- * `requests` as its `timeout=`, and that argument is a per-socket connect/read
- * timeout, NOT a wall-clock deadline: the worst case is roughly connect 180 +
- * read 180, plus DNS which it does not cover at all, plus the JSON parse and
- * the whole-file save. A 210s expiry would hand the lock to a second paid call
- * while the first was still in flight, which is the exact race the lock exists
- * to prevent.
+ * Above the proxy's LONGEST deadline (`BUILD_TIMEOUT_MS`, nine minutes) by a
+ * clear margin, because a timed-out write is not released — it may still be
+ * running and spending — and the lock has to outlast it.
+ *
+ * The earlier value reasoned from the service's `http_timeout` instead:
+ * `backends/openrouter.py` hands it to `requests` as `timeout=`, which is a
+ * per-socket connect/read limit, so "connect 180 + read 180" looked like the
+ * worst case. It is not a case at all. The read limit is an INACTIVITY limit
+ * and the provider keeps the socket alive while it works, so a build's wall
+ * clock is bounded only by the model — the owner's live builds ran 251s and
+ * 313s. An expiry sized to a bound that does not exist would hand the lock to
+ * a second paid call while the first was still in flight, which is the exact
+ * race the lock exists to prevent.
  */
-const LOCK_EXPIRY_MS = 400_000;
+const LOCK_EXPIRY_MS = 660_000;
 
 /** At most this many paid writes in flight across ALL sessions. */
 const GLOBAL_IN_FLIGHT_LIMIT = 2;
@@ -101,7 +106,7 @@ export function acquireWriteLock(
   if (options.spends) {
     // Breadth, not just depth: the per-session lock does nothing about a caller
     // addressing many session ids at once, and every one of those pins a thread
-    // in the service's threadpool for up to three minutes.
+    // in the service's threadpool for up to nine minutes.
     let inFlight = 0;
     for (const entry of held.values()) {
       if (options.now - entry.startedAt < LOCK_EXPIRY_MS) inFlight += 1;
