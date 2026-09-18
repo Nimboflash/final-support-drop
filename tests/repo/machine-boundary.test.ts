@@ -196,10 +196,19 @@ describe("the proxy exists and is the only way to the machine", () => {
     /*
       Its handler is `detail=str(e)`, so upstream provider URLs, whole pydantic
       dumps and its own API-key message reach the caller verbatim. The status
-      travels because the adapter maps on it; the body does not.
+      travels because the adapter maps on it; the body's WORDS do not.
+
+      The body is READ, once, through `classifyUpstreamFailure`, which reduces
+      it to a closed-set kind and a provider status number and drops the rest
+      (`apps/web/lib/machine/upstream-failure.test.ts` proves no substring
+      survives). Without that, an expired provider key arrived as a bare 400
+      and rendered as "the session moved — refresh the page".
     */
     const code = codeOnly(read(ROUTE));
     expect(code).not.toContain("detail");
+    expect(code).toContain("classifyUpstreamFailure(");
+    // The classifier's OUTPUT is what crosses, never the decoded body itself.
+    expect(code).not.toMatch(/refused\([^)]*\bbody\b/);
   });
 });
 

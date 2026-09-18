@@ -433,7 +433,10 @@ export function commandErrorTone(error: unknown): CommandErrorTone {
   if (
     next === NEXT_ACTIONS.WAIT_THEN_RETRY ||
     next === NEXT_ACTIONS.COOL_DOWN ||
-    next === NEXT_ACTIONS.WAIT_FOR_RESULT
+    next === NEXT_ACTIONS.WAIT_FOR_RESULT ||
+    // The provider is down, not the panel and not the machine. Nothing was
+    // spent; "try again in a minute" is a status line, not an alarm.
+    next === NEXT_ACTIONS.PROVIDER_UNAVAILABLE
   ) {
     return "wait";
   }
@@ -479,6 +482,23 @@ export function commandErrorFa(error: unknown): string {
       return "ماشین چنین کاری ندارد و پنل هم جایی برای نگه‌داشتن آن ندارد؛ این تصمیم ثبت نمی‌شود.";
     case NEXT_ACTIONS.ADD_A_REASON:
       return "ثبت این تصمیم بدون دلیل ممکن نیست.";
+    /*
+      The provider's own refusals. Each names the cause, says whether money
+      left the account, and points at the one place the fix lives — because
+      the sentence these used to render («این مورد در جای دیگری تغییر کرده
+      است؛ صفحه را تازه کنید») sent a person with an expired key to refresh
+      the page.
+    */
+    case NEXT_ACTIONS.REPLACE_PROVIDER_KEY:
+      return "ارائه‌دهندهٔ مدل، کلید ماشین را نپذیرفت؛ احتمالاً منقضی یا باطل شده است. چیزی خرج نشد. در «تنظیمات ← ماشین ← اتصال» کلید تازه بگذارید و ماشین را دوباره راه بیندازید.";
+    case NEXT_ACTIONS.TOP_UP_PROVIDER:
+      return "اعتبار حساب ارائه‌دهندهٔ مدل برای این کار کافی نیست. چیزی خرج نشد؛ حساب را شارژ کنید و دوباره بزنید.";
+    case NEXT_ACTIONS.PROVIDER_REJECTED:
+      return "ارائه‌دهندهٔ مدل، درخواست ماشین را نپذیرفت. چیزی خرج نشد. معمولاً نام مدلی است که روی سرور تنظیم شده و دیگر ارائه نمی‌شود.";
+    case NEXT_ACTIONS.PROVIDER_UNAVAILABLE:
+      return "ارائه‌دهندهٔ مدل فعلاً پاسخ نمی‌دهد. چیزی خرج نشد؛ یکی دو دقیقهٔ دیگر دوباره بزنید.";
+    case NEXT_ACTIONS.MODEL_ANSWER_UNUSABLE:
+      return "مدل پاسخ داد، اما پاسخش در قالب لازم نبود و ثبت نشد. این تلاش هزینه داشت؛ زدن دوباره معمولاً جواب می‌دهد.";
     default:
       break;
   }

@@ -28,6 +28,13 @@ describe("one sentence per next action", () => {
     [NEXT_ACTIONS.ENABLE_WRITES, /خاموش/],
     [NEXT_ACTIONS.UNSUPPORTED_BY_MACHINE, /ماشین چنین کاری ندارد/],
     [NEXT_ACTIONS.ADD_A_REASON, /بدون دلیل/],
+    // The provider's own refusals: each names the cause, says whether money
+    // left the account, and points at where the fix lives.
+    [NEXT_ACTIONS.REPLACE_PROVIDER_KEY, /کلید ماشین را نپذیرفت[\s\S]*چیزی خرج نشد[\s\S]*تنظیمات/],
+    [NEXT_ACTIONS.TOP_UP_PROVIDER, /اعتبار[\s\S]*چیزی خرج نشد/],
+    [NEXT_ACTIONS.PROVIDER_REJECTED, /درخواست ماشین را نپذیرفت[\s\S]*چیزی خرج نشد/],
+    [NEXT_ACTIONS.PROVIDER_UNAVAILABLE, /پاسخ نمی‌دهد[\s\S]*چیزی خرج نشد/],
+    [NEXT_ACTIONS.MODEL_ANSWER_UNUSABLE, /هزینه داشت/],
   ];
   it.each(cases)("%s", (next, expected) => {
     expect(commandErrorFa(error("INVALID_STATE_TRANSITION", next))).toMatch(expected);
@@ -64,6 +71,13 @@ describe("a wait is not painted as a failure", () => {
       expect(commandErrorTone(error("TIMEOUT", next))).toBe("wait");
     }
   });
+  it("a provider outage is a wait, and a refused key is a refusal, never a stale page", () => {
+    expect(commandErrorTone(error("MACHINE_SYSTEM_DISCONNECTED", NEXT_ACTIONS.PROVIDER_UNAVAILABLE))).toBe("wait");
+    expect(commandErrorTone(error("UNAUTHORIZED", NEXT_ACTIONS.REPLACE_PROVIDER_KEY))).toBe("refused");
+    // The sentence an expired key used to render told the person to refresh.
+    expect(commandErrorFa(error("UNAUTHORIZED", NEXT_ACTIONS.REPLACE_PROVIDER_KEY))).not.toMatch(/تازه کنید|نقش/);
+  });
+
   it("classifies a conflict, a refusal and a failure apart", () => {
     expect(commandErrorTone(error("REVISION_CONFLICT", NEXT_ACTIONS.REFRESH_AND_RESUBMIT))).toBe("conflict");
     expect(commandErrorTone(error("UNAUTHORIZED", NEXT_ACTIONS.UNSUPPORTED_BY_MACHINE))).toBe("refused");

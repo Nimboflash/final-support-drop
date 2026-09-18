@@ -73,6 +73,16 @@ export const NEXT_ACTIONS = {
   UNSUPPORTED_BY_MACHINE: "UNSUPPORTED_BY_MACHINE",
   /** ADR-0013 D2 — the decision needs a reason before it can be recorded. */
   ADD_A_REASON: "ADD_A_REASON",
+  /** The provider would not accept the machine's key — expired, revoked, or never configured. Nothing was spent. */
+  REPLACE_PROVIDER_KEY: "REPLACE_PROVIDER_KEY",
+  /** The provider account has no credit left for this call. Nothing was spent. */
+  TOP_UP_PROVIDER: "TOP_UP_PROVIDER",
+  /** The provider rejected the request itself — usually a model id it no longer serves. Nothing was spent. */
+  PROVIDER_REJECTED: "PROVIDER_REJECTED",
+  /** The provider is overloaded or down. Nothing was spent; later is fine. */
+  PROVIDER_UNAVAILABLE: "PROVIDER_UNAVAILABLE",
+  /** The model answered, but the answer did not fit the recorded shape. That call WAS charged; the same press usually works. */
+  MODEL_ANSWER_UNUSABLE: "MODEL_ANSWER_UNUSABLE",
 } as const;
 export type NextAction = (typeof NEXT_ACTIONS)[keyof typeof NEXT_ACTIONS];
 

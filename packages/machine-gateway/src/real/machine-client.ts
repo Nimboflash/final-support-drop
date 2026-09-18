@@ -93,6 +93,90 @@ function proxyCode(body: unknown): string | null {
 }
 
 /**
+ * The proxy's classification of a failure the SERVICE reported.
+ *
+ * Two values from a closed set — a kind, and the provider's own status when
+ * the provider answered — and never a word of the service's text (see
+ * `apps/web/lib/machine/upstream-failure.ts`). Read defensively: a proxy from
+ * before this field existed sends none, and that must still map.
+ */
+interface UpstreamFailure {
+  readonly kind: string;
+  readonly providerStatus: number | null;
+}
+
+function upstreamFailureOf(body: unknown): UpstreamFailure | null {
+  if (typeof body !== "object" || body === null) return null;
+  const upstream = (body as Record<string, unknown>).upstream;
+  if (typeof upstream !== "object" || upstream === null) return null;
+  const kind = (upstream as Record<string, unknown>).kind;
+  const providerStatus = (upstream as Record<string, unknown>).providerStatus;
+  return {
+    kind: typeof kind === "string" ? kind : "UNKNOWN",
+    providerStatus: typeof providerStatus === "number" ? providerStatus : null,
+  };
+}
+
+/**
+ * What the PROVIDER's refusal means to the person, or null when it says nothing.
+ *
+ * Every one of these used to be `REVISION_CONFLICT` — "refresh and resubmit" —
+ * because the service turns any exception into a 400 and the proxy relayed the
+ * number alone. An expired key rendered as a stale page. Each branch below
+ * says what actually happened and what to do; the two that spent nothing say
+ * so, and the one that DID spend says that too.
+ */
+function providerFailure(failure: UpstreamFailure | null, what: string): GatewayError | null {
+  if (failure === null) return null;
+  const never = { retryable: false } as const;
+  const status = failure.providerStatus;
+
+  if (failure.kind === "NO_KEY" || status === 401 || status === 403) {
+    return new GatewayError(
+      "UNAUTHORIZED",
+      `UNAUTHORIZED: the provider did not accept the machine's key while trying to ${what}`,
+      { ...never, nextPermittedActions: [NEXT_ACTIONS.REPLACE_PROVIDER_KEY] },
+    );
+  }
+  if (status === 402) {
+    return new GatewayError(
+      "INVALID_STATE_TRANSITION",
+      `INVALID_STATE_TRANSITION: the provider account has no credit for ${what}`,
+      { ...never, nextPermittedActions: [NEXT_ACTIONS.TOP_UP_PROVIDER] },
+    );
+  }
+  if (status === 429) {
+    return new GatewayError(
+      "INVALID_STATE_TRANSITION",
+      `INVALID_STATE_TRANSITION: the provider is rate-limiting the machine while trying to ${what}`,
+      { ...never, nextPermittedActions: [NEXT_ACTIONS.WAIT_THEN_RETRY] },
+    );
+  }
+  if (failure.kind === "PROVIDER" && status !== null && (status >= 500 || status === 408)) {
+    return new GatewayError(
+      "MACHINE_SYSTEM_DISCONNECTED",
+      `MACHINE_SYSTEM_DISCONNECTED: the provider answered ${String(status)} while trying to ${what}`,
+      { ...never, nextPermittedActions: [NEXT_ACTIONS.PROVIDER_UNAVAILABLE] },
+    );
+  }
+  if (failure.kind === "PROVIDER") {
+    return new GatewayError(
+      "SCHEMA_VALIDATION_FAILED",
+      `SCHEMA_VALIDATION_FAILED: the provider rejected the machine's request (${String(status)}) while trying to ${what}`,
+      { ...never, nextPermittedActions: [NEXT_ACTIONS.PROVIDER_REJECTED] },
+    );
+  }
+  if (failure.kind === "SHAPE") {
+    return new GatewayError(
+      "SCHEMA_VALIDATION_FAILED",
+      `SCHEMA_VALIDATION_FAILED: the model's answer did not fit the recorded shape while trying to ${what}`,
+      { ...never, nextPermittedActions: [NEXT_ACTIONS.MODEL_ANSWER_UNUSABLE] },
+    );
+  }
+  return null;
+}
+
+/**
  * How a WRITE's status becomes a reason — which is not how a read's does.
  *
  * Two differences, both of which cost money to get wrong.
@@ -203,6 +287,13 @@ export function machineWriteError(status: number, body: unknown, what: string): 
         `MACHINE_SYSTEM_DISCONNECTED: the proxy could not reach the machine while trying to ${what}`,
         never,
       );
+    case "UPSTREAM_ERROR": {
+      // The service failed and the proxy said what kind. When it could not
+      // tell, the status table below still applies.
+      const mapped = providerFailure(upstreamFailureOf(body), what);
+      if (mapped !== null) return mapped;
+      break;
+    }
     default:
       break;
   }

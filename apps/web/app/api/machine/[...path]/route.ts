@@ -6,6 +6,7 @@ import {
   roundBudget,
   withinRoundBudget,
 } from "../../../../lib/machine/session-write-lock";
+import { classifyUpstreamFailure, type UpstreamFailure } from "../../../../lib/machine/upstream-failure";
 
 /**
  * The same-origin boundary in front of the concept-portfolio service
@@ -124,8 +125,11 @@ function off(): NextResponse {
   return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 }
 
-function refused(reason: string, status: number): NextResponse {
-  return NextResponse.json({ error: reason }, { status });
+function refused(reason: string, status: number, upstream?: UpstreamFailure): NextResponse {
+  return NextResponse.json(
+    upstream === undefined ? { error: reason } : { error: reason, upstream },
+    { status },
+  );
 }
 
 /**
@@ -477,7 +481,30 @@ export async function POST(
       }
       return refused("UPSTREAM_UNREACHABLE", 503);
     }
-    if (!response.ok) return refused("UPSTREAM_ERROR", response.status);
+    if (!response.ok) {
+      /*
+        The status travels; the body's WORDS do not (machine-boundary). But
+        the body is read, once, and reduced to a closed-set classification —
+        because without it an expired provider key arrived here as a bare 400,
+        the adapter read that as "the session moved", and the person was told
+        to refresh the page. Kind and a status number cross; nothing else.
+
+        The operator's terminal gets those same two values. Not the text: the
+        service's text can carry the whole brief.
+      */
+      const failure = classifyUpstreamFailure(await response.json().catch(() => null));
+      console.warn(
+        "[machine] " +
+          upstreamPath +
+          " answered " +
+          String(response.status) +
+          " (" +
+          failure.kind +
+          (failure.providerStatus === null ? "" : " " + String(failure.providerStatus)) +
+          ")",
+      );
+      return refused("UPSTREAM_ERROR", response.status, failure);
+    }
 
     let written: unknown;
     try {

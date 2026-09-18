@@ -45,6 +45,45 @@ describe("a write refusal keeps the proxy's distinction", () => {
     expect(machineWriteError(0, null, "x").retryable).toBe(false);
   });
 
+  it.each([
+    ["NO_KEY", null, "UNAUTHORIZED", NEXT_ACTIONS.REPLACE_PROVIDER_KEY],
+    ["PROVIDER", 401, "UNAUTHORIZED", NEXT_ACTIONS.REPLACE_PROVIDER_KEY],
+    ["PROVIDER", 403, "UNAUTHORIZED", NEXT_ACTIONS.REPLACE_PROVIDER_KEY],
+    ["PROVIDER", 402, "INVALID_STATE_TRANSITION", NEXT_ACTIONS.TOP_UP_PROVIDER],
+    ["PROVIDER", 429, "INVALID_STATE_TRANSITION", NEXT_ACTIONS.WAIT_THEN_RETRY],
+    ["PROVIDER", 404, "SCHEMA_VALIDATION_FAILED", NEXT_ACTIONS.PROVIDER_REJECTED],
+    ["PROVIDER", 400, "SCHEMA_VALIDATION_FAILED", NEXT_ACTIONS.PROVIDER_REJECTED],
+    ["PROVIDER", 502, "MACHINE_SYSTEM_DISCONNECTED", NEXT_ACTIONS.PROVIDER_UNAVAILABLE],
+    ["PROVIDER", 529, "MACHINE_SYSTEM_DISCONNECTED", NEXT_ACTIONS.PROVIDER_UNAVAILABLE],
+    ["SHAPE", null, "SCHEMA_VALIDATION_FAILED", NEXT_ACTIONS.MODEL_ANSWER_UNUSABLE],
+  ] as const)("the service failed as %s/%s → %s + %s", (kind, providerStatus, reason, next) => {
+    /*
+      The service turns EVERY exception into a 400, so an expired key, an
+      empty account, a model the provider no longer serves and a genuinely
+      moved session all arrived as the same number — and all rendered as
+      "refresh the page". The proxy now says which; this is what each means.
+    */
+    const error = machineWriteError(
+      400,
+      { error: "UPSTREAM_ERROR", upstream: { kind, providerStatus } },
+      "generate concepts",
+    );
+    expect(error.reason).toBe(reason);
+    expect(error.nextPermittedActions).toEqual([next]);
+    expect(error.retryable).toBe(false);
+  });
+
+  it("an unclassified service failure still reads as the recorded conflict", () => {
+    // Nothing the proxy could name: the status table applies, as before.
+    const error = machineWriteError(
+      400,
+      { error: "UPSTREAM_ERROR", upstream: { kind: "UNKNOWN", providerStatus: null } },
+      "x",
+    );
+    expect(error.reason).toBe("REVISION_CONFLICT");
+    expect(error.nextPermittedActions).toEqual([NEXT_ACTIONS.REFRESH_AND_RESUBMIT]);
+  });
+
   it("tells a rejected body apart from a moved session", () => {
     // Both are 400 at the proxy. One is a panel defect; the other is the
     // recorded conflict whose resolution is refresh-then-resubmit.
